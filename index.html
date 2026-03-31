@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greg Gogolak — Freelance Business Automation Consultant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:        #f5f0e8;
+      --bg-soft:   #ede8df;
+      --ink:       #1c1a17;
+      --ink-soft:  #5a5650;
+      --accent:    #b5602a;
+      --max-w:     720px;
+      --gap:       clamp(3rem, 8vw, 6rem);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      font-size: clamp(1rem, 1.1vw + 0.5rem, 1.125rem);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem clamp(1.5rem, 5vw, 3rem);
+      background: rgba(245, 240, 232, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(28, 26, 23, 0.08);
+    }
+
+    .nav-name {
+      font-family: 'Fraunces', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 0.875rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--ink-soft);
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: var(--gap) clamp(1.5rem, 5vw, 3rem);
+    }
+
+    .inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+    }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      font-weight: 400;
+    }
+
+    h1 {
+      font-family: 'Fraunces', serif;
+      font-weight: 300;
+      font-size: clamp(2.6rem, 6vw + 1rem, 5rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.75rem;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 1.5vw + 0.5rem, 1.2rem);
+      color: var(--ink-soft);
+      max-width: 520px;
+      margin-bottom: 2.5rem;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.85em 2em;
+      background: var(--ink);
+      color: var(--bg);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      border-radius: 2px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: var(--accent);
+      margin-bottom: 2rem;
+    }
+
+    /* ── ABOUT ── */
+    #about {
+      background: var(--bg-soft);
+    }
+
+    h2 {
+      font-family: 'Fraunces', serif;
+      font-weight: 500;
+      font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+    }
+
+    .about-text {
+      color: var(--ink-soft);
+      font-size: clamp(1rem, 1.2vw + 0.4rem, 1.125rem);
+    }
+
+    /* ── SERVICES ── */
+    #services .section-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 400;
+      margin-bottom: 0.75rem;
+    }
+
+    .services-grid {
+      margin-top: 3rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .service-card {
+      padding: 2rem 2rem 2rem 0;
+      border-top: 1px solid rgba(28, 26, 23, 0.15);
+    }
+
+    .service-card h3 {
+      font-family: 'Fraunces', serif;
+      font-weight: 500;
+      font-size: 1.2rem;
+      margin-bottom: 0.6rem;
+      letter-spacing: -0.01em;
+    }
+
+    .service-card p {
+      color: var(--ink-soft);
+      font-size: 0.975rem;
+    }
+
+    /* ── CONTACT ── */
+    #contact {
+      background: var(--bg-soft);
+    }
+
+    .contact-intro {
+      color: var(--ink-soft);
+      margin-bottom: 2.5rem;
+    }
+
+    form {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 400;
+      color: var(--ink-soft);
+    }
+
+    input, textarea {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid rgba(28, 26, 23, 0.2);
+      border-radius: 2px;
+      padding: 0.75em 1em;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 130px;
+    }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .mailto-alt {
+      font-size: 0.875rem;
+      color: var(--ink-soft);
+    }
+
+    .mailto-alt a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .mailto-alt a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 2rem clamp(1.5rem, 5vw, 3rem);
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      border-top: 1px solid rgba(28, 26, 23, 0.08);
+    }
+
+    /* ── SCROLL REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .nav-links {
+        gap: 1.25rem;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-name" href="#hero">Greg Gogolak</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#services">Services</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="inner">
+      <p class="hero-label">Freelance Consultant</p>
+      <h1>I help small businesses<br>save time with <em>smart automation.</em></h1>
+      <p class="hero-sub">Streamlined workflows, less admin, more focus on what actually moves your business forward.</p>
+      <a href="#contact" class="btn">Get in touch</a>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="inner reveal">
+      <div class="divider"></div>
+      <h2>About me</h2>
+      <p class="about-text">I'm a freelance consultant specialising in business automation. I work with small businesses to streamline their operations — from automating repetitive tasks to setting up systems that run in the background so you can focus on what matters.</p>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services">
+    <div class="inner">
+      <p class="section-label reveal">What I do</p>
+      <h2 class="reveal">Services</h2>
+      <div class="services-grid">
+        <div class="service-card reveal">
+          <h3>Business Process Automation</h3>
+          <p>Mapping and automating repetitive workflows so your team spends less time on admin.</p>
+        </div>
+        <div class="service-card reveal">
+          <h3>AI-Powered Tools</h3>
+          <p>Setting up AI tools tailored to your business, from smart scheduling to customer communication.</p>
+        </div>
+        <div class="service-card reveal">
+          <h3>Consulting &amp; Strategy</h3>
+          <p>One-on-one sessions to identify where automation can save you the most time and money.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="inner">
+      <div class="divider reveal"></div>
+      <h2 class="reveal">Let's talk</h2>
+      <p class="contact-intro reveal">Got a workflow you'd like to simplify? I'd love to hear about it.</p>
+      <form class="reveal" name="contact" action="mailto:hello@greg.com" method="post" enctype="text/plain">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Your name" required />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" placeholder="Tell me about your business and what you'd like to automate…" required></textarea>
+        </div>
+        <div class="form-footer">
+          <button type="submit" class="btn">Send message</button>
+          <p class="mailto-alt">Or email me directly: <a href="mailto:hello@greg.com">hello@greg.com</a></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 Greg Gogolak. Freelance Business Automation Consultant.</p>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+  </script>
+
+</body>
+</html>
