@@ -175,9 +175,59 @@
       margin-bottom: 1.5rem;
     }
 
+    .about-layout {
+      display: flex;
+      gap: 2.5rem;
+      align-items: flex-start;
+    }
+
+    .about-photo {
+      width: 160px;
+      min-width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center top;
+      border: 3px solid var(--accent);
+      flex-shrink: 0;
+    }
+
     .about-text {
       color: var(--ink-soft);
       font-size: clamp(1rem, 1.2vw + 0.4rem, 1.125rem);
+    }
+
+    .about-details {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .about-details span {
+      color: var(--ink);
+      font-weight: 400;
+    }
+
+    .about-details a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .about-details a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 540px) {
+      .about-layout {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .about-details {
+        align-items: center;
+      }
     }
 
     /* ── SERVICES ── */
@@ -353,9 +403,19 @@
     <div class="inner reveal">
       <div class="divider"></div>
       <h2>About me</h2>
-      <p class="about-text">I'm a freelance consultant specialising in business automation. I work with small businesses
-        to streamline their operations — from automating repetitive tasks to setting up systems that run in the
-        background so you can focus on what matters.</p>
+      <div class="about-layout">
+        <img src="Pfp - Photoshoot.jpg" alt="Greg Gogolak" class="about-photo" />
+        <div>
+          <p class="about-text">I'm a freelance consultant specialising in business automation. I work with small businesses
+            to streamline their operations — from automating repetitive tasks to setting up systems that run in the
+            background so you can focus on what matters.</p>
+          <div class="about-details">
+            <span><strong>Greg Gogolak</strong></span>
+            <span>Email: <a href="mailto:greg@gogolak.com">greg@gogolak.com</a></span>
+            <span>Phone: <a href="tel:+421904224488">+421 904 224 488</a></span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
