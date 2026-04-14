@@ -138,6 +138,27 @@ export default function ReadPage() {
         </p>
       )}
 
+      {/* Shimmer skeleton — shown while a new read is in flight */}
+      {loading && (
+        <div className="space-y-2 mt-4">
+          {[72, 88, 65, 55].map((w, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-white/[0.03] border-l-2 border-l-gray-800 bg-white/[0.018] p-4"
+            >
+              <div
+                className="h-2 rounded bg-white/[0.05] animate-pulse mb-3"
+                style={{ width: `${w}%` }}
+              />
+              <div
+                className="h-2 rounded bg-white/[0.03] animate-pulse"
+                style={{ width: `${w - 18}%` }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       {data && !loading && (
         <>
           {/* Cache age */}
