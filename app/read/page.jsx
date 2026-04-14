@@ -197,6 +197,43 @@ export default function ReadPage() {
               )
             })()}
 
+            {/* 5 — Market Pulse */}
+            <button
+              onClick={() => setPulseOpen(o => !o)}
+              className="w-full rounded-lg border border-white/[0.03] border-l-2 border-l-gray-800 bg-white/[0.018] p-4 text-left hover:bg-white/[0.025] transition-colors"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[9px] font-mono text-gray-600 tracking-widest">MARKET PULSE</p>
+                <span className="text-gray-700 font-mono text-[9px]">{pulseOpen ? '▲' : '▼'}</span>
+              </div>
+
+              {!pulseOpen ? (
+                <div className="flex gap-2">
+                  <div className="flex-1 border border-white/[0.03] rounded-md px-3 py-2">
+                    <p className="text-[8px] font-mono text-gray-700 tracking-widest mb-1">RETAIL</p>
+                    <p className="text-[10px] text-gray-400">{data.marketPulse?.retail?.label}</p>
+                  </div>
+                  <div className="flex-1 border border-white/[0.03] rounded-md px-3 py-2">
+                    <p className="text-[8px] font-mono text-gray-700 tracking-widest mb-1">HEDGE FUND</p>
+                    <p className="text-[10px] text-gray-400">{data.marketPulse?.hedge?.label}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 mt-1">
+                  <div>
+                    <p className="text-[8px] font-mono text-gray-600 tracking-widest mb-1">RETAIL</p>
+                    <p className="text-[11px] font-mono text-gray-300 mb-1">{data.marketPulse?.retail?.label}</p>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">{data.marketPulse?.retail?.summary}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-mono text-gray-600 tracking-widest mb-1">HEDGE FUND</p>
+                    <p className="text-[11px] font-mono text-gray-300 mb-1">{data.marketPulse?.hedge?.label}</p>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">{data.marketPulse?.hedge?.summary}</p>
+                  </div>
+                </div>
+              )}
+            </button>
+
           </div>
         </>
       )}
