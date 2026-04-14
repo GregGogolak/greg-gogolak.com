@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import useNVDAData   from '@/hooks/useNVDAData'
-import useMacroData  from '@/hooks/useMacroData'
-import useNews       from '@/hooks/useNews'
+import { useNVDAData }   from '@/hooks/useNVDAData'
+import { useMacroData }  from '@/hooks/useMacroData'
+import { useNews }       from '@/hooks/useNews'
 import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
 import { daysUntil } from '@/lib/calculations'
 

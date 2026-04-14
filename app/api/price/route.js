@@ -1,53 +1,93 @@
-import { sma } from '@/lib/calculations'
-
 const FINNHUB = 'https://finnhub.io/api/v1'
-const KEY     = process.env.FINNHUB_API_KEY
+const AV      = 'https://www.alphavantage.co/query'
+const FH_KEY  = process.env.FINNHUB_API_KEY
+const AV_KEY  = process.env.ALPHA_VANTAGE_API_KEY
 
 // Server-side in-memory caches
-let quoteCache   = { data: null, ts: 0 }
-let candleCache  = { data: null, ts: 0 }
-const QUOTE_TTL  = 55_000        // 55 seconds
-const CANDLE_TTL = 4 * 60_000   // 4 minutes
+// AV call budget: SMA200 (4/day) + SMA50 (4/day) + daily (4/day) + brent (4/day) + fundamentals (4/day) = ~20/day
+let quoteCache  = { data: null, ts: 0 }
+let sma200Cache = { data: null, ts: 0 }
+let sma50Cache  = { data: null, ts: 0 }
+let dailyCache  = { data: null, ts: 0 }
+
+const QUOTE_TTL = 55_000       // 55 seconds — live price
+const SMA_TTL   = 6 * 3600_000 // 6 hours — SMAs change slowly
+const DAILY_TTL = 6 * 3600_000 // 6 hours — 100-day window for sparkline/volume/10d high
 
 async function fetchQuote() {
   if (Date.now() - quoteCache.ts < QUOTE_TTL && quoteCache.data) return quoteCache.data
-  const res  = await fetch(`${FINNHUB}/quote?symbol=NVDA&token=${KEY}`, { cache: 'no-store' })
+  const res  = await fetch(`${FINNHUB}/quote?symbol=NVDA&token=${FH_KEY}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!data.c) throw new Error('Quote unavailable')
   quoteCache = { data, ts: Date.now() }
   return data
 }
 
-async function fetchCandles() {
-  if (Date.now() - candleCache.ts < CANDLE_TTL && candleCache.data) return candleCache.data
-  const to   = Math.floor(Date.now() / 1000)
-  const from = to - 320 * 24 * 60 * 60   // 320 calendar days → ~220 trading days
+async function fetchSMA(period, cache, setCache) {
+  if (Date.now() - cache.ts < SMA_TTL && cache.data) return cache.data
   const res  = await fetch(
-    `${FINNHUB}/stock/candle?symbol=NVDA&resolution=D&from=${from}&to=${to}&token=${KEY}`,
+    `${AV}?function=SMA&symbol=NVDA&interval=daily&time_period=${period}&series_type=close&apikey=${AV_KEY}`,
     { cache: 'no-store' }
   )
-  const data = await res.json()
-  if (data.s !== 'ok') throw new Error('Candle fetch failed: ' + JSON.stringify(data))
-  candleCache = { data, ts: Date.now() }
+  const json = await res.json()
+  const s    = json?.['Technical Analysis: SMA']
+  if (!s) return null
+  const latest = Object.values(s)[0]
+  if (!latest) return null
+  const val = parseFloat(latest.SMA)
+  setCache({ data: val, ts: Date.now() })
+  return val
+}
+
+/**
+ * Alpha Vantage compact daily — last 100 trading days.
+ * Provides: sparkline, 10-day high, 30-day avg volume.
+ */
+async function fetchDaily() {
+  if (Date.now() - dailyCache.ts < DAILY_TTL && dailyCache.data) return dailyCache.data
+  const res  = await fetch(
+    `${AV}?function=TIME_SERIES_DAILY&symbol=NVDA&outputsize=compact&apikey=${AV_KEY}`,
+    { cache: 'no-store' }
+  )
+  const json = await res.json()
+  const series = json?.['Time Series (Daily)']
+  if (!series) return null
+
+  // Dates in descending order from AV — convert to arrays newest→oldest then reverse
+  const dates  = Object.keys(series).sort((a, b) => b.localeCompare(a))
+  const closes = dates.map(d => parseFloat(series[d]['4. close'])).reverse()
+  const highs  = dates.map(d => parseFloat(series[d]['2. high'])).reverse()
+  const vols   = dates.map(d => parseFloat(series[d]['5. volume'])).reverse()
+
+  const data = { closes, highs, vols }
+  dailyCache = { data, ts: Date.now() }
   return data
 }
 
 export async function GET() {
   try {
-    const [quote, candles] = await Promise.all([fetchQuote(), fetchCandles()])
+    // Start Finnhub quote immediately (doesn't count toward AV rate limit)
+    const quotePromise = fetchQuote()
 
-    const closes = candles.c
-    const highs  = candles.h
-    const vols   = candles.v
+    // AV calls run sequentially to respect 1 req/sec burst limit.
+    // With 6-hour caching, this only matters on cold start (once every 6hr).
+    const sma200 = await fetchSMA(200, sma200Cache, (v) => { sma200Cache = v })
+    const sma50  = await fetchSMA(50,  sma50Cache,  (v) => { sma50Cache  = v })
+    const daily  = await fetchDaily()
+    const quote  = await quotePromise
 
-    const sma200 = sma(closes, 200)
-    const sma50  = sma(closes, 50)
-    const price  = quote.c
+    const price = quote.c
 
-    const tenDayHigh      = highs.length >= 10 ? Math.max(...highs.slice(-10)) : null
-    const thirtyDayAvgVol = vols.length >= 30  ? vols.slice(-30).reduce((a, b) => a + b, 0) / 30 : null
+    const highs = daily?.highs ?? []
+    const vols  = daily?.vols  ?? []
 
-    // Last 60 closing prices for the sparkline chart
-    const sparkline = closes.slice(-60)
+    const tenDayHigh      = highs.length >= 10 ? Math.max(...highs.slice(-10))              : null
+    const thirtyDayAvgVol = vols.length  >= 30 ? vols.slice(-30).reduce((a, b) => a + b, 0) / 30 : null
+
+    // Sparkline: 59 historical closes + live price as final point
+    const sparkline = daily
+      ? [...daily.closes.slice(-59), price]
+      : [price]
 
     return Response.json({
       price,
@@ -66,7 +106,7 @@ export async function GET() {
       lastUpdated:    Date.now(),
     })
   } catch (err) {
-    console.error('[/api/price]', err)
+    console.error('[/api/price]', err.message)
     return Response.json({ error: err.message }, { status: 500 })
   }
 }
