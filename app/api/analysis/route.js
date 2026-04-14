@@ -153,6 +153,8 @@ ${brief}`,
     if (redis) {
       const { fromCache: _fc, ...toCache } = result
       await redis.set(CACHE_KEY, toCache, { ex: CACHE_TTL_S })
+      await redis.lpush('analysis:history', toCache)
+      await redis.ltrim('analysis:history', 0, 4)
     }
 
     return Response.json(result)
