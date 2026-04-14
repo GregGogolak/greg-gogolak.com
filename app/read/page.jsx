@@ -71,7 +71,10 @@ export default function ReadPage() {
       const res = await fetch('/api/analysis', { method: 'POST' })
       if (!res.ok) throw new Error(`Analysis failed (${res.status})`)
       const result = await res.json()
-      setHistory(prev => [result, ...prev].slice(0, 5))
+      setHistory(prev => {
+        if (prev[0]?.generatedAt === result.generatedAt) return prev
+        return [result, ...prev].slice(0, 5)
+      })
       setActiveIdx(0)
       setPulseOpen(false)
     } catch (e) {
