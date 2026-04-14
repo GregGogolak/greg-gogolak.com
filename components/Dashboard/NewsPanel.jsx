@@ -1,9 +1,9 @@
 'use client'
 
-const BUCKET_META = {
-  A: { label: 'NOISE',   color: '#3d4a5c', bg: 'rgba(61,74,92,0.15)',   border: 'rgba(61,74,92,0.3)' },
-  B: { label: 'SUPPORT', color: '#34d399', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
-  C: { label: 'RISK',    color: '#f87171', bg: 'rgba(248,113,113,0.08)',border: 'rgba(248,113,113,0.2)' },
+const BUCKET_CONFIG = {
+  A: { label: 'NOISE',  className: 'text-gray-500 bg-gray-500/10 border-gray-500/20' },
+  B: { label: 'SIGNAL', className: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
+  C: { label: 'RISK',   className: 'text-red-400 bg-red-400/10 border-red-400/20' },
 }
 
 function relativeTime(unixTs) {
@@ -15,11 +15,6 @@ function relativeTime(unixTs) {
 }
 
 function NewsItem({ article }) {
-  // Phase 1: all articles shown as-is (no bucket classification yet)
-  // Bucket classification is Phase 2 (newsClassifier.js)
-  const bucket = article.bucket || 'A'
-  const meta   = BUCKET_META[bucket] || BUCKET_META.A
-
   return (
     <a
       href={article.url || '#'}
@@ -38,15 +33,15 @@ function NewsItem({ article }) {
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
           {/* Bucket pill */}
-          <span style={{
-            flexShrink: 0,
-            fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
-            padding: '1px 6px', borderRadius: '4px', marginTop: '1px',
-            color: meta.color, background: meta.bg, border: `1px solid ${meta.border}`,
-            fontFamily: 'Inter, sans-serif',
-          }}>
-            {meta.label}
-          </span>
+          {(() => {
+            const cfg = BUCKET_CONFIG[article.bucket] ?? BUCKET_CONFIG.A
+            return (
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${cfg.className}`}
+                style={{ flexShrink: 0, marginTop: '1px' }}>
+                {cfg.label}
+              </span>
+            )
+          })()}
           {/* Headline */}
           <span style={{
             fontSize: '12px', color: '#c4cbda', lineHeight: 1.45, flex: 1,
