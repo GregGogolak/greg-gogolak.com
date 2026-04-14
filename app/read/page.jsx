@@ -23,6 +23,11 @@ const ACTION_TEXT = {
   AVOID: 'text-red-400',
 }
 
+const UNDERVALUED_STYLE = {
+  Yes: { border: 'border-l-emerald-600', text: 'text-emerald-400' },
+  No:  { border: 'border-l-red-600',     text: 'text-red-400'     },
+}
+
 function tabLabel(read) {
   const action = read.recommendedAction?.action ?? '??'
   const time   = new Date(read.generatedAt).toLocaleTimeString([], {
@@ -137,7 +142,7 @@ export default function ReadPage() {
         <>
           {/* Cache age */}
           <p className="text-[10px] font-mono text-gray-700 text-center my-3">
-            {activeIdx === 0 && !data.fromCache
+            {Date.now() - data.generatedAt < 60_000
               ? 'fresh read'
               : `${new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} · ${timeAgo(data.generatedAt)}`}
           </p>
@@ -147,8 +152,9 @@ export default function ReadPage() {
             {/* 1 — Undervalued */}
             {(() => {
               const ans     = data.undervalued?.answer
-              const border  = ans === 'Yes' ? 'border-l-emerald-600' : 'border-l-red-600'
-              const ansText = ans === 'Yes' ? 'text-emerald-400'     : 'text-red-400'
+              const style   = UNDERVALUED_STYLE[ans] ?? UNDERVALUED_STYLE.No
+              const border  = style.border
+              const ansText = style.text
               return (
                 <div className={`rounded-lg border border-white/[0.03] border-l-2 ${border} bg-white/[0.018] p-4`}>
                   <p className="text-[9px] font-mono text-gray-600 tracking-widest mb-1">UNDERVALUED?</p>
