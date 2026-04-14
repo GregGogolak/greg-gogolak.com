@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NVDA Jarvis — v2 Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+:root {
+  --bg: #06070d;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.065);
+  --border: rgba(255,255,255,0.07);
+  --border-bright: rgba(99,179,255,0.25);
+  --text-primary: #f0f4ff;
+  --text-secondary: #8892a4;
+  --text-muted: #3d4657;
+  --cyan: #63b3ff;
+  --cyan-dim: rgba(99,179,255,0.12);
+  --green: #34d399;
+  --green-dim: rgba(52,211,153,0.1);
+  --red: #f87171;
+  --red-dim: rgba(248,113,113,0.1);
+  --yellow: #fbbf24;
+  --yellow-dim: rgba(251,191,36,0.1);
+  --purple: #a78bfa;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Inter', -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 40px 20px;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+/* ────── Phone Shell ────── */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 48px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 50px 120px rgba(0,0,0,0.9),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* subtle dot-grid background */
+.phone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(99,179,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Dynamic island */
+.island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.island-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.08); }
+.island-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse-dot 2s infinite; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* scroll area */
+.scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 60px;
+  padding-bottom: 80px;
+  scrollbar-width: none;
+  z-index: 1;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ────── Status Bar ────── */
+.status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 8px;
+  z-index: 5;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: linear-gradient(to bottom, var(--bg), transparent);
+}
+.app-name {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  opacity: 0.7;
+}
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green);
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-dot 1.5s infinite;
+}
+
+/* ────── Price Hero ────── */
+.price-hero {
+  padding: 24px 24px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* scan line animation */
+.price-hero::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  animation: scan 4s ease-in-out infinite;
+  opacity: 0.4;
+}
+
+@keyframes scan {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.ticker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ticker {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+.exchange-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.price-value {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 52px;
+  font-weight: 300;
+  color: var(--text-primary);
+  letter-spacing: -2.5px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.price-value span.cents { font-size: 32px; font-weight: 300; opacity: 0.7; }
+
+.price-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.price-change {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+.price-change.down {
+  color: var(--red);
+  background: var(--red-dim);
+}
+.price-change.up {
+  color: var(--green);
+  background: var(--green-dim);
+}
+.prev-close {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ────── Section Divider ────── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 0 20px;
+}
+
+/* ────── Section Label ────── */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 14px 24px 8px;
+}
+
+/* ────── Data Cards ────── */
+.card {
+  margin: 0 16px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  transition: background 0.2s;
+}
+.card.accent-green {
+  background: var(--green-dim);
+  border-color: rgba(52,211,153,0.2);
+}
+.card.accent-blue {
+  background: var(--cyan-dim);
+  border-color: rgba(99,179,255,0.2);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.card-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+.tag-green { background: rgba(52,211,153,0.15); color: var(--green); }
+.tag-red   { background: rgba(248,113,113,0.15); color: var(--red); }
+.tag-yellow { background: rgba(251,191,36,0.15); color: var(--yellow); }
+.tag-cyan  { background: rgba(99,179,255,0.15); color: var(--cyan); }
+
+.data-rows { display: flex; flex-direction: column; gap: 8px; }
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.data-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.data-value {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.data-value.green { color: var(--green); }
+.data-value.red   { color: var(--red); }
+.data-value.yellow { color: var(--yellow); }
+.data-value.cyan  { color: var(--cyan); }
+.data-value.muted { color: var(--text-muted); }
+
+/* Inline sub-value */
+.sub-val {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* ────── Thesis Card ────── */
+.thesis-card {
+  margin: 0 16px 10px;
+  background: var(--green-dim);
+  border: 1px solid rgba(52,211,153,0.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.thesis-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(52,211,153,0.5);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.thesis-status {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 0.02em;
+}
+.thesis-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: rgba(52,211,153,0.12);
+  border: 1px solid rgba(52,211,153,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* ────── Macro Row ────── */
+.macro-row {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px 10px;
+}
+.macro-cell {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.macro-cell-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.macro-cell-value {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.macro-cell-value.red { color: var(--red); }
+.macro-cell-value.yellow { color: var(--yellow); }
+.macro-cell-value.green { color: var(--green); }
+
+/* ────── Progress Bar (SMA distance) ────── */
+.progress-row { margin-bottom: 4px; }
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.progress-track {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+.progress-fill.red { background: linear-gradient(90deg, var(--red-dim), var(--red)); width: 72%; }
+.progress-fill.green { background: linear-gradient(90deg, var(--green-dim), var(--green)); width: 85%; }
+
+/* ────── Bottom Nav ────── */
+.bottom-nav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(to top, rgba(6,7,13,0.98), rgba(6,7,13,0.85));
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 8px 16px;
+  z-index: 5;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.nav-item.active { background: rgba(99,179,255,0.08); }
+.nav-icon { font-size: 20px; line-height: 1; }
+.nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.nav-item.active .nav-label { color: var(--cyan); }
+
+/* ────── Catalyst Pill ────── */
+.pills {
+  display: flex;
+  gap: 6px;
+  margin: 0 16px 10px;
+  flex-wrap: wrap;
+}
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.pill-label { color: var(--text-muted); font-weight: 400; }
+.pill-value { color: var(--text-primary); font-weight: 500; font-family: 'Inter Tight', sans-serif; }
+.pill-value.yellow { color: var(--yellow); }
+.pill-value.red { color: var(--red); }
+
+/* ────── Load animation ────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.scroll > * {
+  animation: fadeUp 0.5s ease both;
+}
+.scroll > *:nth-child(1) { animation-delay: 0.05s; }
+.scroll > *:nth-child(2) { animation-delay: 0.10s; }
+.scroll > *:nth-child(3) { animation-delay: 0.15s; }
+.scroll > *:nth-child(4) { animation-delay: 0.20s; }
+.scroll > *:nth-child(5) { animation-delay: 0.25s; }
+.scroll > *:nth-child(6) { animation-delay: 0.30s; }
+.scroll > *:nth-child(7) { animation-delay: 0.35s; }
+.scroll > *:nth-child(8) { animation-delay: 0.40s; }
+.scroll > *:nth-child(9) { animation-delay: 0.45s; }
+
+/* ────── Page shell ────── */
+.page-bg {
+  background: #050508;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 48px 24px;
+  gap: 16px;
+}
+.page-title { font-size: 22px; font-weight: 600; color: #f0f4ff; letter-spacing: -0.3px; }
+.page-sub { font-size: 13px; color: #3d4657; }
+
+/* ────── Highlight glow on hero number ────── */
+@keyframes price-glow {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 30px rgba(99,179,255,0.15); }
+}
+.price-value { animation: price-glow 3s ease-in-out infinite; }
+</style>
+</head>
+<body style="background:#050508; flex-direction: column; align-items: center; justify-content: flex-start; padding: 48px 24px;">
+
+<div style="text-align:center; margin-bottom:32px;">
+  <div style="font-family:'Inter Tight',sans-serif; font-size:24px; font-weight:600; color:#f0f4ff; letter-spacing:-0.5px; margin-bottom:6px;">NVDA Jarvis — v2 Design</div>
+  <div style="font-size:13px; color:#3d4657;">Reload the page to replay animations</div>
+</div>
+
+<div class="phone">
+  <!-- Dynamic Island -->
+  <div class="island">
+    <div class="island-dot active"></div>
+    <div class="island-dot"></div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="app-name">JARVIS</div>
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="scroll">
+
+    <!-- Price Hero -->
+    <div class="price-hero">
+      <div class="ticker-row">
+        <div class="ticker">NVDA</div>
+        <div class="exchange-badge">NASDAQ</div>
+      </div>
+      <div class="price-value">$104<span class="cents">.82</span></div>
+      <div class="price-meta">
+        <div class="price-change down">▼ −3.21%  −$3.49</div>
+        <div class="prev-close">Prev close $108.31</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Thesis -->
+    <div style="padding: 12px 0 2px;">
+    <div class="thesis-card">
+      <div>
+        <div class="thesis-label">Thesis Status</div>
+        <div class="thesis-status">INTACT</div>
+      </div>
+      <div class="thesis-icon">✦</div>
+    </div>
+    </div>
+
+    <!-- SMA Distance -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">SMA Distance</div>
+        <div class="card-tag tag-red">Below Both</div>
+      </div>
+      <div>
+        <div class="progress-label-row">
+          <span class="data-label" style="font-size:12px;">200-day <span class="sub-val">$114.43</span></span>
+          <span class="data-value red" style="font-size:13px;">−8.4%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill red" style="width:72%;"></div></div>
+        <div class="progress-label-row">
+          <span class="data-label" style="font-size:12px;">50-day <span class="sub-val">$109.41</span></span>
+          <span class="data-value red" style="font-size:13px;">−4.2%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill red" style="width:58%;"></div></div>
+        <div class="data-row" style="margin-top:4px; padding-top:8px; border-top: 1px solid var(--border);">
+          <span class="data-label">Analyst target</span>
+          <span class="data-value cyan">+152% <span class="sub-val">$264</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Macro -->
+    <div class="section-label">Macro</div>
+    <div class="macro-row">
+      <div class="macro-cell">
+        <div class="macro-cell-label">Brent</div>
+        <div class="macro-cell-value">$78.42</div>
+      </div>
+      <div class="macro-cell">
+        <div class="macro-cell-label">QQQ</div>
+        <div class="macro-cell-value red">−1.2%</div>
+      </div>
+      <div class="macro-cell">
+        <div class="macro-cell-label">VIX</div>
+        <div class="macro-cell-value yellow">28.4</div>
+      </div>
+    </div>
+
+    <!-- Iran -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Iran / Hormuz</div>
+        <div class="card-tag tag-yellow">ESCALATING</div>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted);">Manual toggle · updated today</div>
+    </div>
+
+    <!-- Catalysts -->
+    <div class="section-label">Upcoming Catalysts</div>
+    <div class="pills">
+      <div class="pill">
+        <span class="pill-label">Earnings</span>
+        <span class="pill-value yellow">36 days</span>
+      </div>
+      <div class="pill">
+        <span class="pill-label">FOMC</span>
+        <span class="pill-value yellow">14 days</span>
+      </div>
+    </div>
+
+    <!-- Spacer -->
+    <div style="height: 8px;"></div>
+
+  </div><!-- /scroll -->
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <div class="nav-icon">⬡</div>
+      <div class="nav-label">Dashboard</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">◈</div>
+      <div class="nav-label">Read</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">◇</div>
+      <div class="nav-label">Trade</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">◉</div>
+      <div class="nav-label">Alerts</div>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<div style="text-align:center; margin-top:24px; font-size:12px; color:#3d4657; max-width:500px; line-height:1.6;">
+  <strong style="color:#63b3ff;">Design notes:</strong> Inter Tight for numbers, Inter for labels.
+  Fade-up load animation, scan line on hero, breathing price glow, pulsing live dot.
+  Progress bars show SMA distance visually. Blur nav bar. Dynamic Island.
+</div>
+
+<!-- Count-up animation for price -->
+<script>
+const el = document.querySelector('.price-value');
+const target = 104.82;
+let start = 95;
+let startTime = null;
+const duration = 1200;
+
+function animate(ts) {
+  if (!startTime) startTime = ts;
+  const progress = Math.min((ts - startTime) / duration, 1);
+  const eased = 1 - Math.pow(1 - progress, 3);
+  const val = start + (target - start) * eased;
+  const whole = Math.floor(val);
+  const dec = String(Math.round((val - whole) * 100)).padStart(2, '0');
+  el.innerHTML = `$${whole}<span class="cents">.${dec}</span>`;
+  if (progress < 1) requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>
