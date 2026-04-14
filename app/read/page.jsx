@@ -1,40 +1,155 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+
+const ACTION_COLORS = {
+  BUY:   'text-emerald-400',
+  HOLD:  'text-blue-400',
+  WAIT:  'text-yellow-400',
+  AVOID: 'text-red-400',
+}
+
+function timeAgo(val) {
+  // Normalise: if value looks like seconds-epoch (< 1e12), convert to ms
+  const ms   = val > 1e12 ? val : val * 1000
+  const mins = Math.floor((Date.now() - ms) / 60_000)
+  if (mins < 1)   return 'just now'
+  if (mins === 1) return '1 min ago'
+  if (mins < 60)  return `${mins} mins ago`
+  return `${Math.floor(mins / 60)}h ago`
+}
+
 export default function ReadPage() {
+  const [data,      setData]      = useState(null)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
+  const [pulseOpen, setPulseOpen] = useState(false)
+
+  // Auto-load cached result on mount — no token cost
+  useEffect(() => {
+    fetch('/api/analysis')
+      .then(r => r.json())
+      .then(res => { if (res.fromCache) setData(res) })
+      .catch(() => {})
+  }, [])
+
+  async function handleRead() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/analysis', { method: 'POST' })
+      if (!res.ok) throw new Error(`Analysis failed (${res.status})`)
+      setData(await res.json())
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div style={{
-      minHeight: '100dvh', background: 'var(--color-bg, #080910)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: '16px', padding: '24px',
-    }}>
-      <div style={{
-        width: '56px', height: '56px', borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(91,156,246,0.2) 0%, rgba(91,156,246,0.06) 100%)',
-        border: '1px solid rgba(91,156,246,0.25)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '24px', color: '#5b9cf6',
-      }}>◈</div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{
-          fontFamily: "'Inter Tight', sans-serif",
-          fontSize: '22px', fontWeight: 300, color: '#eef2ff', marginBottom: '8px',
-        }}>
-          Give Me A Read
+    <div className="min-h-screen bg-[#0a0a0a] text-[#eef2ff] px-4 py-6 pb-24 max-w-[480px] mx-auto">
+      <p className="text-[10px] font-mono text-gray-500 tracking-widest mb-4">GIVE ME A READ</p>
+
+      {/* Trigger button */}
+      <button
+        onClick={handleRead}
+        disabled={loading}
+        className="w-full py-3 rounded-lg border border-blue-500/40 bg-blue-500/10 text-blue-400 font-mono text-sm tracking-wider hover:bg-blue-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-2"
+      >
+        {loading ? 'ANALYSING...' : 'GIVE ME A READ'}
+      </button>
+
+      {/* Cache age indicator */}
+      {data?.generatedAt && (
+        <p className="text-[11px] font-mono text-gray-600 text-center mb-6">
+          {data.fromCache ? `cached — ${timeAgo(data.generatedAt)}` : 'fresh read'}
+        </p>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <p className="text-red-400 text-xs font-mono text-center mb-4">{error}</p>
+      )}
+
+      {/* Results */}
+      {data?.undervalued && (
+        <div className="space-y-3">
+
+          {/* 1 — Undervalued */}
+          <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+            <p className="text-[10px] font-mono text-gray-500 tracking-widest mb-1">UNDERVALUED?</p>
+            <p className={`text-xl font-mono font-bold mb-1 ${data.undervalued.answer === 'Yes' ? 'text-emerald-400' : 'text-red-400'}`}>
+              {data.undervalued.answer}
+            </p>
+            <p className="text-sm text-gray-300">{data.undervalued.reason}</p>
+          </div>
+
+          {/* 2 — Why at this level */}
+          <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+            <p className="text-[10px] font-mono text-gray-500 tracking-widest mb-1">WHY AT THIS LEVEL?</p>
+            <p className="text-sm text-gray-300">{data.whyAtThisLevel}</p>
+          </div>
+
+          {/* 3 — What resolves it */}
+          <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+            <p className="text-[10px] font-mono text-gray-500 tracking-widest mb-2">WHAT RESOLVES IT?</p>
+            <ul className="space-y-1">
+              {(Array.isArray(data.whatResolvesIt) ? data.whatResolvesIt : []).map((item, i) => (
+                <li key={i} className="text-sm text-gray-300 flex gap-2">
+                  <span className="text-blue-400 font-mono shrink-0">›</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* 4 — Recommended action */}
+          <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+            <p className="text-[10px] font-mono text-gray-500 tracking-widest mb-1">RECOMMENDED ACTION</p>
+            <p className={`text-2xl font-mono font-bold mb-1 ${ACTION_COLORS[data.recommendedAction?.action] ?? 'text-white'}`}>
+              {data.recommendedAction?.action}
+            </p>
+            <p className="text-sm text-gray-300">{data.recommendedAction?.reason}</p>
+          </div>
+
+          {/* Market Pulse — tappable popup */}
+          <button
+            onClick={() => setPulseOpen(o => !o)}
+            className="w-full rounded-lg border border-white/5 bg-white/[0.03] p-4 text-left hover:bg-white/[0.05] transition-colors"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-mono text-gray-500 tracking-widest">MARKET PULSE</p>
+              <span className="text-gray-600 font-mono text-xs">{pulseOpen ? '▲' : '▼'}</span>
+            </div>
+
+            {!pulseOpen ? (
+              <div className="flex gap-4">
+                <span className="text-xs font-mono text-gray-400">
+                  🧑 <span className="text-white">{data.marketPulse?.retail?.label}</span>
+                </span>
+                <span className="text-xs font-mono text-gray-400">
+                  🏦 <span className="text-white">{data.marketPulse?.hedge?.label}</span>
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-3 mt-1">
+                <div>
+                  <p className="text-[10px] font-mono text-gray-500 mb-0.5">🧑 RETAIL</p>
+                  <p className="text-sm font-mono text-white mb-0.5">{data.marketPulse?.retail?.label}</p>
+                  <p className="text-xs text-gray-400">{data.marketPulse?.retail?.summary}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono text-gray-500 mb-0.5">🏦 HEDGE FUND</p>
+                  <p className="text-sm font-mono text-white mb-0.5">{data.marketPulse?.hedge?.label}</p>
+                  <p className="text-xs text-gray-400">{data.marketPulse?.hedge?.summary}</p>
+                </div>
+              </div>
+            )}
+          </button>
+
         </div>
-        <div style={{ fontSize: '13px', color: '#3d4a5c', maxWidth: '280px', lineHeight: 1.6 }}>
-          AI-powered analysis — available in Phase 2.
-          Answers: undervalued? why here? what resolves it?
-        </div>
-      </div>
-      <div style={{
-        fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
-        padding: '4px 14px', borderRadius: '20px',
-        color: '#fbbf24', background: 'rgba(251,191,36,0.1)',
-        border: '1px solid rgba(251,191,36,0.2)',
-        fontFamily: 'Inter, sans-serif',
-      }}>
-        PHASE 2
-      </div>
+      )}
     </div>
   )
 }
