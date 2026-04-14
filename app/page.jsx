@@ -18,6 +18,28 @@ import NewsPanel     from '@/components/Dashboard/NewsPanel'
 const EARNINGS_DATE = '2026-05-20'
 const FOMC_DATE     = '2026-04-29'
 
+function SentimentChip() {
+  const [pulse, setPulse] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/analysis')
+      .then(r => r.json())
+      .then(res => { if (res.fromCache && res.marketPulse) setPulse(res.marketPulse) })
+      .catch(() => {})
+  }, [])
+
+  if (!pulse) return null
+
+  return (
+    <div className="flex gap-3 items-center px-3 py-2 rounded-lg border border-white/5 bg-white/[0.03] text-xs font-mono">
+      <span className="text-gray-500 tracking-widest text-[10px]">PULSE</span>
+      <span className="text-white">🧑 {pulse.retail.label}</span>
+      <span className="text-gray-600">·</span>
+      <span className="text-white">🏦 {pulse.hedge.label}</span>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { data: priceData, loading: priceLoading }  = useNVDAData()
   const { data: macroData, loading: macroLoading }  = useMacroData()
@@ -175,6 +197,9 @@ export default function Dashboard() {
 
       {/* Main grid */}
       <main style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '12px 24px 0' }}>
+          <SentimentChip />
+        </div>
         {/* Desktop: 3-column layout */}
         <div style={{
           display: 'grid',
