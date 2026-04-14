@@ -75,7 +75,7 @@ export default function ReadPage() {
 
       {/* Tab strip */}
       <div
-        className="flex gap-2 overflow-x-auto pb-3 mb-1 border-b border-white/[0.03]"
+        className="flex gap-2 overflow-x-auto pb-3 mb-1 border-b border-white/[0.03] [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none' }}
       >
         {history.map((read, i) => {
@@ -83,7 +83,7 @@ export default function ReadPage() {
           const isActive = i === activeIdx
           return (
             <button
-              key={read.generatedAt}
+              key={`${read.generatedAt}-${i}`}
               onClick={() => switchTab(i)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-mono tracking-wide border transition-colors ${
                 isActive && ACTION_TAB[action]
