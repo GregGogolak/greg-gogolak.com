@@ -9,6 +9,20 @@ const ACTION_TAB = {
   AVOID: 'border-red-700     text-red-400     bg-red-500/10',
 }
 
+const ACTION_SECTION = {
+  BUY:   'border-l-emerald-600 bg-emerald-500/[0.04] border-emerald-500/20',
+  WAIT:  'border-l-amber-600   bg-amber-500/[0.04]   border-amber-500/20',
+  HOLD:  'border-l-blue-600    bg-blue-500/[0.04]    border-blue-500/20',
+  AVOID: 'border-l-red-600     bg-red-500/[0.04]     border-red-500/20',
+}
+
+const ACTION_TEXT = {
+  BUY:   'text-emerald-400',
+  WAIT:  'text-amber-400',
+  HOLD:  'text-blue-400',
+  AVOID: 'text-red-400',
+}
+
 function tabLabel(read) {
   const action = read.recommendedAction?.action ?? '??'
   const time   = new Date(read.generatedAt).toLocaleTimeString([], {
@@ -119,9 +133,66 @@ export default function ReadPage() {
         </p>
       )}
 
-      {/* Output sections placeholder — replaced in Task 4 */}
       {data && !loading && (
-        <p className="text-gray-600 text-xs font-mono text-center mt-6">sections coming…</p>
+        <>
+          {/* Cache age */}
+          <p className="text-[10px] font-mono text-gray-700 text-center my-3">
+            {activeIdx === 0 && !data.fromCache
+              ? 'fresh read'
+              : `${new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} · ${timeAgo(data.generatedAt)}`}
+          </p>
+
+          <div className="space-y-2">
+
+            {/* 1 — Undervalued */}
+            {(() => {
+              const ans     = data.undervalued?.answer
+              const border  = ans === 'Yes' ? 'border-l-emerald-600' : 'border-l-red-600'
+              const ansText = ans === 'Yes' ? 'text-emerald-400'     : 'text-red-400'
+              return (
+                <div className={`rounded-lg border border-white/[0.03] border-l-2 ${border} bg-white/[0.018] p-4`}>
+                  <p className="text-[9px] font-mono text-gray-600 tracking-widest mb-1">UNDERVALUED?</p>
+                  <p className={`text-xl font-mono font-bold mb-1 ${ansText}`}>{ans}</p>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">{data.undervalued?.reason}</p>
+                </div>
+              )
+            })()}
+
+            {/* 2 — Why at this level */}
+            <div className="rounded-lg border border-white/[0.03] border-l-2 border-l-amber-700 bg-white/[0.018] p-4">
+              <p className="text-[9px] font-mono text-gray-600 tracking-widest mb-1">WHY AT THIS LEVEL?</p>
+              <p className="text-[11px] text-gray-400 leading-relaxed">{data.whyAtThisLevel}</p>
+            </div>
+
+            {/* 3 — What resolves it */}
+            <div className="rounded-lg border border-white/[0.03] border-l-2 border-l-blue-700 bg-white/[0.018] p-4">
+              <p className="text-[9px] font-mono text-gray-600 tracking-widest mb-2">WHAT RESOLVES IT?</p>
+              <ul className="space-y-1.5">
+                {(Array.isArray(data.whatResolvesIt) ? data.whatResolvesIt : []).map((item, i) => (
+                  <li key={i} className="text-[11px] text-gray-400 flex gap-2">
+                    <span className="text-blue-500 font-mono shrink-0">›</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 4 — Recommended action */}
+            {(() => {
+              const action  = data.recommendedAction?.action
+              const section = ACTION_SECTION[action] ?? 'border-l-gray-700 bg-white/[0.018] border-white/[0.03]'
+              const text    = ACTION_TEXT[action]    ?? 'text-white'
+              return (
+                <div className={`rounded-lg border border-l-2 p-4 ${section}`}>
+                  <p className="text-[9px] font-mono text-gray-600 tracking-widest mb-1">RECOMMENDED ACTION</p>
+                  <p className={`text-2xl font-mono font-bold mb-1 ${text}`}>{action}</p>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">{data.recommendedAction?.reason}</p>
+                </div>
+              )
+            })()}
+
+          </div>
+        </>
       )}
     </div>
   )
