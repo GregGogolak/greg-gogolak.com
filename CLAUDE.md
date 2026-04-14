@@ -234,8 +234,8 @@ major customer loss, antitrust action, competing chip threat
 - No charting, no order execution, NVDA only
 
 ## Phase Status (update this when phases complete)
-- Phase 1: NOT STARTED
-- Phase 2: NOT STARTED
+- Phase 1: COMPLETE
+- Phase 2: COMPLETE
 - Phase 3: NOT STARTED
 - Phase 4: NOT STARTED
 - Phase 5: NOT STARTED
