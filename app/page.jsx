@@ -24,18 +24,28 @@ function SentimentChip() {
   useEffect(() => {
     fetch('/api/analysis')
       .then(r => r.json())
-      .then(res => { if (res.fromCache && res.marketPulse) setPulse(res.marketPulse) })
+      .then(res => {
+        const latest = Array.isArray(res) ? res[0] : res
+        if (latest?.marketPulse) setPulse(latest.marketPulse)
+      })
       .catch(() => {})
   }, [])
 
   if (!pulse) return null
 
   return (
-    <div className="flex gap-3 items-center px-3 py-2 rounded-lg border border-white/5 bg-white/[0.03] text-xs font-mono">
-      <span className="text-gray-500 tracking-widest text-[10px]">PULSE</span>
-      <span className="text-white">🧑 {pulse.retail.label}</span>
-      <span className="text-gray-600">·</span>
-      <span className="text-white">🏦 {pulse.hedge.label}</span>
+    <div style={{
+      marginTop: '12px',
+      padding: '10px 14px',
+      borderRadius: '10px',
+      background: 'rgba(91,156,246,0.05)',
+      border: '1px solid rgba(91,156,246,0.12)',
+      display: 'flex', gap: '12px', alignItems: 'center',
+    }}>
+      <span style={{ fontSize: '9px', color: '#3d4a5c', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif' }}>PULSE</span>
+      <span style={{ fontSize: '11px', color: '#eef2ff', fontFamily: 'Inter, sans-serif' }}>🧑 {pulse.retail.label}</span>
+      <span style={{ color: '#3d4a5c' }}>·</span>
+      <span style={{ fontSize: '11px', color: '#eef2ff', fontFamily: 'Inter, sans-serif' }}>🏦 {pulse.hedge.label}</span>
     </div>
   )
 }
@@ -197,48 +207,63 @@ export default function Dashboard() {
 
       {/* Main grid */}
       <main style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '12px 24px 0' }}>
-          <SentimentChip />
-        </div>
-        {/* Desktop: 3-column layout */}
+        {/*
+          Desktop 3-col layout:
+            Col 1: Price (rows 1-2) │ Col 2: Macro      │ Col 3: Signals (rows 1-2)
+                   Thesis+Pulse(r3) │        Catalyst   │        Signals
+                                    │        Positions  │        News (row 3)
+        */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateRows: 'auto auto 1fr',
           gridTemplateAreas: `
-            "price   macro    gauge"
-            "thesis  catalyst news"
-            "thesis  position news"
+            "price   macro     signals"
+            "price   catalyst  signals"
+            "thesis  position  news"
           `,
           gap: '16px',
-          padding: '20px 24px',
+          padding: '16px 24px 80px',
           maxWidth: '1400px',
           margin: '0 auto',
-          alignItems: 'start',
         }}
           className="dashboard-grid"
         >
-          {/* Column 1 — Price */}
-          <div style={{ gridArea: 'price' }}>
+          {/* ── PRICE  (col 1, rows 1-2) ─────────────────────────────── */}
+          <div style={{ gridArea: 'price', display: 'flex', flexDirection: 'column' }}>
             <PricePanel data={priceData} loading={loading} />
           </div>
 
-          {/* Column 1 — Thesis */}
-          <div style={{ gridArea: 'thesis' }}>
-            <ThesisStatus
-              status={thesis.status}
-              triggers={thesis.triggers}
-              price={price}
-              sma200={sma200}
-              loading={loading}
-            />
-          </div>
-
-          {/* Column 2 — Macro */}
+          {/* ── MACRO ENV  (col 2, row 1) ────────────────────────────── */}
           <div style={{ gridArea: 'macro' }}>
             <MacroPanel data={macroData} loading={macroLoading && !macroData} />
           </div>
 
-          {/* Column 2 — Catalysts + Iran */}
+          {/* ── SIGNALS  (col 3, rows 1-2) — gauge + entry checklist ─── */}
+          <div style={{ gridArea: 'signals', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Signal gauge card */}
+            <div style={{
+              background: 'rgba(255,255,255,0.028)',
+              border: '1px solid rgba(255,255,255,0.065)',
+              borderRadius: '14px', padding: '18px',
+            }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: '#3d4a5c', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '10px' }}>
+                Signal Strength
+              </div>
+              <SignalGauge passCount={passCount} totalCount={checklistItems.length} />
+            </div>
+            {/* Entry checklist card */}
+            <div style={{
+              background: 'rgba(255,255,255,0.028)',
+              border: '1px solid rgba(255,255,255,0.065)',
+              borderRadius: '14px', padding: '18px',
+              flex: 1,
+            }}>
+              <BuyChecklist items={checklistItems} />
+            </div>
+          </div>
+
+          {/* ── CATALYSTS  (col 2, row 2) ────────────────────────────── */}
           <div style={{ gridArea: 'catalyst' }}>
             <CatalystBar
               iranStatus={iranStatus}
@@ -247,8 +272,21 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Column 2 — Positions */}
-          <div style={{ gridArea: 'position' }}>
+          {/* ── THESIS + PULSE  (col 1, row 3) ──────────────────────── */}
+          <div style={{ gridArea: 'thesis', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <ThesisStatus
+              status={thesis.status}
+              triggers={thesis.triggers}
+              price={price}
+              sma200={sma200}
+              loading={loading}
+              style={{ flex: 1 }}
+            />
+            <SentimentChip />
+          </div>
+
+          {/* ── POSITIONS  (col 2, row 3) ────────────────────────────── */}
+          <div style={{ gridArea: 'position', display: 'flex', flexDirection: 'column' }}>
             <PositionPanel
               positions={positions}
               currentPrice={price}
@@ -256,65 +294,44 @@ export default function Dashboard() {
               onAdd={handleAddPosition}
               onRemove={handleRemovePosition}
               onSetCash={handleSetCash}
+              style={{ flex: 1 }}
             />
           </div>
 
-          {/* Column 3 — Gauge */}
-          <div style={{ gridArea: 'gauge' }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.028)',
-              border: '1px solid rgba(255,255,255,0.065)',
-              borderRadius: '14px', padding: '18px',
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Signal Strength
-              </div>
-              <SignalGauge passCount={passCount} totalCount={checklistItems.length} />
-            </div>
-          </div>
-
-          {/* Column 3 — Checklist (inside same card as gauge on wide screens looks odd — separate card) */}
-          {/* We'll put checklist inline below gauge in col 3, and news spans lower */}
-          <div style={{ gridArea: 'news', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Checklist */}
-            <div style={{
-              background: 'rgba(255,255,255,0.028)',
-              border: '1px solid rgba(255,255,255,0.065)',
-              borderRadius: '14px', padding: '18px',
-            }}>
-              <BuyChecklist items={checklistItems} />
-            </div>
-            {/* News */}
+          {/* ── NEWS  (col 3, row 3) ─────────────────────────────────── */}
+          <div style={{ gridArea: 'news' }}>
             <NewsPanel articles={articles} loading={newsLoading && articles.length === 0} />
           </div>
         </div>
       </main>
 
-      {/* Responsive styles injected via style tag */}
+      {/* Responsive styles */}
       <style>{`
         @media (max-width: 1024px) {
           .dashboard-grid {
             grid-template-columns: 1fr 1fr !important;
+            grid-template-rows: auto !important;
             grid-template-areas:
-              "price   macro"
-              "thesis  catalyst"
-              "thesis  position"
-              "gauge   gauge"
-              "news    news" !important;
+              "price    macro"
+              "price    catalyst"
+              "signals  signals"
+              "thesis   position"
+              "news     news" !important;
           }
         }
         @media (max-width: 640px) {
           .dashboard-grid {
             grid-template-columns: 1fr !important;
+            grid-template-rows: auto !important;
             grid-template-areas:
               "price"
               "thesis"
-              "gauge"
+              "signals"
               "macro"
               "catalyst"
               "position"
               "news" !important;
-            padding: 12px 16px !important;
+            padding: 12px 16px 80px !important;
           }
         }
       `}</style>
