@@ -20,16 +20,15 @@ const BASE_URL = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : 'http://localhost:3000'
 
-// GET — return cached result for the dashboard sentiment chip
+// GET — return full history list for tab population
 export async function GET() {
   try {
-    const redis  = getRedis()
-    if (!redis) return Response.json({ cached: false })
-    const cached = await redis.get(CACHE_KEY)
-    if (cached) return Response.json({ ...cached, fromCache: true })
-    return Response.json({ cached: false })
+    const redis = getRedis()
+    if (!redis) return Response.json([])
+    const history = await redis.lrange('analysis:history', 0, 4)
+    return Response.json(Array.isArray(history) ? history : [])
   } catch {
-    return Response.json({ cached: false })
+    return Response.json([])
   }
 }
 
