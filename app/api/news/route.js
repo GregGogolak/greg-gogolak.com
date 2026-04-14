@@ -1,3 +1,5 @@
+import { classifyWithKeywords } from '@/lib/newsClassifier'
+
 const FINNHUB = 'https://finnhub.io/api/v1'
 const KEY     = process.env.FINNHUB_API_KEY
 
@@ -35,6 +37,7 @@ export async function GET() {
         source:   a.source,
         image:    a.image || null,
         datetime: a.datetime,
+        bucket:   classifyWithKeywords(a.headline + ' ' + (a.summary || '')) ?? 'A',
       }))
 
     const result = { articles: sorted, lastUpdated: Date.now() }
