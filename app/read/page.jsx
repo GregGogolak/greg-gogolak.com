@@ -207,7 +207,9 @@ export default function ReadPage() {
                 <span className="text-gray-700 font-mono text-[9px]">{pulseOpen ? '▲' : '▼'}</span>
               </div>
 
-              {!pulseOpen ? (
+              {!data.marketPulse ? (
+                <p className="text-[9px] font-mono text-gray-700">Not available for this read</p>
+              ) : !pulseOpen ? (
                 <div className="flex gap-2">
                   <div className="flex-1 border border-white/[0.03] rounded-md px-3 py-2">
                     <p className="text-[8px] font-mono text-gray-700 tracking-widest mb-1">RETAIL</p>
