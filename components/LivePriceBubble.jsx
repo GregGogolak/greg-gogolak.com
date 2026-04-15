@@ -76,15 +76,6 @@ export default function LivePriceBubble({ livePrice, prevClose, pctChange, wsCon
       borderRadius: '14px',
       padding:      '14px 18px',
     }}>
-      <style>{`
-        @keyframes lpbFlashUp   { 0%{color:#34d399} 100%{color:#eef2ff} }
-        @keyframes lpbFlashDown { 0%{color:#f87171} 100%{color:#eef2ff} }
-        .lpb-flash-up   { animation: lpbFlashUp   300ms ease-out forwards }
-        .lpb-flash-down { animation: lpbFlashDown 300ms ease-out forwards }
-        @keyframes lpbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.8)} }
-        .lpb-dot { animation: lpbPulse 2s ease-in-out infinite }
-      `}</style>
-
       {/* Row 1: badge · dot · countdown */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
         <span style={{
