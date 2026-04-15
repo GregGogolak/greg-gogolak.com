@@ -81,8 +81,8 @@ For closed trade history (Track page), the formula also includes:
 - Voice input: Web Speech API (browser native) — Phase 3, deferred
 - Voice output: ElevenLabs TTS — Phase 3, deferred
 - AI layer: Anthropic API (claude-sonnet-4-6)
-- Price/macro data: Finnhub API
-- Fundamentals: Alpha Vantage API
+- Price/macro data: Finnhub (quotes + QQQ), Twelve Data (SMAs + time series), OilPriceAPI (Brent crude), Yahoo Finance (VIX)
+- Fundamentals: Alpha Vantage API (OVERVIEW endpoint)
 - Persistence: Upstash Redis (KV)
 - Hosting: Vercel (auto-deploy from GitHub main branch)
 
@@ -96,7 +96,9 @@ Never hardcode values — always use process.env.
 ```
 FINNHUB_API_KEY                   server-side only (API routes)
 NEXT_PUBLIC_FINNHUB_API_KEY       client-side (WebSocket in NVDALiveContext)
-ALPHA_VANTAGE_API_KEY             server-side only
+ALPHA_VANTAGE_API_KEY             server-side only (fundamentals/route.js OVERVIEW endpoint)
+TWELVE_DATA_API_KEY               server-side only (SMAs + daily time series in price/route.js)
+OIL_PRICE_API_KEY                 server-side only (Brent crude in macro/route.js)
 ANTHROPIC_API_KEY                 server-side only
 ELEVENLABS_API_KEY                server-side only (Phase 3, not yet used)
 ELEVENLABS_VOICE_ID               server-side only (Phase 3, not yet used)
@@ -129,8 +131,8 @@ nvda-jarvis/
 │   ├── track/page.jsx                 Trade history + P&L summary
 │   │
 │   └── api/
-│       ├── price/route.js             NVDA quote + SMAs (Finnhub + AV) + market status
-│       ├── macro/route.js             QQQ (Finnhub), Brent oil (AV), VIX (Yahoo)
+│       ├── price/route.js             NVDA quote (Finnhub), SMAs + time series (Twelve Data), market status
+│       ├── macro/route.js             QQQ (Finnhub), Brent oil (OilPriceAPI), VIX (Yahoo Finance)
 │       ├── news/route.js              NVDA news (Finnhub), keyword-classified A/B/C
 │       ├── fundamentals/route.js      Analyst target, PE, EPS (AV, 6hr KV cache)
 │       ├── analysis/route.js          Give Me A Read (Anthropic, 30min KV cache)

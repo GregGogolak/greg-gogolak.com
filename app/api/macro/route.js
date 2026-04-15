@@ -1,11 +1,7 @@
 const FINNHUB  = 'https://finnhub.io/api/v1'
-const AV       = 'https://www.alphavantage.co/query'
 const OIL_BASE = 'https://api.oilpriceapi.com/v1'
-const TD       = 'https://api.twelvedata.com'
 const FH_KEY   = process.env.FINNHUB_API_KEY
-const AV_KEY   = process.env.ALPHA_VANTAGE_API_KEY
 const OIL_KEY  = process.env.OIL_PRICE_API_KEY
-const TD_KEY   = process.env.TWELVE_DATA_API_KEY
 
 // Separate caches per data source
 let cache       = { data: null, ts: 0 }

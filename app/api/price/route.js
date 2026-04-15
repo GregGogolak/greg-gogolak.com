@@ -1,10 +1,9 @@
 const FINNHUB = 'https://finnhub.io/api/v1'
-const AV      = 'https://www.alphavantage.co/query'
+const TD      = 'https://api.twelvedata.com'
 const FH_KEY  = process.env.FINNHUB_API_KEY
-const AV_KEY  = process.env.ALPHA_VANTAGE_API_KEY
+const TD_KEY  = process.env.TWELVE_DATA_API_KEY
 
 // Server-side in-memory caches
-// AV call budget: SMA200 (4/day) + SMA50 (4/day) + daily (4/day) + brent (4/day) + fundamentals (4/day) = ~20/day
 let quoteCache  = { data: null, ts: 0 }
 let sma200Cache = { data: null, ts: 0 }
 let sma50Cache  = { data: null, ts: 0 }
@@ -27,43 +26,56 @@ async function fetchQuote() {
 
 async function fetchSMA(period, cache, setCache) {
   if (Date.now() - cache.ts < SMA_TTL && cache.data) return cache.data
-  const res  = await fetch(
-    `${AV}?function=SMA&symbol=NVDA&interval=daily&time_period=${period}&series_type=close&apikey=${AV_KEY}`,
-    { cache: 'no-store' }
-  )
-  const json = await res.json()
-  const s    = json?.['Technical Analysis: SMA']
-  if (!s) return null
-  const latest = Object.values(s)[0]
-  if (!latest) return null
-  const val = parseFloat(latest.SMA)
-  setCache({ data: val, ts: Date.now() })
-  return val
+  try {
+    const res  = await fetch(
+      `${TD}/sma?symbol=NVDA&interval=1day&time_period=${period}&outputsize=2&apikey=${TD_KEY}`,
+      { cache: 'no-store' }
+    )
+    const json = await res.json()
+    if (json?.status === 'error') {
+      console.error(`[fetchSMA ${period}] TD error:`, json.code, json.message)
+      return null
+    }
+    const val  = parseFloat(json?.values?.[0]?.sma)
+    if (!val || isNaN(val)) return null
+    setCache({ data: val, ts: Date.now() })
+    return val
+  } catch {
+    return null
+  }
 }
 
 /**
- * Alpha Vantage compact daily — last 100 trading days.
+ * Twelve Data time_series daily — last 100 trading days.
  * Provides: sparkline, 10-day high, 30-day avg volume.
  */
 async function fetchDaily() {
   if (Date.now() - dailyCache.ts < DAILY_TTL && dailyCache.data) return dailyCache.data
-  const res  = await fetch(
-    `${AV}?function=TIME_SERIES_DAILY&symbol=NVDA&outputsize=compact&apikey=${AV_KEY}`,
-    { cache: 'no-store' }
-  )
-  const json = await res.json()
-  const series = json?.['Time Series (Daily)']
-  if (!series) return null
+  try {
+    const res  = await fetch(
+      `${TD}/time_series?symbol=NVDA&interval=1day&outputsize=100&apikey=${TD_KEY}`,
+      { cache: 'no-store' }
+    )
+    const json = await res.json()
+    if (json?.status === 'error') {
+      console.error('[fetchDaily] TD error:', json.code, json.message)
+      return null
+    }
+    const values = json?.values
+    if (!Array.isArray(values) || values.length === 0) return null
 
-  // Dates in descending order from AV — convert to arrays newest→oldest then reverse
-  const dates  = Object.keys(series).sort((a, b) => b.localeCompare(a))
-  const closes = dates.map(d => parseFloat(series[d]['4. close'])).reverse()
-  const highs  = dates.map(d => parseFloat(series[d]['2. high'])).reverse()
-  const vols   = dates.map(d => parseFloat(series[d]['5. volume'])).reverse()
+    // Twelve Data returns newest-first — reverse to oldest→newest for slice(-N) calcs
+    const reversed = [...values].reverse()
+    const closes = reversed.map(d => parseFloat(d.close))
+    const highs  = reversed.map(d => parseFloat(d.high))
+    const vols   = reversed.map(d => parseFloat(d.volume))
 
-  const data = { closes, highs, vols }
-  dailyCache = { data, ts: Date.now() }
-  return data
+    const data = { closes, highs, vols }
+    dailyCache = { data, ts: Date.now() }
+    return data
+  } catch {
+    return null
+  }
 }
 
 async function fetchMarketStatus() {
@@ -90,10 +102,12 @@ export async function GET() {
     const quotePromise        = fetchQuote()
     const marketStatusPromise = fetchMarketStatus()
 
-    // AV calls run sequentially to respect 1 req/sec burst limit.
-    // With 6-hour caching, this only matters on cold start (once every 6hr).
+    // TD calls run sequentially with a 1s gap to stay within the 8 credits/min rate limit.
+    // With 6-hour caching, this only fires on cold start (once every 6hr).
     const sma200 = await fetchSMA(200, sma200Cache, (v) => { sma200Cache = v })
+    await new Promise(r => setTimeout(r, 1100))
     const sma50  = await fetchSMA(50,  sma50Cache,  (v) => { sma50Cache  = v })
+    await new Promise(r => setTimeout(r, 1100))
     const daily  = await fetchDaily()
     const quote  = await quotePromise
     const marketOpen = await marketStatusPromise
