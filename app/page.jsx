@@ -124,11 +124,14 @@ export default function Dashboard() {
 
   const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix })
 
+  const nowSec         = Date.now() / 1000
+  const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)
+
   const checklistItems = getBuyChecklist({
     price:          price ?? 0,
     sma200:         sma200 ?? 0,
     analystTarget,
-    hasBucketCNews: articles.some(a => a.bucket === 'C'),
+    hasBucketCNews,
     qqqPctChange:   qqqPct,
     vix,
     daysToEarnings: daysUntil(EARNINGS_DATE),
