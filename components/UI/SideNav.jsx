@@ -1,18 +1,28 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 
-const NAV = [
+const adminNav = [
   { href: '/',       label: 'Dashboard', icon: '⬡' },
   { href: '/brief',  label: 'Brief',     icon: '◑' },
   { href: '/read',   label: 'Read',      icon: '◈' },
   { href: '/trade',  label: 'Trade',     icon: '◇' },
   { href: '/alerts', label: 'Alerts',    icon: '◉' },
   { href: '/track',  label: 'Track',     icon: '◫' },
+  { href: '/ledger', label: 'Ledger',    icon: '◻' },
+]
+
+const memberNav = [
+  { href: '/track',  label: 'Track',     icon: '◇' },
+  { href: '/ledger', label: 'Ledger',    icon: '◻' },
 ]
 
 export default function SideNav() {
   const pathname = usePathname()
+  const { user } = useUser()
+  const role = user?.publicMetadata?.role ?? user?.privateMetadata?.role ?? 'member'
+  const navItems = role === 'admin' ? adminNav : memberNav
 
   return (
     <>
@@ -100,7 +110,7 @@ export default function SideNav() {
           boxShadow: '0 0 20px rgba(91,156,246,0.18), inset 0 1px 0 rgba(91,156,246,0.2)',
         }}>⬡</div>
 
-        {NAV.map(({ href, label, icon }, i) => {
+        {navItems.map(({ href, label, icon }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
           return (
             <Link

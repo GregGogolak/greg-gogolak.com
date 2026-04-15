@@ -1,21 +1,18 @@
 import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
+import { getUserId } from '@/lib/auth'
 
-// ── Redis keys ─────────────────────────────────────────────────────────────
-const KEYS = {
-  positions: 'positions:list',
-  cash:      'cash:available',
-  iran:      'iran:status',
-}
+// Iran status is shared across all users — not namespaced
+const IRAN_KEY = 'iran:status'
 
 const DEFAULTS = { positions: [], cash: 0, iranStatus: 'ESCALATING' }
 
-async function readAll(redis) {
+async function readAll(redis, posKey, cashKey) {
   if (!redis) return DEFAULTS
   const [rawPositions, rawCash, rawIran] = await Promise.all([
-    redis.get(KEYS.positions),
-    redis.get(KEYS.cash),
-    redis.get(KEYS.iran),
+    redis.get(posKey),
+    redis.get(cashKey),
+    redis.get(IRAN_KEY),
   ])
   return {
     positions:  safeParse(rawPositions, []),
@@ -27,8 +24,12 @@ async function readAll(redis) {
 // ── GET — full state ───────────────────────────────────────────────────────
 export async function GET() {
   try {
+    const userId = await getUserId()
+    const POSITIONS_KEY = `positions:${userId}`
+    const CASH_KEY = `cash:${userId}`
+
     const redis = getRedis()
-    const data  = await readAll(redis)
+    const data  = await readAll(redis, POSITIONS_KEY, CASH_KEY)
     return Response.json(data)
   } catch (err) {
     console.error('[/api/positions GET]', err)
@@ -39,6 +40,10 @@ export async function GET() {
 // ── POST — mutations ───────────────────────────────────────────────────────
 export async function POST(req) {
   try {
+    const userId = await getUserId()
+    const POSITIONS_KEY = `positions:${userId}`
+    const CASH_KEY = `cash:${userId}`
+
     const redis = getRedis()
     const { action, payload } = await req.json()
 
@@ -46,30 +51,30 @@ export async function POST(req) {
 
     switch (action) {
       case 'add': {
-        const current = safeParse(await redis.get(KEYS.positions), [])
+        const current = safeParse(await redis.get(POSITIONS_KEY), [])
         const newPos  = { ...payload, id: crypto.randomUUID(), status: 'OPEN' }
         const updated = [...current, newPos]
-        await redis.set(KEYS.positions, JSON.stringify(updated))
+        await redis.set(POSITIONS_KEY, JSON.stringify(updated))
         // Return updated list so client can sync without a second fetch
         return Response.json({ ok: true, positions: updated })
       }
 
       case 'remove': {
-        const current  = safeParse(await redis.get(KEYS.positions), [])
+        const current  = safeParse(await redis.get(POSITIONS_KEY), [])
         const filtered = current.filter(p => p.id !== payload.id)
-        await redis.set(KEYS.positions, JSON.stringify(filtered))
+        await redis.set(POSITIONS_KEY, JSON.stringify(filtered))
         return Response.json({ ok: true, positions: filtered })
       }
 
       case 'setCash': {
         // payload: { cash: number }
-        await redis.set(KEYS.cash, String(payload.cash))
+        await redis.set(CASH_KEY, String(payload.cash))
         return Response.json({ ok: true })
       }
 
       case 'setIran': {
         // payload: { status: string }
-        await redis.set(KEYS.iran, payload.status)
+        await redis.set(IRAN_KEY, payload.status)
         return Response.json({ ok: true })
       }
 

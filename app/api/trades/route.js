@@ -1,8 +1,7 @@
 import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
 import { calculateTrade } from '@/lib/tradeCalculations'
-
-const TRADES_KEY = 'nvda_trades'
+import { getUserId } from '@/lib/auth'
 
 function validateInputs({ buy_price, sell_price, shares, buy_date, sell_date, type }) {
   if (!buy_date || !sell_date || !type) return 'All fields are required'
@@ -17,6 +16,9 @@ function validateInputs({ buy_price, sell_price, shares, buy_date, sell_date, ty
 // ── GET — return all trades sorted by sell_date descending ─────────────────
 export async function GET() {
   try {
+    const userId = await getUserId()
+    const TRADES_KEY = `trades:${userId}`
+
     const redis = getRedis()
     if (!redis) return Response.json([])
     const raw    = await redis.get(TRADES_KEY)
@@ -32,6 +34,9 @@ export async function GET() {
 // ── POST — validate, calculate, append, save ───────────────────────────────
 export async function POST(req) {
   try {
+    const userId = await getUserId()
+    const TRADES_KEY = `trades:${userId}`
+
     const redis = getRedis()
     const body  = await req.json()
     const { buy_price, sell_price, shares, buy_date, sell_date, type } = body
@@ -74,6 +79,9 @@ export async function POST(req) {
 // ── PUT — find by id, recalculate, update, save ────────────────────────────
 export async function PUT(req) {
   try {
+    const userId = await getUserId()
+    const TRADES_KEY = `trades:${userId}`
+
     const redis = getRedis()
     const body  = await req.json()
     const { id, buy_price, sell_price, shares, buy_date, sell_date, type } = body
@@ -119,6 +127,9 @@ export async function PUT(req) {
 // ── DELETE — find by id, remove, save ─────────────────────────────────────
 export async function DELETE(req) {
   try {
+    const userId = await getUserId()
+    const TRADES_KEY = `trades:${userId}`
+
     const redis = getRedis()
     const { id } = await req.json()
     if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
