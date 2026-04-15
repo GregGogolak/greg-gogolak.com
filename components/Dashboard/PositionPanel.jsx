@@ -8,7 +8,7 @@ const card = {
   borderRadius: '14px', padding: '16px 18px',
 }
 
-export default function PositionPanel({ positions = [], currentPrice, cash = 0, onAdd, onRemove, onSetCash }) {
+export default function PositionPanel({ positions = [], currentPrice, cash = 0, onAdd, onRemove, onSetCash, style: styleProp }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm]         = useState({ type: 'CONVICTION', shares: '', entryPrice: '', entryDate: new Date().toISOString().split('T')[0], label: '' })
   const [editCash, setEditCash] = useState(false)
@@ -27,9 +27,9 @@ export default function PositionPanel({ positions = [], currentPrice, cash = 0, 
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', ...styleProp }}>
       {/* Positions */}
-      <div style={card}>
+      <div style={{ ...card, flex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <span style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Positions</span>
           <button onClick={() => setShowForm(v => !v)} style={{

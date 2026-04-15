@@ -9,7 +9,7 @@ const ORB_STYLES = {
 
 const ICONS = { INTACT: '✦', 'AT RISK': '◉', BROKEN: '✕', UNKNOWN: '?' }
 
-export default function ThesisStatus({ status = 'UNKNOWN', triggers = [] }) {
+export default function ThesisStatus({ status = 'UNKNOWN', triggers = [], style: styleProp }) {
   const s = ORB_STYLES[status] || ORB_STYLES.UNKNOWN
 
   return (
@@ -18,6 +18,7 @@ export default function ThesisStatus({ status = 'UNKNOWN', triggers = [] }) {
       border: '1px solid rgba(255,255,255,0.065)',
       borderRadius: '14px', padding: '18px',
       position: 'relative', overflow: 'hidden',
+      ...styleProp,
     }}>
       <div style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
         Thesis
