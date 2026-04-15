@@ -1,4 +1,5 @@
 import { getRedis } from '@/lib/redis'
+import { safeParse } from '@/lib/safeParse'
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY
 const CACHE_KEY    = 'fundamentals:nvda'
@@ -12,8 +13,8 @@ export async function GET() {
     if (redis) {
       const cached = await redis.get(CACHE_KEY)
       if (cached) {
-        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached
-        if (Date.now() - parsed.ts < CACHE_TTL_MS) return Response.json(parsed)
+        const parsed = safeParse(cached)
+        if (parsed && Date.now() - parsed.ts < CACHE_TTL_MS) return Response.json(parsed)
       }
     }
 
