@@ -9,8 +9,10 @@ let quoteCache  = { data: null, ts: 0 }
 let sma200Cache = { data: null, ts: 0 }
 let sma50Cache  = { data: null, ts: 0 }
 let dailyCache  = { data: null, ts: 0 }
+let marketStatusCache = { data: null, ts: 0 }
 
 const QUOTE_TTL = 55_000       // 55 seconds — live price
+const MARKET_STATUS_TTL = 3_600_000 // 1 hour
 const SMA_TTL   = 6 * 3600_000 // 6 hours — SMAs change slowly
 const DAILY_TTL = 6 * 3600_000 // 6 hours — 100-day window for sparkline/volume/10d high
 
@@ -64,10 +66,29 @@ async function fetchDaily() {
   return data
 }
 
+async function fetchMarketStatus() {
+  if (Date.now() - marketStatusCache.ts < MARKET_STATUS_TTL && marketStatusCache.data !== null) {
+    return marketStatusCache.data
+  }
+  try {
+    const res  = await fetch(
+      `${FINNHUB}/stock/market-status?exchange=US&token=${FH_KEY}`,
+      { cache: 'no-store' }
+    )
+    const json = await res.json()
+    const isOpen = json?.isOpen ?? null
+    marketStatusCache = { data: isOpen, ts: Date.now() }
+    return isOpen
+  } catch {
+    return null // non-fatal — bubble falls back to client-side ET logic
+  }
+}
+
 export async function GET() {
   try {
-    // Start Finnhub quote immediately (doesn't count toward AV rate limit)
-    const quotePromise = fetchQuote()
+    // Start Finnhub calls immediately (don't count toward AV rate limit)
+    const quotePromise        = fetchQuote()
+    const marketStatusPromise = fetchMarketStatus()
 
     // AV calls run sequentially to respect 1 req/sec burst limit.
     // With 6-hour caching, this only matters on cold start (once every 6hr).
@@ -75,6 +96,7 @@ export async function GET() {
     const sma50  = await fetchSMA(50,  sma50Cache,  (v) => { sma50Cache  = v })
     const daily  = await fetchDaily()
     const quote  = await quotePromise
+    const marketOpen = await marketStatusPromise
 
     const price = quote.c
 
@@ -103,6 +125,7 @@ export async function GET() {
       thirtyDayAvgVol,
       volumeRatio:    thirtyDayAvgVol && quote.v ? quote.v / thirtyDayAvgVol : null,
       sparkline,
+      marketOpen,
       lastUpdated:    Date.now(),
     })
   } catch (err) {
