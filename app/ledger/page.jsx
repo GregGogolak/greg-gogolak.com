@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { fmtEUR } from '@/lib/format'
 
-function LeaderCard({ title, icon, value, valueColor, winners, style }) {
+function LeaderCard({ title, icon, value, valueColor, winners, runners = [], style }) {
   return (
     <div style={{ ...leaderCard, ...style }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -11,7 +11,7 @@ function LeaderCard({ title, icon, value, valueColor, winners, style }) {
         <span style={{ fontSize: '16px' }}>{icon}</span>
       </div>
       <div style={{ ...leaderCardValue, color: valueColor }}>{value}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px', marginBottom: runners.length > 0 ? '10px' : '0' }}>
         {winners.map((name, i) => (
           <span key={i} style={leaderCardName}>
             {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
@@ -21,6 +21,21 @@ function LeaderCard({ title, icon, value, valueColor, winners, style }) {
           <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', marginLeft: '2px' }}>TIED</span>
         )}
       </div>
+      {runners.length > 0 && (
+        <div style={{ borderTop: '0.5px solid #1a1f2e', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {runners.map((runner, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#2a2f3e', background: '#1a1f2e', borderRadius: '3px', padding: '1px 5px' }}>
+                  #{i + 2}
+                </span>
+                <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }}>{runner.name}</span>
+              </div>
+              <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }}>{runner.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -135,6 +150,11 @@ export default function LedgerPage() {
               winners={leaderboard.mostProfitable.map(m => m.name)}
               value={fmtEUR(leaderboard.mostProfitable[0]?.totalNetEur)}
               valueColor='#22c55e'
+              runners={[...members]
+                .sort((a, b) => b.totalNetEur - a.totalNetEur)
+                .filter(m => !leaderboard.mostProfitable.find(w => w.userId === m.userId))
+                .slice(0, 4)
+                .map(m => ({ name: m.name, value: fmtEUR(m.totalNetEur) }))}
             />
 
             <LeaderCard
@@ -143,6 +163,12 @@ export default function LedgerPage() {
               winners={leaderboard.bestWinRate.length > 0 ? leaderboard.bestWinRate.map(m => m.name) : ['min 3 trades']}
               value={leaderboard.bestWinRate.length > 0 ? `${leaderboard.bestWinRate[0].winRate}%` : '—'}
               valueColor='#7b8cde'
+              runners={[...members]
+                .filter(m => m.tradeCount >= 3)
+                .sort((a, b) => b.winRate - a.winRate)
+                .filter(m => !leaderboard.bestWinRate.find(w => w.userId === m.userId))
+                .slice(0, 4)
+                .map(m => ({ name: m.name, value: `${m.winRate}%` }))}
             />
 
             <LeaderCard
@@ -151,6 +177,12 @@ export default function LedgerPage() {
               winners={leaderboard.bestSingleTrade.length > 0 ? leaderboard.bestSingleTrade.map(m => m.name) : ['—']}
               value={leaderboard.bestSingleTrade.length > 0 ? fmtEUR(leaderboard.bestSingleTrade[0].bestTrade.net_eur) : '—'}
               valueColor='#f59e0b'
+              runners={[...members]
+                .filter(m => m.bestTrade)
+                .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)
+                .filter(m => !leaderboard.bestSingleTrade.find(w => w.userId === m.userId))
+                .slice(0, 4)
+                .map(m => ({ name: m.name, value: fmtEUR(m.bestTrade.net_eur) }))}
             />
 
             <LeaderCard
@@ -159,6 +191,11 @@ export default function LedgerPage() {
               winners={leaderboard.mostActive.map(m => m.name)}
               value={`${leaderboard.mostActive[0]?.tradeCount} trades`}
               valueColor='#e8eaf6'
+              runners={[...members]
+                .sort((a, b) => b.tradeCount - a.tradeCount)
+                .filter(m => !leaderboard.mostActive.find(w => w.userId === m.userId))
+                .slice(0, 4)
+                .map(m => ({ name: m.name, value: `${m.tradeCount} trades` }))}
             />
 
             <LeaderCard
@@ -168,6 +205,11 @@ export default function LedgerPage() {
               value={fmtEUR(leaderboard.bestThisMonth[0]?.thisMonthNet)}
               valueColor={leaderboard.bestThisMonth[0]?.thisMonthNet >= 0 ? '#22c55e' : '#ef4444'}
               style={{ gridColumn: 'span 2' }}
+              runners={[...members]
+                .sort((a, b) => b.thisMonthNet - a.thisMonthNet)
+                .filter(m => !leaderboard.bestThisMonth.find(w => w.userId === m.userId))
+                .slice(0, 4)
+                .map(m => ({ name: m.name, value: fmtEUR(m.thisMonthNet) }))}
             />
 
           </div>
