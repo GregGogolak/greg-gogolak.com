@@ -1,4 +1,4 @@
-import { classifyWithKeywords } from '@/lib/newsClassifier'
+import { classifyWithKeywords, scoreArticle } from '@/lib/newsClassifier'
 
 const FINNHUB = 'https://finnhub.io/api/v1'
 const KEY     = process.env.FINNHUB_API_KEY
@@ -29,16 +29,19 @@ export async function GET() {
       .filter(a => a.headline && a.url)
       .sort((a, b) => b.datetime - a.datetime)
       .slice(0, 15)
-      .map(a => ({
-        id:       a.id,
-        headline: a.headline,
-        summary:  a.summary,
-        url:      a.url,
-        source:   a.source,
-        image:    a.image || null,
-        datetime: a.datetime,
-        bucket:   classifyWithKeywords(a.headline + ' ' + (a.summary || '')),
-      }))
+      .map(a => {
+        const bucket = classifyWithKeywords(a.headline + ' ' + (a.summary || ''))
+        return scoreArticle({
+          id:       a.id,
+          headline: a.headline,
+          summary:  a.summary,
+          url:      a.url,
+          source:   a.source,
+          image:    a.image || null,
+          datetime: a.datetime,
+          bucket,
+        })
+      })
 
     const result = { articles: sorted, lastUpdated: Date.now() }
     cache = { data: result, ts: Date.now() }

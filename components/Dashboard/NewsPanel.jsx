@@ -6,15 +6,27 @@ const BUCKET_CONFIG = {
   C: { label: 'RISK',   className: 'text-red-400 bg-red-400/10 border-red-400/20' },
 }
 
-function relativeTime(unixTs) {
-  const diff = Math.floor((Date.now() / 1000) - unixTs)
-  if (diff < 60)        return `${diff}s ago`
-  if (diff < 3600)      return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400)     return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+function formatAge(ageHours) {
+  if (ageHours == null) return null
+  if (ageHours < 1) return `${Math.round(ageHours * 60)}m ago`
+  if (ageHours < 24) return `${Math.floor(ageHours)}h ago`
+  return `${Math.floor(ageHours / 24)}d ago`
+}
+
+function Stars({ count }) {
+  if (!count) return null
+  const color = count >= 3 ? '#f59e0b' : '#4a5568'
+  return (
+    <span style={{ color, fontSize: '10px', letterSpacing: '1px', flexShrink: 0 }}>
+      {'★'.repeat(count)}
+    </span>
+  )
 }
 
 function NewsItem({ article }) {
+  const cfg = BUCKET_CONFIG[article.bucket] ?? BUCKET_CONFIG.A
+  const age = formatAge(article.ageHours)
+
   return (
     <a
       href={article.url || '#'}
@@ -31,17 +43,22 @@ function NewsItem({ article }) {
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '4px' }}>
+        {/* Top row: bucket pill + specificity + headline + stars */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '4px' }}>
           {/* Bucket pill */}
-          {(() => {
-            const cfg = BUCKET_CONFIG[article.bucket] ?? BUCKET_CONFIG.A
-            return (
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${cfg.className}`}
-                style={{ flexShrink: 0, marginTop: '1px' }}>
-                {cfg.label}
-              </span>
-            )
-          })()}
+          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${cfg.className}`}
+            style={{ flexShrink: 0, marginTop: '1px' }}>
+            {cfg.label}
+          </span>
+          {/* Specificity tag */}
+          {article.specificity && (
+            <span style={{
+              fontSize: '10px', fontFamily: 'monospace',
+              color: '#4a5568', flexShrink: 0, marginTop: '2px',
+            }}>
+              {article.specificity}
+            </span>
+          )}
           {/* Headline */}
           <span style={{
             fontSize: '12px', color: '#c4cbda', lineHeight: 1.45, flex: 1,
@@ -49,16 +66,20 @@ function NewsItem({ article }) {
           }}>
             {article.headline}
           </span>
+          {/* Stars */}
+          <Stars count={article.stars} />
         </div>
         {/* Meta row */}
-        <div style={{ display: 'flex', gap: '8px', marginLeft: '52px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginLeft: '4px' }}>
           <span style={{ fontSize: '10px', color: '#3d4a5c', fontFamily: 'Inter, sans-serif' }}>
             {article.source}
           </span>
-          <span style={{ fontSize: '10px', color: '#3d4a5c' }}>·</span>
-          <span style={{ fontSize: '10px', color: '#3d4a5c', fontFamily: 'Inter, sans-serif' }}>
-            {relativeTime(article.datetime)}
-          </span>
+          {age && <>
+            <span style={{ fontSize: '10px', color: '#3d4a5c' }}>·</span>
+            <span style={{ fontSize: '10px', color: '#3d4a5c', fontFamily: 'Inter, sans-serif' }}>
+              {age}
+            </span>
+          </>}
         </div>
       </div>
     </a>
@@ -66,6 +87,13 @@ function NewsItem({ article }) {
 }
 
 export default function NewsPanel({ articles = [], loading }) {
+  // Bucket C always first, then sort by score descending
+  const sorted = [...articles].sort((a, b) => {
+    if (a.bucket === 'C' && b.bucket !== 'C') return -1
+    if (b.bucket === 'C' && a.bucket !== 'C') return 1
+    return (b.score ?? 0) - (a.score ?? 0)
+  })
+
   return (
     <div style={{
       background: 'rgba(255,255,255,0.028)',
@@ -103,7 +131,7 @@ export default function NewsPanel({ articles = [], loading }) {
           </div>
         )}
 
-        {articles.map((article, i) => (
+        {sorted.map((article, i) => (
           <NewsItem key={article.id || i} article={article} />
         ))}
       </div>
