@@ -31,29 +31,47 @@ export default function LedgerPage() {
   )
 
   const members = data?.members ?? []
+  const fundStats = data?.fundStats ?? {}
 
   return (
     <div style={pageStyle}>
       <p style={labelStyle}>LEDGER</p>
 
-      {/* Summary row */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={statCard}>
-          <div style={statLabel}>MEMBERS</div>
-          <div style={statValue}>{members.length}</div>
-        </div>
-        <div style={statCard}>
-          <div style={statLabel}>TOTAL NET</div>
-          <div style={{ ...statValue, color: '#22c55e' }}>
-            {fmtEUR(members.reduce((s, m) => s + m.totalNetEur, 0))}
+      {/* Fund Overview */}
+      <div style={overviewCard}>
+        <div style={overviewLabel}>FUND OVERVIEW</div>
+        <div style={overviewGrid}>
+          <div style={overviewStat}>
+            <div style={overviewStatLabel}>TOTAL NET</div>
+            <div style={{ ...overviewStatValue, color: (fundStats.totalNetEur ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}>
+              {fmtEUR(fundStats.totalNetEur ?? 0)}
+            </div>
+          </div>
+          <div style={overviewStat}>
+            <div style={overviewStatLabel}>TOTAL TRADES</div>
+            <div style={overviewStatValue}>{fundStats.totalTrades ?? 0}</div>
+          </div>
+          <div style={overviewStat}>
+            <div style={overviewStatLabel}>FUND WIN RATE</div>
+            <div style={overviewStatValue}>{fundStats.fundWinRate !== null && fundStats.fundWinRate !== undefined ? `${fundStats.fundWinRate}%` : '—'}</div>
+          </div>
+          <div style={overviewStat}>
+            <div style={overviewStatLabel}>OPEN POSITIONS</div>
+            <div style={overviewStatValue}>{fundStats.totalOpenPositions ?? 0}</div>
           </div>
         </div>
-        <div style={statCard}>
-          <div style={statLabel}>OPEN POSITIONS</div>
-          <div style={statValue}>
-            {members.reduce((s, m) => s + m.openPositions.length, 0)}
+
+        {fundStats.bestTradeEver && (
+          <div style={bestTradeBanner}>
+            <span style={{ color: '#f59e0b', fontSize: '10px', fontFamily: 'monospace', letterSpacing: '0.1em' }}>★ BEST TRADE EVER</span>
+            <span style={{ color: '#e8eaf6', fontSize: '13px', marginLeft: '10px' }}>
+              {fundStats.bestTradeEver.memberName} — {fmtEUR(fundStats.bestTradeEver.net_eur)}
+            </span>
+            <span style={{ color: '#4a5270', fontSize: '11px', marginLeft: '8px' }}>
+              {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.entry_price} → ${fundStats.bestTradeEver.exit_price}
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Member cards */}
@@ -132,12 +150,16 @@ export default function LedgerPage() {
 // Styles
 const pageStyle = { minHeight: '100vh', background: '#080910', color: '#e8eaf6', padding: '24px 16px 96px', maxWidth: '480px', margin: '0 auto' }
 const labelStyle = { fontFamily: 'monospace', fontSize: '11px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '20px' }
-const statCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '100px' }
-const statLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }
-const statValue = { fontFamily: 'monospace', fontSize: '18px', fontWeight: 500, color: '#e8eaf6' }
 const memberCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '14px', marginBottom: '10px' }
 const rankBadge = { width: '24px', height: '24px', borderRadius: '50%', background: '#1a1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }
 const sectionLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }
 const positionRow = { display: 'flex', gap: '10px', alignItems: 'center', padding: '4px 0', borderBottom: '0.5px solid #12151f' }
 const toggleButton = { background: 'none', border: 'none', color: '#4a5270', fontFamily: 'monospace', fontSize: '10px', cursor: 'pointer', padding: '4px 0', letterSpacing: '0.05em' }
 const tradeRow = { display: 'flex', gap: '10px', alignItems: 'center', padding: '4px 0', borderBottom: '0.5px solid #12151f' }
+const overviewCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '16px', marginBottom: '16px' }
+const overviewLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '14px' }
+const overviewGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }
+const overviewStat = { background: '#080910', borderRadius: '6px', padding: '10px' }
+const overviewStatLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }
+const overviewStatValue = { fontFamily: 'monospace', fontSize: '20px', fontWeight: 500, color: '#e8eaf6' }
+const bestTradeBanner = { background: '#12100a', border: '0.5px solid #3a2a0a', borderRadius: '6px', padding: '8px 12px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }

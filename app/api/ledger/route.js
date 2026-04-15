@@ -37,7 +37,33 @@ export async function GET() {
           : null
         const recentTrades = [...trades]
           .sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
-          .slice(0, 5)
+          .slice(0, 10)
+
+        // Best single trade
+        const bestTrade = trades.length > 0
+          ? trades.reduce((best, t) => t.net_eur > (best?.net_eur ?? -Infinity) ? t : best, null)
+          : null
+
+        // Worst single trade
+        const worstTrade = trades.length > 0
+          ? trades.reduce((worst, t) => t.net_eur < (worst?.net_eur ?? Infinity) ? t : worst, null)
+          : null
+
+        // This month net EUR
+        const now = new Date()
+        const thisMonth = trades.filter(t => {
+          const d = new Date(t.sell_date)
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        })
+        const thisMonthNet = thisMonth.reduce((s, t) => s + (t.net_eur ?? 0), 0)
+
+        // Current win streak
+        const sorted = [...trades].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
+        let streak = 0
+        for (const t of sorted) {
+          if (t.net_eur > 0) streak++
+          else break
+        }
 
         return {
           userId: uid,
@@ -49,6 +75,11 @@ export async function GET() {
           winRate,
           tradeCount: trades.length,
           recentTrades,
+          bestTrade,
+          worstTrade,
+          thisMonthNet,
+          winStreak: streak,
+          _allTrades: trades,
         }
       })
     )
@@ -56,7 +87,27 @@ export async function GET() {
     // Sort by total net EUR descending
     members.sort((a, b) => b.totalNetEur - a.totalNetEur)
 
-    return Response.json({ members })
+    // Fund-level stats (requires full trades, not trimmed recentTrades)
+    const fundStats = {
+      totalNetEur: members.reduce((s, m) => s + m.totalNetEur, 0),
+      totalTrades: members.reduce((s, m) => s + m.tradeCount, 0),
+      fundWinRate: (() => {
+        const allTrades = members.flatMap(m => m._allTrades)
+        const wins = allTrades.filter(t => t.net_eur > 0).length
+        return allTrades.length > 0 ? Math.round((wins / allTrades.length) * 100) : null
+      })(),
+      bestTradeEver: members.reduce((best, m) => {
+        if (!m.bestTrade) return best
+        if (!best || m.bestTrade.net_eur > best.net_eur) return { ...m.bestTrade, memberName: m.name }
+        return best
+      }, null),
+      totalOpenPositions: members.reduce((s, m) => s + m.openPositions.length, 0),
+    }
+
+    // Remove internal field before returning
+    members.forEach(m => delete m._allTrades)
+
+    return Response.json({ members, fundStats })
   } catch (err) {
     console.error('[/api/ledger]', err)
     return Response.json({ error: err.message }, { status: 500 })
