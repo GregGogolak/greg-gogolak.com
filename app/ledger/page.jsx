@@ -3,6 +3,19 @@
 import { useState, useEffect } from 'react'
 import { fmtEUR } from '@/lib/format'
 
+function LeaderCard({ title, icon, name, value, valueColor, sub, style: extraStyle }) {
+  return (
+    <div style={{ ...leaderCard, ...extraStyle }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <div style={leaderCardTitle}>{title}</div>
+        <span style={{ fontSize: '16px' }}>{icon}</span>
+      </div>
+      <div style={{ ...leaderCardValue, color: valueColor }}>{value}</div>
+      <div style={leaderCardName}>{name}</div>
+    </div>
+  )
+}
+
 export default function LedgerPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -32,6 +45,18 @@ export default function LedgerPage() {
 
   const members = data?.members ?? []
   const fundStats = data?.fundStats ?? {}
+
+  const leaderboard = members.length > 0 ? {
+    mostProfitable: [...members].sort((a, b) => b.totalNetEur - a.totalNetEur)[0],
+    bestWinRate: [...members]
+      .filter(m => m.tradeCount >= 3)
+      .sort((a, b) => b.winRate - a.winRate)[0] ?? null,
+    bestSingleTrade: [...members]
+      .filter(m => m.bestTrade)
+      .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)[0] ?? null,
+    mostActive: [...members].sort((a, b) => b.tradeCount - a.tradeCount)[0],
+    bestThisMonth: [...members].sort((a, b) => b.thisMonthNet - a.thisMonthNet)[0],
+  } : null
 
   return (
     <div style={pageStyle}>
@@ -73,6 +98,62 @@ export default function LedgerPage() {
           </div>
         )}
       </div>
+
+      {/* Leaderboard */}
+      {leaderboard && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={sectionHeader}>LEADERBOARD</div>
+          <div style={leaderboardGrid}>
+
+            <LeaderCard
+              title='MOST PROFITABLE'
+              icon='💰'
+              name={leaderboard.mostProfitable?.name}
+              value={fmtEUR(leaderboard.mostProfitable?.totalNetEur)}
+              valueColor='#22c55e'
+              sub='all time'
+            />
+
+            <LeaderCard
+              title='BEST WIN RATE'
+              icon='🎯'
+              name={leaderboard.bestWinRate?.name ?? '—'}
+              value={leaderboard.bestWinRate ? `${leaderboard.bestWinRate.winRate}%` : 'min 3 trades'}
+              valueColor='#7b8cde'
+              sub='min 3 trades'
+            />
+
+            <LeaderCard
+              title='BEST SINGLE TRADE'
+              icon='⚡'
+              name={leaderboard.bestSingleTrade?.name ?? '—'}
+              value={leaderboard.bestSingleTrade ? fmtEUR(leaderboard.bestSingleTrade.bestTrade.net_eur) : '—'}
+              valueColor='#f59e0b'
+              sub='highest net EUR'
+            />
+
+            <LeaderCard
+              title='MOST ACTIVE'
+              icon='🔥'
+              name={leaderboard.mostActive?.name}
+              value={`${leaderboard.mostActive?.tradeCount} trades`}
+              valueColor='#e8eaf6'
+              sub='total trades'
+            />
+
+            <LeaderCard
+              title='BEST THIS MONTH'
+              icon='📅'
+              name={leaderboard.bestThisMonth?.name}
+              value={fmtEUR(leaderboard.bestThisMonth?.thisMonthNet)}
+              valueColor={leaderboard.bestThisMonth?.thisMonthNet >= 0 ? '#22c55e' : '#ef4444'}
+              sub={new Date().toLocaleString('default', { month: 'long' })}
+              style={{ gridColumn: 'span 2' }}
+            />
+
+          </div>
+        </div>
+      )}
 
       {/* Member cards */}
       {members.map((member, i) => (
@@ -163,3 +244,9 @@ const overviewStat = { background: '#080910', borderRadius: '6px', padding: '10p
 const overviewStatLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }
 const overviewStatValue = { fontFamily: 'monospace', fontSize: '20px', fontWeight: 500, color: '#e8eaf6' }
 const bestTradeBanner = { background: '#12100a', border: '0.5px solid #3a2a0a', borderRadius: '6px', padding: '8px 12px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }
+const sectionHeader = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px' }
+const leaderboardGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }
+const leaderCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '12px' }
+const leaderCardTitle = { fontFamily: 'monospace', fontSize: '8px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase' }
+const leaderCardValue = { fontFamily: 'monospace', fontSize: '18px', fontWeight: 500, margin: '6px 0 2px' }
+const leaderCardName = { fontFamily: 'monospace', fontSize: '10px', color: '#7b8cde' }
