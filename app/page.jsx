@@ -4,6 +4,7 @@ import { useNVDAData }      from '@/hooks/useNVDAData'
 import { useMacroData }     from '@/hooks/useMacroData'
 import { useNews }          from '@/hooks/useNews'
 import { useFundamentals }  from '@/hooks/useFundamentals'
+import { useAlerts }        from '@/hooks/useAlerts'
 import { useNVDALive }    from '@/context/NVDALiveContext'
 import LivePriceBubble    from '@/components/LivePriceBubble'
 import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const { articles, loading: newsLoading }          = useNews()
   const { data: fundamentalsData }                  = useFundamentals()
   const { livePrice, wsConnected } = useNVDALive()
+  useAlerts({ externalPriceData: priceData, externalMacroData: macroData })
 
   // Persisted state (KV-backed)
   const [positions,  setPositions]  = useState([])

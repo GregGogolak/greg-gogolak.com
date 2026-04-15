@@ -29,9 +29,22 @@ function saveDismissed(set) {
   } catch {}
 }
 
-export function useAlerts() {
-  const [priceData,    setPriceData]    = useState(null)
-  const [macroData,    setMacroData]    = useState(null)
+/**
+ * useAlerts — evaluates all alert conditions and manages alert state.
+ *
+ * @param {object} [opts]
+ * @param {object} [opts.externalPriceData] - price data from useNVDAData (skips internal poll)
+ * @param {object} [opts.externalMacroData] - macro data from useMacroData (skips internal poll)
+ *
+ * When external data is provided (e.g. on the Dashboard where useNVDAData is
+ * already running), the hook skips its own polling loops to avoid duplicate
+ * requests. The price buffer is still maintained from external data changes.
+ * When no external data is provided (e.g. AlertBanner on non-dashboard pages),
+ * the hook polls independently as before.
+ */
+export function useAlerts({ externalPriceData, externalMacroData } = {}) {
+  const [internalPriceData, setInternalPriceData] = useState(null)
+  const [internalMacroData, setInternalMacroData] = useState(null)
   const [positions,    setPositions]    = useState([])
   const [config,       setConfigState]  = useState(CONFIG_DEFAULTS)
   const [customLevels, setCustomLevels] = useState([])
@@ -41,12 +54,18 @@ export function useAlerts() {
 
   const priceBuffer = useRef([])
 
-  // ── Fetch price every 60s ─────────────────────────────────────────────────
+  // Resolved data: prefer external, fall back to internal
+  const priceData = externalPriceData ?? internalPriceData
+  const macroData = externalMacroData ?? internalMacroData
+
+  // ── Price: poll independently only when no external source ───────────────
   useEffect(() => {
+    if (externalPriceData !== undefined) return // external caller owns this
+
     async function fetchPrice() {
       try {
         const data = await fetch('/api/price').then(r => r.json())
-        setPriceData(data)
+        setInternalPriceData(data)
         if (data?.price) {
           priceBuffer.current = [
             ...priceBuffer.current,
@@ -58,20 +77,35 @@ export function useAlerts() {
     fetchPrice()
     const id = setInterval(fetchPrice, 60_000)
     return () => clearInterval(id)
-  }, [])
+  }, [externalPriceData])
 
-  // ── Fetch macro every 5min ────────────────────────────────────────────────
+  // ── Buffer: feed from external price data when provided ──────────────────
+  const prevExternalPrice = useRef(null)
   useEffect(() => {
+    if (externalPriceData === undefined) return
+    const p = externalPriceData?.price
+    if (!p || p === prevExternalPrice.current) return
+    prevExternalPrice.current = p
+    priceBuffer.current = [
+      ...priceBuffer.current,
+      { price: p, ts: Date.now() },
+    ].slice(-BUFFER_MAX)
+  }, [externalPriceData])
+
+  // ── Macro: poll independently only when no external source ──────────────
+  useEffect(() => {
+    if (externalMacroData !== undefined) return // external caller owns this
+
     async function fetchMacro() {
       try {
         const data = await fetch('/api/macro').then(r => r.json())
-        setMacroData(data)
+        setInternalMacroData(data)
       } catch {}
     }
     fetchMacro()
     const id = setInterval(fetchMacro, 5 * 60_000)
     return () => clearInterval(id)
-  }, [])
+  }, [externalMacroData])
 
   // ── Fetch positions every 5min ────────────────────────────────────────────
   useEffect(() => {
