@@ -30,8 +30,6 @@ export async function POST() {
     if (redis) {
       const cached = await redis.get(CACHE_KEY)
       if (cached && Date.now() - cached.generatedAt < CACHE_TTL_MS) {
-        await redis.lpush('analysis:history', cached)
-        await redis.ltrim('analysis:history', 0, 4)
         return Response.json({ ...cached, fromCache: true })
       }
     }

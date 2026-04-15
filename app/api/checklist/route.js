@@ -24,17 +24,21 @@ export async function POST(request) {
 
     // Fetch live market context in parallel
     const baseUrl = getBaseUrl()
-    const [priceRes, macroRes, newsRes] = await Promise.all([
+    const [priceRes, macroRes, newsRes, fundamentalsRes] = await Promise.all([
       fetch(`${baseUrl}/api/price`),
       fetch(`${baseUrl}/api/macro`),
       fetch(`${baseUrl}/api/news`),
+      fetch(`${baseUrl}/api/fundamentals`),
     ])
 
-    const [price, macro, newsData] = await Promise.all([
+    const [price, macro, newsData, fundamentals] = await Promise.all([
       priceRes.json(),
       macroRes.json(),
       newsRes.json(),
+      fundamentalsRes.json(),
     ])
+
+    const analystTarget = fundamentals?.analystTarget ?? 264
 
     // Compute checklist from live data
     const articles       = newsData.articles || []
@@ -45,7 +49,7 @@ export async function POST(request) {
     const checklist = getBuyChecklist({
       price:          price.price,
       sma200:         price.sma200,
-      analystTarget:  264,
+      analystTarget,
       hasBucketCNews,
       qqqPctChange:   macro.qqq?.pctChange ?? 0,
       vix:            macro.vix?.level ?? 0,
