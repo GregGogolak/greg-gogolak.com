@@ -1,6 +1,6 @@
 import { getRedis } from '@/lib/redis'
 import Anthropic from '@anthropic-ai/sdk'
-import { classifyWithKeywords, classifyWithClaude } from '@/lib/newsClassifier'
+import { classifyWithClaude } from '@/lib/newsClassifier'
 import { formatBrief } from '@/lib/formatBrief'
 import { daysUntil } from '@/lib/calculations'
 import { EARNINGS_DATE, FOMC_DATE, getBaseUrl } from '@/lib/config'
@@ -61,19 +61,11 @@ export async function POST() {
       positionsRes.json(),
     ])
 
-    // Hybrid classification: keyword first, Claude only for ambiguous
+    // /api/news already ran keyword classification — bucket is set or null (ambiguous).
+    // Only send the null-bucket articles to Claude; don't re-classify what keywords resolved.
     const articles  = newsData.articles || []
-    const definite  = []
-    const ambiguous = []
-
-    for (const article of articles) {
-      const bucket = classifyWithKeywords(article.headline + ' ' + (article.summary || ''))
-      if (bucket !== null) {
-        definite.push({ ...article, bucket })
-      } else {
-        ambiguous.push(article)
-      }
-    }
+    const definite  = articles.filter(a => a.bucket !== null && a.bucket !== undefined)
+    const ambiguous = articles.filter(a => a.bucket === null || a.bucket === undefined)
 
     const claudeClassified = ambiguous.length > 0
       ? await classifyWithClaude(ambiguous)

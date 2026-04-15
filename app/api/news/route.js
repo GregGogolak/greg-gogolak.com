@@ -37,7 +37,7 @@ export async function GET() {
         source:   a.source,
         image:    a.image || null,
         datetime: a.datetime,
-        bucket:   classifyWithKeywords(a.headline + ' ' + (a.summary || '')) ?? 'A',
+        bucket:   classifyWithKeywords(a.headline + ' ' + (a.summary || '')),
       }))
 
     const result = { articles: sorted, lastUpdated: Date.now() }
