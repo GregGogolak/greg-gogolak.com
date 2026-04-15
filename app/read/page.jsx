@@ -4,21 +4,18 @@ import { useState, useEffect } from 'react'
 
 // Full static strings — Tailwind scanner requires no dynamic class construction
 const ACTION_TAB = {
-  BUY:   'border-emerald-700 text-emerald-400 bg-emerald-500/10',
-  WAIT:  'border-amber-700   text-amber-400   bg-amber-500/10',
-  HOLD:  'border-blue-700    text-blue-400    bg-blue-500/10',
-  AVOID: 'border-red-700     text-red-400     bg-red-500/10',
-}
-
-
-
-const UNDERVALUED_STYLE = {
-  Yes: { border: 'border-l-emerald-500', text: 'text-emerald-400' },
-  No:  { border: 'border-l-red-500',     text: 'text-red-400'     },
+  BUY:        'border-emerald-700 text-emerald-400 bg-emerald-500/10',
+  WAIT:       'border-amber-700   text-amber-400   bg-amber-500/10',
+  HOLD:       'border-blue-700    text-blue-400    bg-blue-500/10',
+  AVOID:      'border-red-700     text-red-400     bg-red-500/10',
+  SCALP:      'border-emerald-700 text-emerald-400 bg-emerald-500/10',
+  CONVICTION: 'border-blue-700    text-blue-400    bg-blue-500/10',
+  'NO SETUP': 'border-gray-700    text-gray-500    bg-gray-500/10',
 }
 
 function getTabLabel(read) {
-  const action = read.recommendedAction?.action ?? '??'
+  // New format uses setup.type; fall back to old recommendedAction for cached reads
+  const action = read.setup?.type ?? read.recommendedAction?.action ?? '??'
   const time   = new Date(read.generatedAt).toLocaleTimeString([], {
     hour: '2-digit', minute: '2-digit', hour12: false,
   })
@@ -39,7 +36,6 @@ export default function ReadPage() {
   const [activeIdx,   setActiveIdx]   = useState(0)
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
-  const [pulseOpen,   setPulseOpen]   = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -66,7 +62,6 @@ export default function ReadPage() {
         return [result, ...prev].slice(0, 5)
       })
       setActiveIdx(0)
-      setPulseOpen(false)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -76,7 +71,6 @@ export default function ReadPage() {
 
   function switchTab(idx) {
     setActiveIdx(idx)
-    setPulseOpen(false)
     setSidebarOpen(false)
   }
 
@@ -90,7 +84,7 @@ export default function ReadPage() {
      */
     <div
       className="flex bg-[#0a0a0a] text-[#eef2ff]"
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 52 }}
+      style={{ height: '100dvh', overflow: 'hidden' }}
     >
 
       {/* Mobile backdrop — tap outside to close */}
@@ -110,10 +104,10 @@ export default function ReadPage() {
       <aside
         className={`
           flex flex-col shrink-0
-          fixed top-0 left-0 z-50 h-[calc(100vh-52px)]
+          fixed top-0 left-[90px] z-50 h-screen
           transition-transform duration-[220ms] ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:relative md:h-auto md:z-auto md:translate-x-0
+          md:relative md:h-auto md:z-auto md:translate-x-0 md:left-0
         `}
         style={{ width: 280, background: '#0d0d0d', borderRight: '1px solid rgba(255,255,255,0.07)' }}
       >
@@ -181,10 +175,13 @@ export default function ReadPage() {
               const { action, time } = getTabLabel(read)
               const isActive = i === activeIdx
               const actionColors = {
-                BUY:   { border: '#10b981', bg: 'rgba(16,185,129,0.08)',  text: '#34d399', badge: 'rgba(16,185,129,0.15)' },
-                WAIT:  { border: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  text: '#fbbf24', badge: 'rgba(245,158,11,0.15)' },
-                HOLD:  { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', badge: 'rgba(59,130,246,0.15)' },
-                AVOID: { border: '#ef4444', bg: 'rgba(239,68,68,0.08)',   text: '#f87171', badge: 'rgba(239,68,68,0.15)' },
+                BUY:        { border: '#10b981', bg: 'rgba(16,185,129,0.08)',  text: '#34d399', badge: 'rgba(16,185,129,0.15)' },
+                WAIT:       { border: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  text: '#fbbf24', badge: 'rgba(245,158,11,0.15)' },
+                HOLD:       { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', badge: 'rgba(59,130,246,0.15)' },
+                AVOID:      { border: '#ef4444', bg: 'rgba(239,68,68,0.08)',   text: '#f87171', badge: 'rgba(239,68,68,0.15)' },
+                SCALP:      { border: '#10b981', bg: 'rgba(16,185,129,0.08)',  text: '#34d399', badge: 'rgba(16,185,129,0.15)' },
+                CONVICTION: { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)',  text: '#60a5fa', badge: 'rgba(59,130,246,0.15)' },
+                'NO SETUP': { border: '#6b7280', bg: 'rgba(107,114,128,0.06)', text: '#9ca3af', badge: 'rgba(107,114,128,0.12)' },
               }
               const c = actionColors[action] ?? { border: '#6b7280', bg: 'rgba(255,255,255,0.04)', text: '#9ca3af', badge: 'rgba(255,255,255,0.08)' }
               return (
@@ -329,7 +326,7 @@ export default function ReadPage() {
               {/* Shimmer skeleton */}
               {loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {[2, 3, 3, 2].map((lines, i) => (
+                  {[2, 3, 3, 2, 2].map((lines, i) => (
                     <div key={i} style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #374151', background: 'rgba(255,255,255,0.02)', padding: '28px 32px' }}>
                       <div className="animate-pulse" style={{ height: 8, width: 112, borderRadius: 4, background: 'rgba(255,255,255,0.06)', marginBottom: 20 }} />
                       {Array.from({ length: lines }).map((_, j) => (
@@ -344,7 +341,7 @@ export default function ReadPage() {
                 </div>
               )}
 
-              {/* Content bubbles */}
+              {/* Content cards */}
               {data && !loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
@@ -354,98 +351,169 @@ export default function ReadPage() {
                       : `${new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} · ${timeAgo(data.generatedAt)}`}
                   </p>
 
-                  {/* 1 — Undervalued */}
-                  {(() => {
-                    const ans   = data.undervalued?.answer
-                    const style = UNDERVALUED_STYLE[ans] ?? UNDERVALUED_STYLE.No
-                    const lc    = ans === 'Yes' ? '#10b981' : '#ef4444'
-                    return (
-                      <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: `3px solid ${lc}`, background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
-                        <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>UNDERVALUED?</p>
-                        <p className={`text-3xl font-mono font-bold ${style.text}`} style={{ marginBottom: 12 }}>{ans}</p>
-                        <p style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.7 }}>{data.undervalued?.reason}</p>
-                      </div>
-                    )
-                  })()}
-
-                  {/* 2 — Why */}
-                  <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #d97706', background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
-                    <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>WHY AT THIS LEVEL?</p>
-                    <p style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.7 }}>{data.whyAtThisLevel}</p>
-                  </div>
-
-                  {/* 3 — Resolves */}
-                  <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #3b82f6', background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
-                    <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>WHAT RESOLVES IT?</p>
-                    <ul style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      {(Array.isArray(data.whatResolvesIt) ? data.whatResolvesIt : []).map((item, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 14, fontSize: 14, color: '#d1d5db' }}>
-                          <span style={{ color: '#60a5fa', fontFamily: 'monospace', flexShrink: 0, marginTop: 2 }}>›</span>
-                          <span style={{ lineHeight: 1.7 }}>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* 4 — Action */}
-                  {(() => {
-                    const action = data.recommendedAction?.action
-                    const colors = {
-                      BUY:   { border: '#10b981', bg: 'rgba(16,185,129,0.07)',  text: '#34d399' },
-                      WAIT:  { border: '#f59e0b', bg: 'rgba(245,158,11,0.07)',  text: '#fbbf24' },
-                      HOLD:  { border: '#3b82f6', bg: 'rgba(59,130,246,0.07)',  text: '#60a5fa' },
-                      AVOID: { border: '#ef4444', bg: 'rgba(239,68,68,0.07)',   text: '#f87171' },
-                    }
-                    const c = colors[action] ?? { border: '#6b7280', bg: 'rgba(255,255,255,0.025)', text: '#fff' }
-                    return (
-                      <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.06)', borderRight: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', borderLeft: `3px solid ${c.border}`, background: c.bg, padding: '28px 32px' }}>
-                        <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>RECOMMENDED ACTION</p>
-                        <p style={{ fontSize: 40, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.05em', color: c.text, marginBottom: 12 }}>{action}</p>
-                        <p style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.7 }}>{data.recommendedAction?.reason}</p>
-                      </div>
-                    )
-                  })()}
-
-                  {/* 5 — Market Pulse */}
-                  <button
-                    onClick={() => setPulseOpen(o => !o)}
-                    style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #374151', background: 'rgba(255,255,255,0.025)', padding: '28px 32px', textAlign: 'left', width: '100%', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                      <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em' }}>MARKET PULSE</p>
-                      <span style={{ color: '#4b5563', fontFamily: 'monospace', fontSize: 11 }}>{pulseOpen ? '▲' : '▼'}</span>
+                  {/* Legacy format notice */}
+                  {!data.setup && data.recommendedAction && (
+                    <div style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', padding: '20px 24px', textAlign: 'center' }}>
+                      <p style={{ fontSize: 13, color: '#4b5563', fontFamily: 'monospace' }}>Legacy format — run a new read to see the updated analysis</p>
                     </div>
+                  )}
 
-                    {!data.marketPulse ? (
-                      <p style={{ fontSize: 12, fontFamily: 'monospace', color: '#4b5563' }}>Not available for this read</p>
-                    ) : !pulseOpen ? (
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <div style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', padding: '14px 18px' }}>
-                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', marginBottom: 8 }}>RETAIL</p>
-                          <p style={{ fontSize: 13, color: '#d1d5db' }}>{data.marketPulse?.retail?.label}</p>
+                  {data.setup && (() => {
+                    const setupColors = {
+                      SCALP:      { border: '#10b981', bg: 'rgba(16,185,129,0.07)',  text: '#34d399' },
+                      CONVICTION: { border: '#3b82f6', bg: 'rgba(59,130,246,0.07)',  text: '#60a5fa' },
+                      'NO SETUP': { border: '#6b7280', bg: 'rgba(107,114,128,0.05)', text: '#9ca3af' },
+                      WAIT:       { border: '#f59e0b', bg: 'rgba(245,158,11,0.07)',  text: '#fbbf24' },
+                    }
+                    const confColors = { HIGH: '#10b981', MEDIUM: '#f59e0b', LOW: '#6b7280' }
+                    const dirColors  = { RESOLVING: '#10b981', WORSENING: '#ef4444', STABLE: '#f59e0b', UNKNOWN: '#6b7280' }
+
+                    const sc = setupColors[data.setup.type] ?? setupColors['NO SETUP']
+                    const allNews    = data.classifiedNews ?? []
+                    const highImpact = allNews
+                      .filter(a => a.bucket === 'B' || a.bucket === 'C')
+                      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+                      .slice(0, 6)
+                    const alreadyPriced = data.newsToday?.alreadyPriced ?? []
+                    const noiseCount    = data.newsToday?.ignore
+                      ?? allNews.filter(a => a.bucket === 'A' || !a.bucket).length
+
+                    return (
+                      <>
+                        {/* Card 1 — SETUP */}
+                        <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.06)', borderRight: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', borderLeft: `3px solid ${sc.border}`, background: sc.bg, padding: '28px 32px' }}>
+                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>SETUP</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                            <p style={{ fontSize: 40, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.04em', color: sc.text, lineHeight: 1 }}>
+                              {data.setup.type}
+                            </p>
+                            {data.setup.confidence && (
+                              <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: confColors[data.setup.confidence] ?? '#6b7280', background: 'rgba(255,255,255,0.04)', border: `1px solid ${confColors[data.setup.confidence] ?? '#6b7280'}40`, padding: '4px 10px', borderRadius: 8, letterSpacing: '0.08em' }}>
+                                {data.setup.confidence}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.7 }}>{data.setup.reason}</p>
                         </div>
-                        <div style={{ flex: 1, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)', padding: '14px 18px' }}>
-                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', marginBottom: 8 }}>HEDGE FUND</p>
-                          <p style={{ fontSize: 13, color: '#d1d5db' }}>{data.marketPulse?.hedge?.label}</p>
+
+                        {/* Card 2 — WHY IS IT HERE */}
+                        {data.whyHere && (
+                          <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #d97706', background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
+                            <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>WHY IS IT HERE</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                              <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.25)', padding: '3px 10px', borderRadius: 8, letterSpacing: '0.08em' }}>
+                                {data.whyHere.cause}
+                              </span>
+                              <span style={{ fontSize: 11, fontFamily: 'monospace', color: data.whyHere.alreadyPriced ? '#4b5563' : '#f59e0b', background: data.whyHere.alreadyPriced ? 'rgba(255,255,255,0.03)' : 'rgba(245,158,11,0.08)', border: `1px solid ${data.whyHere.alreadyPriced ? 'rgba(255,255,255,0.07)' : 'rgba(245,158,11,0.25)'}`, padding: '3px 10px', borderRadius: 8 }}>
+                                {data.whyHere.alreadyPriced ? 'Already priced in' : 'Still being priced'}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: 14, color: '#d1d5db', lineHeight: 1.7 }}>{data.whyHere.explanation}</p>
+                          </div>
+                        )}
+
+                        {/* Card 3 — IS IT RESOLVING */}
+                        {data.resolution && (
+                          <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: `3px solid ${dirColors[data.resolution.direction] ?? '#6b7280'}`, background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
+                            <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>IS IT RESOLVING</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                              <p style={{ fontSize: 22, fontFamily: 'monospace', fontWeight: 700, color: dirColors[data.resolution.direction] ?? '#9ca3af' }}>
+                                {data.resolution.direction}
+                              </p>
+                              {data.resolution.speed && (
+                                <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#6b7280', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '3px 10px', borderRadius: 8, letterSpacing: '0.06em' }}>
+                                  {data.resolution.speed}
+                                </span>
+                              )}
+                            </div>
+                            {data.resolution.catalyst && (
+                              <p style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.7 }}>
+                                <span style={{ color: '#4b5563', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.1em', marginRight: 8 }}>CATALYST</span>
+                                {data.resolution.catalyst}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Card 4 — THE TRADE (only if setup exists) */}
+                        {data.trade && (data.trade.type === 'SCALP' || data.trade.type === 'CONVICTION') && (
+                          <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.06)', borderRight: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', borderLeft: `3px solid ${sc.border}`, background: 'rgba(255,255,255,0.025)', padding: '28px 32px' }}>
+                            <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>THE TRADE</p>
+                            {data.trade.thesis && (
+                              <p style={{ fontSize: 15, color: '#e5e7eb', lineHeight: 1.7, marginBottom: 20, fontWeight: 500 }}>{data.trade.thesis}</p>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                              {data.trade.entryZone && (
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                                  <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', flexShrink: 0 }}>ENTRY ZONE</span>
+                                  <span style={{ fontSize: 14, fontFamily: 'monospace', color: '#34d399' }}>{data.trade.entryZone}</span>
+                                </div>
+                              )}
+                              {data.trade.invalidatedIf && (
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                                  <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', flexShrink: 0 }}>WRONG IF</span>
+                                  <span style={{ fontSize: 13, color: '#9ca3af', lineHeight: 1.6 }}>{data.trade.invalidatedIf}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <a href="/trade" style={{ flex: 1, padding: '11px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', color: '#e5e7eb', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontSize: 12, fontFamily: 'monospace', letterSpacing: '0.05em', textDecoration: 'none', display: 'block', transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.09)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              >
+                                Trade Checklist
+                              </a>
+                              <a href="/track" style={{ flex: 1, padding: '11px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', color: '#e5e7eb', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontSize: 12, fontFamily: 'monospace', letterSpacing: '0.05em', textDecoration: 'none', display: 'block', transition: 'background 0.15s' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.09)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                              >
+                                Log Position
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Card 5 — TODAY'S NEWS */}
+                        <div style={{ borderRadius: 16, borderTop: '1px solid rgba(255,255,255,0.05)', borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', borderLeft: '3px solid #374151', background: 'rgba(255,255,255,0.02)', padding: '28px 32px' }}>
+                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#6b7280', letterSpacing: '0.12em', marginBottom: 16 }}>TODAY'S NEWS</p>
+
+                          {highImpact.length === 0 && (
+                            <p style={{ fontSize: 13, color: '#4b5563' }}>No significant B/C bucket news</p>
+                          )}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: alreadyPriced.length > 0 ? 20 : 0 }}>
+                            {highImpact.map((article, i) => (
+                              <a key={i} href={article.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                {article.stars > 0 && (
+                                  <span style={{ fontSize: 10, color: article.stars >= 3 ? '#f59e0b' : '#4a5568', flexShrink: 0, marginTop: 3, letterSpacing: '1px' }}>
+                                    {'★'.repeat(article.stars)}
+                                  </span>
+                                )}
+                                <span style={{ fontSize: 13, color: article.bucket === 'C' ? '#fca5a5' : '#d1d5db', lineHeight: 1.6 }}>
+                                  {article.headline}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+
+                          {alreadyPriced.length > 0 && (
+                            <div style={{ marginBottom: 14 }}>
+                              <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#374151', letterSpacing: '0.1em', marginBottom: 10 }}>ALREADY PRICED IN</p>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {alreadyPriced.map((headline, i) => (
+                                  <p key={i} style={{ fontSize: 12, color: '#374151', lineHeight: 1.6 }}>{headline}</p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#374151', marginTop: alreadyPriced.length > 0 ? 0 : 16 }}>
+                            {noiseCount} noise article{noiseCount !== 1 ? 's' : ''} ignored
+                          </p>
                         </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                        <div>
-                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', marginBottom: 8 }}>RETAIL</p>
-                          <p style={{ fontSize: 14, fontFamily: 'monospace', color: '#e5e7eb', marginBottom: 8 }}>{data.marketPulse?.retail?.label}</p>
-                          <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.7 }}>{data.marketPulse?.retail?.summary}</p>
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563', letterSpacing: '0.1em', marginBottom: 8 }}>HEDGE FUND</p>
-                          <p style={{ fontSize: 14, fontFamily: 'monospace', color: '#e5e7eb', marginBottom: 8 }}>{data.marketPulse?.hedge?.label}</p>
-                          <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.7 }}>{data.marketPulse?.hedge?.summary}</p>
-                        </div>
-                      </div>
-                    )}
-                  </button>
+                      </>
+                    )
+                  })()}
 
                 </div>
               )}
