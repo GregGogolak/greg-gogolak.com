@@ -68,7 +68,7 @@ export default function LedgerPage() {
               {fundStats.bestTradeEver.memberName} — {fmtEUR(fundStats.bestTradeEver.net_eur)}
             </span>
             <span style={{ color: '#4a5270', fontSize: '11px', marginLeft: '8px' }}>
-              {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.entry_price} → ${fundStats.bestTradeEver.exit_price}
+              {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.buy_price} → ${fundStats.bestTradeEver.sell_price}
             </span>
           </div>
         )}

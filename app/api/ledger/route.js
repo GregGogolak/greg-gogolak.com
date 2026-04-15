@@ -67,7 +67,10 @@ export async function GET() {
 
         return {
           userId: uid,
-          name: `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.emailAddresses[0]?.emailAddress,
+          name: (`${user.firstName ?? ''} ${user.lastName ?? ''}`).trim() ||
+                user.username ||
+                user.emailAddresses[0]?.emailAddress?.split('@')[0] ||
+                'Unknown',
           role,
           openPositions: positions,
           cash,
