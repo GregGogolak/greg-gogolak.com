@@ -56,12 +56,21 @@ export async function POST(request) {
       fetch(`${BASE}/api/positions`),
     ])
 
+    // Guard against sub-API returning HTML (e.g. 504 timeout) instead of JSON
+    async function parseSubApi(res, label) {
+      const ct = res.headers.get('content-type') ?? ''
+      if (!ct.includes('json')) {
+        throw new Error(`${label} API unavailable (HTTP ${res.status}) — try again`)
+      }
+      return res.json()
+    }
+
     const [price, macro, newsData, fundamentals, positionsData] = await Promise.all([
-      priceRes.json(),
-      macroRes.json(),
-      newsRes.json(),
-      fundamentalsRes.json(),
-      positionsRes.json(),
+      parseSubApi(priceRes, 'price'),
+      parseSubApi(macroRes, 'macro'),
+      parseSubApi(newsRes, 'news'),
+      parseSubApi(fundamentalsRes, 'fundamentals'),
+      parseSubApi(positionsRes, 'positions'),
     ])
 
     // Compute streak from sparkline (consecutive closes in same direction)

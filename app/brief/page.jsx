@@ -364,8 +364,12 @@ export default function BriefPage() {
         body:    JSON.stringify({ type }),
       })
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? `Request failed (${res.status})`)
+        const ct = res.headers.get('content-type') ?? ''
+        if (ct.includes('json')) {
+          const data = await res.json()
+          throw new Error(data.error ?? `Request failed (${res.status})`)
+        }
+        throw new Error(`Brief generation failed (HTTP ${res.status}) — try again`)
       }
       const result = await res.json()
       setDisplayBrief(result)
