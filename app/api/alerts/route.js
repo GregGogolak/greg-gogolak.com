@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis'
+import { getRedis } from '@/lib/redis'
 
 const KEYS = {
   config:       'alerts:config',
@@ -11,14 +11,6 @@ const CONFIG_DEFAULTS = {
   oilMove:         true,
   earnings14d:     true,
   earnings3d:      true,
-}
-
-function getRedis() {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null
-  return new Redis({
-    url:   process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  })
 }
 
 // Upstash auto-deserializes JSON — handle both string and parsed forms

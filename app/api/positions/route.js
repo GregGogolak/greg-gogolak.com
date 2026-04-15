@@ -1,20 +1,24 @@
-import { Redis } from '@upstash/redis'
+import { getRedis } from '@/lib/redis'
 
+// ── Redis keys ─────────────────────────────────────────────────────────────
 const KEYS = {
   positions: 'positions:list',
   cash:      'cash:available',
   iran:      'iran:status',
 }
 
-function getRedis() {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null
-  return new Redis({
-    url:   process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  })
+/**
+ * Upstash auto-deserialises JSON on read, so redis.get() may return an already-
+ * parsed object rather than a string. Handle both forms to avoid JSON.parse errors.
+ */
+function safeparse(val, fallback) {
+  if (val === null || val === undefined) return fallback
+  if (typeof val === 'string') {
+    try { return JSON.parse(val) } catch { return fallback }
+  }
+  return val  // already deserialised by Upstash
 }
 
-// Default state when KV unavailable
 const DEFAULTS = { positions: [], cash: 0, iranStatus: 'ESCALATING' }
 
 async function readAll(redis) {
@@ -25,12 +29,13 @@ async function readAll(redis) {
     redis.get(KEYS.iran),
   ])
   return {
-    positions:  JSON.parse(rawPositions || '[]'),
+    positions:  safeparse(rawPositions, []),
     cash:       parseFloat(rawCash || '0'),
     iranStatus: rawIran || 'ESCALATING',
   }
 }
 
+// ── GET — full state ───────────────────────────────────────────────────────
 export async function GET() {
   try {
     const redis = getRedis()
@@ -42,6 +47,7 @@ export async function GET() {
   }
 }
 
+// ── POST — mutations ───────────────────────────────────────────────────────
 export async function POST(req) {
   try {
     const redis = getRedis()
@@ -51,25 +57,33 @@ export async function POST(req) {
 
     switch (action) {
       case 'add': {
-        const current = JSON.parse(await redis.get(KEYS.positions) || '[]')
+        const current = safeparse(await redis.get(KEYS.positions), [])
         const newPos  = { ...payload, id: crypto.randomUUID(), status: 'OPEN' }
-        await redis.set(KEYS.positions, JSON.stringify([...current, newPos]))
-        return Response.json({ ok: true, position: newPos })
+        const updated = [...current, newPos]
+        await redis.set(KEYS.positions, JSON.stringify(updated))
+        // Return updated list so client can sync without a second fetch
+        return Response.json({ ok: true, positions: updated })
       }
+
       case 'remove': {
-        const current  = JSON.parse(await redis.get(KEYS.positions) || '[]')
+        const current  = safeparse(await redis.get(KEYS.positions), [])
         const filtered = current.filter(p => p.id !== payload.id)
         await redis.set(KEYS.positions, JSON.stringify(filtered))
-        return Response.json({ ok: true })
+        return Response.json({ ok: true, positions: filtered })
       }
+
       case 'setCash': {
+        // payload: { cash: number }
         await redis.set(KEYS.cash, String(payload.cash))
         return Response.json({ ok: true })
       }
+
       case 'setIran': {
+        // payload: { status: string }
         await redis.set(KEYS.iran, payload.status)
         return Response.json({ ok: true })
       }
+
       default:
         return Response.json({ error: 'Unknown action' }, { status: 400 })
     }

@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis'
+import { getRedis } from '@/lib/redis'
 import Anthropic from '@anthropic-ai/sdk'
 import { classifyWithKeywords, classifyWithClaude } from '@/lib/newsClassifier'
 import { formatBrief } from '@/lib/formatBrief'
@@ -7,14 +7,6 @@ import { daysUntil } from '@/lib/calculations'
 const CACHE_KEY    = 'analysis:latest'
 const CACHE_TTL_MS = 30 * 60 * 1000   // 30 minutes
 const CACHE_TTL_S  = 30 * 60          // 30 minutes in seconds (for Redis ex)
-
-function getRedis() {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null
-  return new Redis({
-    url:   process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  })
-}
 
 const BASE_URL = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`

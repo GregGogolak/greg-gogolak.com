@@ -1,16 +1,8 @@
-import { Redis } from '@upstash/redis'
+import { getRedis } from '@/lib/redis'
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY
 const CACHE_KEY    = 'fundamentals:nvda'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000  // 6 hours
-
-function getRedis() {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null
-  return new Redis({
-    url:   process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  })
-}
 
 export async function GET() {
   try {
