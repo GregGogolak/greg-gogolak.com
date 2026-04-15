@@ -120,10 +120,10 @@ export async function GET() {
     const tenDayHigh      = highs.length >= 10 ? Math.max(...highs.slice(-10))              : null
     const thirtyDayAvgVol = vols.length  >= 30 ? vols.slice(-30).reduce((a, b) => a + b, 0) / 30 : null
 
-    // Sparkline: 59 historical closes + live price as final point
-    const sparkline = daily
-      ? [...daily.closes.slice(-59), price]
-      : [price]
+    // Sparklines at different timeframes (closes + live price as final point)
+    const sparkline    = daily ? [...daily.closes.slice(-59), price] : [price]
+    const sparkline7d  = daily ? [...daily.closes.slice(-4),  price] : [price]  // ~1 week (5 trading days)
+    const sparkline30d = daily ? [...daily.closes.slice(-21), price] : [price]  // ~1 month (22 trading days)
 
     return Response.json({
       price,
@@ -139,6 +139,8 @@ export async function GET() {
       thirtyDayAvgVol,
       volumeRatio:    thirtyDayAvgVol && quote.v ? quote.v / thirtyDayAvgVol : null,
       sparkline,
+      sparkline7d,
+      sparkline30d,
       marketOpen,
       lastUpdated:    Date.now(),
     })

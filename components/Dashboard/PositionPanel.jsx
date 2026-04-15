@@ -8,22 +8,14 @@ const card = {
   borderRadius: '14px', padding: '16px 18px',
 }
 
-export default function PositionPanel({ positions = [], currentPrice, cash = 0, onAdd, onRemove, onSetCash, style: styleProp }) {
+export default function PositionPanel({ positions = [], currentPrice, onAdd, onRemove, style: styleProp }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm]         = useState({ type: 'CONVICTION', shares: '', entryPrice: '', entryDate: new Date().toISOString().split('T')[0], label: '' })
-  const [editCash, setEditCash] = useState(false)
-  const [cashInput, setCashInput] = useState(String(cash))
-
   function handleAdd(e) {
     e.preventDefault()
     onAdd?.({ ...form, shares: Number(form.shares), entryPrice: Number(form.entryPrice) })
     setForm({ type: 'CONVICTION', shares: '', entryPrice: '', entryDate: new Date().toISOString().split('T')[0], label: '' })
     setShowForm(false)
-  }
-
-  function saveCash() {
-    onSetCash?.(parseFloat(cashInput) || 0)
-    setEditCash(false)
   }
 
   return (
@@ -117,29 +109,6 @@ export default function PositionPanel({ positions = [], currentPrice, cash = 0, 
         )}
       </div>
 
-      {/* Cash */}
-      <div style={card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Cash Available</span>
-          <button onClick={() => setEditCash(v => !v)} style={{
-            background: 'none', border: 'none', color: '#3d4a5c', fontSize: '11px', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-          }}>Edit</button>
-        </div>
-        {editCash ? (
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <input value={cashInput} onChange={e => setCashInput(e.target.value)} placeholder="EUR" type="number" style={{ ...inputStyle, flex: 1 }} />
-            <button onClick={saveCash} style={{
-              background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)',
-              color: '#34d399', borderRadius: '7px', padding: '5px 12px',
-              fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-            }}>Save</button>
-          </div>
-        ) : (
-          <div style={{ fontFamily: "'Inter Tight', sans-serif", fontSize: '22px', fontWeight: 300, color: '#eef2ff', marginTop: '6px' }}>
-            €{Number(cash).toLocaleString()}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

@@ -62,7 +62,6 @@ export default function Dashboard() {
 
   // Persisted state (KV-backed)
   const [positions,  setPositions]  = useState([])
-  const [cash,       setCash]       = useState(0)
   const [iranStatus, setIranStatus] = useState('ESCALATING')
 
   // Load positions + KV state on mount
@@ -71,7 +70,6 @@ export default function Dashboard() {
       .then(r => r.json())
       .then(d => {
         setPositions(d.positions || [])
-        setCash(d.cash || 0)
         setIranStatus(d.iranStatus || 'ESCALATING')
       })
       .catch(() => {})
@@ -98,15 +96,6 @@ export default function Dashboard() {
     setPositions(data.positions || [])
   }, [])
 
-  const handleSetCash = useCallback(async (amount) => {
-    setCash(amount)
-    await fetch('/api/positions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setCash', payload: { cash: amount } }),
-    })
-  }, [])
-
   const handleIranChange = useCallback(async (status) => {
     setIranStatus(status)
     await fetch('/api/positions', {
@@ -124,10 +113,10 @@ export default function Dashboard() {
   const qqqPct         = macroData?.qqq?.pctChange ?? 0
   const analystTarget  = fundamentalsData?.analystTarget ?? 264
 
-  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
-
   const nowSec         = Date.now() / 1000
   const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)
+
+  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
 
   const checklistItems = getBuyChecklist({
     price:          price ?? 0,
@@ -212,32 +201,21 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main grid */}
+      {/* Main grid — 3 independent flex columns, no row spanning */}
       <main style={{ position: 'relative', zIndex: 1 }}>
-        {/*
-          Desktop 3-col layout:
-            Col 1: Price (rows 1-2) │ Col 2: Macro      │ Col 3: Signals (rows 1-2)
-                   Thesis+Pulse(r3) │        Catalyst   │        Signals
-                                    │        Positions  │        News (row 3)
-        */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
-          gridTemplateRows: 'auto auto 1fr',
-          gridTemplateAreas: `
-            "price   macro     signals"
-            "price   catalyst  signals"
-            "thesis  position  news"
-          `,
           gap: '16px',
           padding: '16px 24px 80px',
           maxWidth: '1400px',
           margin: '0 auto',
+          alignItems: 'start',
         }}
           className="dashboard-grid"
         >
-          {/* ── PRICE  (col 1, rows 1-2) ─────────────────────────────── */}
-          <div style={{ gridArea: 'price', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* ── COL 1 ── price + thesis ──────────────────────────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <LivePriceBubble
               livePrice={livePrice}
               prevClose={priceData?.prevClose ?? null}
@@ -248,14 +226,32 @@ export default function Dashboard() {
             <PricePanel data={priceData} loading={loading} analystTarget={analystTarget} />
           </div>
 
-          {/* ── MACRO ENV  (col 2, row 1) ────────────────────────────── */}
-          <div style={{ gridArea: 'macro' }}>
+          {/* ── COL 2 ── macro + catalysts + positions ───────────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <MacroPanel data={macroData} loading={macroLoading && !macroData} />
+            <CatalystBar
+              iranStatus={iranStatus}
+              onIranChange={handleIranChange}
+              loading={macroLoading && !macroData}
+            />
+            <PositionPanel
+              positions={positions}
+              currentPrice={price}
+              onAdd={handleAddPosition}
+              onRemove={handleRemovePosition}
+            />
           </div>
 
-          {/* ── SIGNALS  (col 3, rows 1-2) — gauge + entry checklist ─── */}
-          <div style={{ gridArea: 'signals', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Signal gauge card */}
+          {/* ── COL 3 ── thesis + signals + checklist + news ────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <ThesisStatus
+              status={thesis.status}
+              triggers={thesis.triggers}
+              price={price}
+              sma200={sma200}
+              loading={loading}
+            />
+            <SentimentChip />
             <div style={{
               background: 'rgba(255,255,255,0.028)',
               border: '1px solid rgba(255,255,255,0.065)',
@@ -266,54 +262,13 @@ export default function Dashboard() {
               </div>
               <SignalGauge passCount={passCount} totalCount={checklistItems.length} />
             </div>
-            {/* Entry checklist card */}
             <div style={{
               background: 'rgba(255,255,255,0.028)',
               border: '1px solid rgba(255,255,255,0.065)',
               borderRadius: '14px', padding: '18px',
-              flex: 1,
             }}>
               <BuyChecklist items={checklistItems} />
             </div>
-          </div>
-
-          {/* ── CATALYSTS  (col 2, row 2) ────────────────────────────── */}
-          <div style={{ gridArea: 'catalyst' }}>
-            <CatalystBar
-              iranStatus={iranStatus}
-              onIranChange={handleIranChange}
-              loading={macroLoading && !macroData}
-            />
-          </div>
-
-          {/* ── THESIS + PULSE  (col 1, row 3) ──────────────────────── */}
-          <div style={{ gridArea: 'thesis', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <ThesisStatus
-              status={thesis.status}
-              triggers={thesis.triggers}
-              price={price}
-              sma200={sma200}
-              loading={loading}
-              style={{ flex: 1 }}
-            />
-            <SentimentChip />
-          </div>
-
-          {/* ── POSITIONS  (col 2, row 3) ────────────────────────────── */}
-          <div style={{ gridArea: 'position', display: 'flex', flexDirection: 'column' }}>
-            <PositionPanel
-              positions={positions}
-              currentPrice={price}
-              cash={cash}
-              onAdd={handleAddPosition}
-              onRemove={handleRemovePosition}
-              onSetCash={handleSetCash}
-              style={{ flex: 1 }}
-            />
-          </div>
-
-          {/* ── NEWS  (col 3, row 3) ─────────────────────────────────── */}
-          <div style={{ gridArea: 'news' }}>
             <NewsPanel articles={articles} loading={newsLoading && articles.length === 0} />
           </div>
         </div>
@@ -324,27 +279,11 @@ export default function Dashboard() {
         @media (max-width: 1024px) {
           .dashboard-grid {
             grid-template-columns: 1fr 1fr !important;
-            grid-template-rows: auto !important;
-            grid-template-areas:
-              "price    macro"
-              "price    catalyst"
-              "signals  signals"
-              "thesis   position"
-              "news     news" !important;
           }
         }
         @media (max-width: 640px) {
           .dashboard-grid {
             grid-template-columns: 1fr !important;
-            grid-template-rows: auto !important;
-            grid-template-areas:
-              "price"
-              "thesis"
-              "signals"
-              "macro"
-              "catalyst"
-              "position"
-              "news" !important;
             padding: 12px 16px 80px !important;
           }
         }

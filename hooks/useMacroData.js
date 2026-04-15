@@ -1,18 +1,23 @@
 'use client'
+/**
+ * useMacroData — polls /api/macro every 5 minutes.
+ *
+ * Returns:
+ *   data    — { oil: { price, pctChange, twoSessionPct }, qqq: { pctChange }, vix: { level } }
+ *   loading — true until first successful fetch
+ */
 import { useState, useEffect, useRef } from 'react'
 
-const INTERVAL = 300_000  // 5 minutes
+const POLL_INTERVAL = 5 * 60_000  // matches server-side MACRO_TTL
 
 export function useMacroData() {
-  const [data, setData]       = useState(null)
+  const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
   const timer = useRef(null)
 
   async function fetchMacro() {
     try {
-      const res  = await fetch('/api/macro')
-      const json = await res.json()
-      setData(json)
+      setData(await fetch('/api/macro').then(r => r.json()))
     } catch (e) {
       console.error('[useMacroData]', e)
     } finally {
@@ -22,7 +27,7 @@ export function useMacroData() {
 
   useEffect(() => {
     fetchMacro()
-    timer.current = setInterval(fetchMacro, INTERVAL)
+    timer.current = setInterval(fetchMacro, POLL_INTERVAL)
     return () => clearInterval(timer.current)
   }, [])
 
