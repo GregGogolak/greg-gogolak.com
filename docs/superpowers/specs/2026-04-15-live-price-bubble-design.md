@@ -143,16 +143,18 @@ CSS:
 
 ### Four render states
 
+**Pulsing dot rule (all states):** Show the pulsing green dot whenever `wsConnected === true`, regardless of session. If the WebSocket is connected and receiving in premarket or afterhours, the dot appears. It is hidden only when `wsConnected === false` (disconnected, reconnecting, or `closed` state where the dot is never shown).
+
 **`open`**
 - Green pill badge: `LIVE`
-- Pulsing green dot (only when `wsConnected === true`)
+- Pulsing green dot when `wsConnected === true`
 - Large monospace price: `livePrice ?? prevClose`
 - `% change` from `prevClose` — green if positive, red if negative
 - Countdown: `Market closes in Xh Xm`
 
 **`premarket`**
 - Orange pill badge: `PRE-MARKET`
-- No pulsing dot (WebSocket may not have trades yet)
+- Pulsing green dot when `wsConnected === true`
 - Price: `livePrice ?? prevClose` (WebSocket will stream any pre-market trades)
 - `% change` from `prevClose`
 - Countdown: `Market opens in Xh Xm`
@@ -160,14 +162,14 @@ CSS:
 
 **`afterhours`**
 - Blue pill badge: `AFTER HOURS`
-- No pulsing dot
+- Pulsing green dot when `wsConnected === true`
 - Price: `livePrice ?? prevClose`
 - `% change` from `prevClose`
 - Countdown: `Extended hours close in Xh Xm`
 
 **`closed`**
 - Grey pill badge: `CLOSED`
-- No pulsing dot
+- No pulsing dot (never — WebSocket does not stream outside 04:00–20:00 ET)
 - Price: `prevClose` (last known close — do not show stale WebSocket tick)
 - `% change`: show `pctChange` from REST (last session's change vs previous day close)
 - Countdown: `Pre-market opens in Xh Xm` (counting to 04:00 ET next trading day — skips weekends)
@@ -218,7 +220,7 @@ const { livePrice, wsConnected } = useNVDALive()
 A new env var is required client-side:
 
 ```
-NEXT_PUBLIC_FINNHUB_API_KEY=d7f3tlpr01qpjqqjc1cgd7f3tlpr01qpjqqjc1d0
+NEXT_PUBLIC_FINNHUB_API_KEY=<your_finnhub_api_key>
 ```
 
 Add to `.env.local`. The existing server-side `FINNHUB_API_KEY` is unchanged and continues to be used by all API routes.
