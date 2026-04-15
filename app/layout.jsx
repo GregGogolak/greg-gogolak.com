@@ -1,6 +1,7 @@
 import { Inter, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import SideNav from '@/components/UI/SideNav'
+import AlertBanner from '@/components/Alerts/AlertBanner'
 import { NVDALiveContextProvider } from '@/context/NVDALiveContext'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -16,6 +17,7 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
       <body style={{ fontFamily: 'var(--font-inter, Inter, sans-serif)', display: 'flex' }}>
         <NVDALiveContextProvider>
+          <AlertBanner />
           <SideNav />
           <div style={{ position: 'relative', zIndex: 1, flex: 1, marginLeft: '90px' }}>
             {children}
