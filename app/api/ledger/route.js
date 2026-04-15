@@ -78,11 +78,11 @@ export async function GET() {
           winRate,
           tradeCount: trades.length,
           recentTrades,
+          allTrades: [...trades].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date)),
           bestTrade,
           worstTrade,
           thisMonthNet,
           winStreak: streak,
-          _allTrades: trades,
         }
       })
     )
@@ -95,7 +95,7 @@ export async function GET() {
       totalNetEur: members.reduce((s, m) => s + m.totalNetEur, 0),
       totalTrades: members.reduce((s, m) => s + m.tradeCount, 0),
       fundWinRate: (() => {
-        const allTrades = members.flatMap(m => m._allTrades)
+        const allTrades = members.flatMap(m => m.allTrades)
         const wins = allTrades.filter(t => t.net_eur > 0).length
         return allTrades.length > 0 ? Math.round((wins / allTrades.length) * 100) : null
       })(),
@@ -106,9 +106,6 @@ export async function GET() {
       }, null),
       totalOpenPositions: members.reduce((s, m) => s + m.openPositions.length, 0),
     }
-
-    // Remove internal field before returning
-    members.forEach(m => delete m._allTrades)
 
     return Response.json({ members, fundStats })
   } catch (err) {

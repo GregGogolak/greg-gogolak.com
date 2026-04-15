@@ -182,9 +182,20 @@ export default function LedgerPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={rankBadge}>#{i + 1}</div>
               <div>
-                <div style={{ color: '#e8eaf6', fontSize: '14px', fontWeight: 500 }}>{member.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#e8eaf6', fontSize: '14px', fontWeight: 500 }}>{member.name}</div>
+                  {member.winStreak >= 2 && (
+                    <span style={streakBadge}>🔥 {member.winStreak} streak</span>
+                  )}
+                  {leaderboard?.bestThisMonth?.some(m => m.userId === member.userId) && member.thisMonthNet > 0 && (
+                    <span style={winningBadge}>👑 winning</span>
+                  )}
+                </div>
                 <div style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>
                   {member.tradeCount} trades · {member.winRate !== null ? `${member.winRate}% win rate` : 'no trades yet'}
+                </div>
+                <div style={{ color: member.thisMonthNet >= 0 ? '#22c55e' : '#ef4444', fontSize: '10px', fontFamily: 'monospace' }}>
+                  {member.thisMonthNet >= 0 ? '+' : ''}{fmtEUR(member.thisMonthNet)} this month
                 </div>
               </div>
             </div>
@@ -212,27 +223,53 @@ export default function LedgerPage() {
             </div>
           )}
 
-          {/* Recent trades toggle */}
-          {member.recentTrades.length > 0 && (
-            <div>
+          {/* Trade history toggle */}
+          {member.tradeCount > 0 && (
+            <div style={{ marginTop: '8px' }}>
               <button
                 onClick={() => setExpanded(expanded === member.userId ? null : member.userId)}
                 style={toggleButton}
               >
-                Recent trades {expanded === member.userId ? '▲' : '▼'}
+                {expanded === member.userId ? '▲ hide trades' : `▼ show all trades (${member.tradeCount})`}
               </button>
+
               {expanded === member.userId && (
-                <div style={{ marginTop: '8px' }}>
-                  {member.recentTrades.map((trade, j) => (
-                    <div key={j} style={tradeRow}>
-                      <span style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>{trade.sell_date}</span>
-                      <span style={{ color: '#7b8cde', fontSize: '10px', fontFamily: 'monospace' }}>{trade.type}</span>
-                      <span style={{ color: '#c8cce8', fontSize: '11px' }}>{trade.shares}sh</span>
-                      <span style={{ color: trade.net_eur >= 0 ? '#22c55e' : '#ef4444', fontSize: '11px', fontFamily: 'monospace', fontWeight: 500 }}>
-                        {fmtEUR(trade.net_eur)}
-                      </span>
-                    </div>
-                  ))}
+                <div style={{ marginTop: '10px' }}>
+                  <div style={tradeHistoryHeader}>
+                    <span>DATE</span>
+                    <span>TYPE</span>
+                    <span>SHARES</span>
+                    <span>ENTRY</span>
+                    <span>EXIT</span>
+                    <span>NET EUR</span>
+                  </div>
+
+                  {(member.allTrades ?? member.recentTrades)
+                    .map((trade, j) => (
+                      <div key={j} style={{
+                        ...tradeHistoryRow,
+                        borderLeft: `2px solid ${trade.net_eur >= 0 ? '#22c55e' : '#ef4444'}`,
+                      }}>
+                        <span style={{ color: '#4a5270' }}>{trade.sell_date}</span>
+                        <span style={{ color: '#7b8cde' }}>{trade.type}</span>
+                        <span style={{ color: '#c8cce8' }}>{trade.shares}</span>
+                        <span style={{ color: '#c8cce8' }}>${trade.buy_price}</span>
+                        <span style={{ color: '#c8cce8' }}>${trade.sell_price}</span>
+                        <span style={{ color: trade.net_eur >= 0 ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
+                          {fmtEUR(trade.net_eur)}
+                        </span>
+                      </div>
+                    ))
+                  }
+
+                  <div style={tradeSummaryRow}>
+                    <span style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>
+                      {member.tradeCount} trades · {member.winRate}% win rate
+                    </span>
+                    <span style={{ color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444', fontSize: '12px', fontFamily: 'monospace', fontWeight: 500 }}>
+                      {fmtEUR(member.totalNetEur)} total
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -269,3 +306,8 @@ const leaderCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borde
 const leaderCardTitle = { fontFamily: 'monospace', fontSize: '8px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase' }
 const leaderCardValue = { fontFamily: 'monospace', fontSize: '18px', fontWeight: 500, margin: '6px 0 2px' }
 const leaderCardName = { fontFamily: 'monospace', fontSize: '10px', color: '#7b8cde' }
+const streakBadge = { background: '#1a0e00', border: '0.5px solid #3a2000', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', fontSize: '9px', color: '#f59e0b' }
+const winningBadge = { background: '#0a1a0a', border: '0.5px solid #1a3a1a', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', fontSize: '9px', color: '#22c55e' }
+const tradeHistoryHeader = { display: 'grid', gridTemplateColumns: '80px 60px 60px 70px 70px 1fr', gap: '4px', padding: '6px 8px', fontFamily: 'monospace', fontSize: '8px', color: '#4a5270', letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '0.5px solid #1a1f2e', marginBottom: '4px' }
+const tradeHistoryRow = { display: 'grid', gridTemplateColumns: '80px 60px 60px 70px 70px 1fr', gap: '4px', padding: '6px 8px', fontFamily: 'monospace', fontSize: '11px', borderBottom: '0.5px solid #0d1018', paddingLeft: '10px' }
+const tradeSummaryRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 8px 4px', marginTop: '4px', borderTop: '0.5px solid #1a1f2e' }
