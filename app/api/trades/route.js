@@ -1,19 +1,8 @@
 import { getRedis } from '@/lib/redis'
+import { safeParse } from '@/lib/safeParse'
 import { calculateTrade } from '@/lib/tradeCalculations'
 
 const TRADES_KEY = 'nvda_trades'
-
-/**
- * Upstash auto-deserialises JSON on read, so redis.get() may return an already-
- * parsed object rather than a string. Handle both forms to avoid JSON.parse errors.
- */
-function safeparse(val, fallback) {
-  if (val === null || val === undefined) return fallback
-  if (typeof val === 'string') {
-    try { return JSON.parse(val) } catch { return fallback }
-  }
-  return val  // already deserialised by Upstash
-}
 
 function validateInputs({ buy_price, sell_price, shares, buy_date, sell_date, type }) {
   if (!buy_date || !sell_date || !type) return 'All fields are required'
@@ -31,7 +20,7 @@ export async function GET() {
     const redis = getRedis()
     if (!redis) return Response.json([])
     const raw    = await redis.get(TRADES_KEY)
-    const trades = safeparse(raw, [])
+    const trades = safeParse(raw, [])
     trades.sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
     return Response.json(trades)
   } catch (err) {
@@ -73,7 +62,7 @@ export async function POST(req) {
 
     if (!redis) return Response.json(trade)
 
-    const existing = safeparse(await redis.get(TRADES_KEY), [])
+    const existing = safeParse(await redis.get(TRADES_KEY), [])
     await redis.set(TRADES_KEY, JSON.stringify([...existing, trade]))
     return Response.json(trade)
   } catch (err) {
@@ -104,7 +93,7 @@ export async function PUT(req) {
 
     if (!redis) return Response.json({ ok: true })
 
-    const existing = safeparse(await redis.get(TRADES_KEY), [])
+    const existing = safeParse(await redis.get(TRADES_KEY), [])
     const idx = existing.findIndex(t => t.id === id)
     if (idx === -1) return Response.json({ error: 'Trade not found' }, { status: 404 })
 
@@ -136,7 +125,7 @@ export async function DELETE(req) {
 
     if (!redis) return Response.json({ ok: true })
 
-    const existing = safeparse(await redis.get(TRADES_KEY), [])
+    const existing = safeParse(await redis.get(TRADES_KEY), [])
     const filtered = existing.filter(t => t.id !== id)
     await redis.set(TRADES_KEY, JSON.stringify(filtered))
     return Response.json({ ok: true })

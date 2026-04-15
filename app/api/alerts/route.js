@@ -1,4 +1,5 @@
 import { getRedis } from '@/lib/redis'
+import { safeParse } from '@/lib/safeParse'
 
 const KEYS = {
   config:       'alerts:config',
@@ -13,15 +14,6 @@ const CONFIG_DEFAULTS = {
   earnings3d:      true,
 }
 
-// Upstash auto-deserializes JSON — handle both string and parsed forms
-function safeparse(val, fallback) {
-  if (val === null || val === undefined) return fallback
-  if (typeof val === 'string') {
-    try { return JSON.parse(val) } catch { return fallback }
-  }
-  return val // already an object/array from Upstash
-}
-
 export async function GET() {
   try {
     const redis = getRedis()
@@ -32,8 +24,8 @@ export async function GET() {
       redis.get(KEYS.customLevels),
     ])
 
-    const config       = { ...CONFIG_DEFAULTS, ...safeparse(rawConfig, {}) }
-    const customLevels = safeparse(rawLevels, [])
+    const config       = { ...CONFIG_DEFAULTS, ...safeParse(rawConfig, {}) }
+    const customLevels = safeParse(rawLevels, [])
 
     return Response.json({ config, customLevels })
   } catch (err) {
@@ -57,7 +49,7 @@ export async function POST(req) {
 
       case 'addLevel': {
         const raw     = await redis.get(KEYS.customLevels)
-        const current = safeparse(raw, [])
+        const current = safeParse(raw, [])
         const level   = {
           id:        crypto.randomUUID(),
           price:     parseFloat(payload.price),
@@ -70,7 +62,7 @@ export async function POST(req) {
 
       case 'removeLevel': {
         const raw      = await redis.get(KEYS.customLevels)
-        const current  = safeparse(raw, [])
+        const current  = safeParse(raw, [])
         const filtered = current.filter(l => l.id !== payload.id)
         await redis.set(KEYS.customLevels, JSON.stringify(filtered))
         return Response.json({ ok: true })

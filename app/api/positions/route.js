@@ -1,22 +1,11 @@
 import { getRedis } from '@/lib/redis'
+import { safeParse } from '@/lib/safeParse'
 
 // ── Redis keys ─────────────────────────────────────────────────────────────
 const KEYS = {
   positions: 'positions:list',
   cash:      'cash:available',
   iran:      'iran:status',
-}
-
-/**
- * Upstash auto-deserialises JSON on read, so redis.get() may return an already-
- * parsed object rather than a string. Handle both forms to avoid JSON.parse errors.
- */
-function safeparse(val, fallback) {
-  if (val === null || val === undefined) return fallback
-  if (typeof val === 'string') {
-    try { return JSON.parse(val) } catch { return fallback }
-  }
-  return val  // already deserialised by Upstash
 }
 
 const DEFAULTS = { positions: [], cash: 0, iranStatus: 'ESCALATING' }
@@ -29,7 +18,7 @@ async function readAll(redis) {
     redis.get(KEYS.iran),
   ])
   return {
-    positions:  safeparse(rawPositions, []),
+    positions:  safeParse(rawPositions, []),
     cash:       parseFloat(rawCash || '0'),
     iranStatus: rawIran || 'ESCALATING',
   }
@@ -57,7 +46,7 @@ export async function POST(req) {
 
     switch (action) {
       case 'add': {
-        const current = safeparse(await redis.get(KEYS.positions), [])
+        const current = safeParse(await redis.get(KEYS.positions), [])
         const newPos  = { ...payload, id: crypto.randomUUID(), status: 'OPEN' }
         const updated = [...current, newPos]
         await redis.set(KEYS.positions, JSON.stringify(updated))
@@ -66,7 +55,7 @@ export async function POST(req) {
       }
 
       case 'remove': {
-        const current  = safeparse(await redis.get(KEYS.positions), [])
+        const current  = safeParse(await redis.get(KEYS.positions), [])
         const filtered = current.filter(p => p.id !== payload.id)
         await redis.set(KEYS.positions, JSON.stringify(filtered))
         return Response.json({ ok: true, positions: filtered })
