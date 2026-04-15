@@ -1,3 +1,18 @@
+## How To Use This Project
+
+This codebase is maintained by one non-technical owner with Claude Code as 
+the builder. Every session should:
+
+1. Read this file completely before writing any code
+2. Make only the changes explicitly requested
+3. Not create new files without stating the intention first
+4. Not modify files not mentioned in the prompt
+5. End every session by listing exactly what was created and what was changed
+
+When in doubt, do less and report back rather than assuming.
+
+
+
 # NVDA Jarvis — Trading Assistant
 
 ## Project Overview
@@ -59,8 +74,8 @@ ALPHA_VANTAGE_API_KEY=82N8723XA07AMYLL
 ANTHROPIC_API_KEY=
 ELEVENLABS_API_KEY=
 ELEVENLABS_VOICE_ID=
-KV_REST_API_URL=
-KV_REST_API_TOKEN=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 ## Project Structure
@@ -74,54 +89,60 @@ nvda-jarvis/
 ├── tailwind.config.js
 │
 ├── app/
-│   ├── layout.jsx
+│   ├── layout.jsx                ← root layout; mounts AlertBanner
 │   ├── page.jsx                  ← Dashboard (home)
 │   ├── read/page.jsx             ← Give Me A Read
 │   ├── trade/page.jsx            ← Pre-Trade Checklist
-│   ├── alerts/page.jsx           ← Alert config
+│   ├── alerts/page.jsx           ← Alert System config
 │   │
 │   └── api/
-│       ├── price/route.js        ← Finnhub: NVDA price + SMAs
-│       ├── macro/route.js        ← Finnhub: oil, QQQ, VIX
-│       ├── news/route.js         ← Finnhub: news + sentiment
-│       ├── fundamentals/route.js ← Alpha Vantage: PE, consensus
-│       ├── analysis/route.js     ← Anthropic: Give Me A Read
-│       ├── checklist/route.js    ← Anthropic: pre-trade eval
-│       ├── voice/route.js        ← ElevenLabs: TTS
-│       └── positions/route.js    ← Vercel KV: position CRUD
+│       ├── price/route.js        ← Finnhub: NVDA quote + SMAs (AV) + daily candles (AV)
+│       ├── macro/route.js        ← QQQ (Finnhub), Brent oil (AV), VIX (Yahoo Finance)
+│       ├── news/route.js         ← Finnhub: NVDA news, keyword-classified A/B/C
+│       ├── fundamentals/route.js ← Alpha Vantage: analyst target, PE, EPS (6hr KV cache)
+│       ├── analysis/route.js     ← Anthropic: Give Me A Read (30min KV cache)
+│       ├── checklist/route.js    ← Anthropic: pre-trade evaluation
+│       ├── positions/route.js    ← Upstash KV: position + cash + Iran CRUD
+│       └── alerts/route.js       ← Upstash KV: alert config + custom price levels
 │
 ├── components/
 │   ├── Dashboard/
-│   │   ├── PricePanel.jsx
-│   │   ├── ThesisStatus.jsx
-│   │   ├── MacroPanel.jsx
-│   │   ├── PositionPanel.jsx
-│   │   └── CatalystBar.jsx
-│   ├── Voice/
-│   │   ├── VoiceButton.jsx
-│   │   └── AudioPlayer.jsx
+│   │   ├── PricePanel.jsx        ← price, SMAs, sparkline
+│   │   ├── ThesisStatus.jsx      ← INTACT/AT RISK/BROKEN orb
+│   │   ├── MacroPanel.jsx        ← oil, QQQ, VIX tiles
+│   │   ├── PositionPanel.jsx     ← open positions + cash
+│   │   ├── CatalystBar.jsx       ← Iran toggle, earnings/FOMC countdown
+│   │   ├── BuyChecklist.jsx      ← 6-condition entry checklist
+│   │   ├── SignalGauge.jsx       ← pass/fail gauge
+│   │   ├── NewsPanel.jsx         ← bucketed news feed
+│   │   └── Sparkline.jsx         ← SVG price sparkline
 │   ├── Alerts/
-│   │   └── AlertBanner.jsx
+│   │   └── AlertBanner.jsx       ← fixed top banner, self-contained
 │   └── UI/
-│       ├── StatusBadge.jsx
-│       └── CopyBrief.jsx
+│       └── StatusBadge.jsx
 │
 ├── hooks/
 │   ├── useNVDAData.js            ← polls /api/price every 60s
 │   ├── useMacroData.js           ← polls /api/macro every 5min
 │   ├── useNews.js                ← polls /api/news every 15min
-│   └── useAlerts.js              ← threshold monitoring
+│   └── useAlerts.js              ← alert engine + price buffer + sessionStorage dedup
 │
 └── lib/
-    ├── calculations.js           ← exact P&L formula above
-    ├── thesisEngine.js           ← INTACT/AT RISK/BROKEN logic
-    ├── newsClassifier.js         ← Bucket A/B/C classification
-    └── formatBrief.js            ← formats all data for Anthropic
+    ├── redis.js                  ← shared getRedis() factory (Upstash)
+    ├── safeParse.js              ← handles Upstash dual return format
+    ├── config.js                 ← EARNINGS_DATE, FOMC_DATE, CONFIG_DEFAULTS, getBaseUrl()
+    ├── format.js                 ← fmtUSD, fmtEUR, pnlColor (hex) for Track components
+    ├── calculations.js           ← exact P&L formula, projections, erosion day
+    ├── tradeCalculations.js      ← full trade P&L with all cost components
+    ├── thesisEngine.js           ← INTACT/AT RISK/BROKEN logic + buy checklist
+    ├── alertEngine.js            ← 5 pure alert check functions
+    ├── newsClassifier.js         ← Bucket A/B/C keyword + Claude classification
+    └── formatBrief.js            ← formats all data for Anthropic prompts
 ```
 
 ## Build Phases — Do Not Skip Ahead
 
-### Phase 1 — Dashboard + Live Data [CURRENT PHASE]
+### Phase 1 — Dashboard + Live Data
 No AI calls. All data real and verified.
 
 Required data on screen:
@@ -174,20 +195,18 @@ Gate: test alert fires correctly.
 
 ## Thesis Status Logic (thesisEngine.js)
 
-INTACT (all must be true):
+INTACT (default — none of the below triggered):
 - Price above daily 200 SMA
-- Analyst consensus >20% above current price
-- No Bucket C news in past 24hrs
+- No AT RISK conditions active
 
 AT RISK (any one triggers):
-- Price within 2% below 200 SMA
-- Oil up >5% in past 2 sessions
+- Price within 0–5% below 200 SMA
+- Oil up >5% over past 2 sessions
 - VIX above 30
 - Bucket C news detected
 
 BROKEN:
-- Price >5% below 200 SMA sustained
-- Confirmed hyperscaler capex deterioration
+- Price >5% below 200 SMA
 
 ## Buy Checklist (6 conditions)
 1. Price within 3% of 200 SMA or below it
@@ -224,7 +243,7 @@ major customer loss, antitrust action, competing chip threat
 8. Days to earnings
 
 ## UI Rules
-- Background: #0a0a0a
+- Background: #080910
 - Mobile-first, 390px primary width
 - Every screen readable in 30 seconds
 - Green = buy signal, Yellow = watch, Red = risk
@@ -234,11 +253,29 @@ major customer loss, antitrust action, competing chip threat
 - No charting, no order execution, NVDA only
 
 ## Phase Status (update this when phases complete)
-- Phase 1: COMPLETE
-- Phase 2: COMPLETE
+- Phase 1: COMPLETE — Dashboard + live data, all numbers verified
+- Phase 2: COMPLETE — Intelligence layer, news classification, Give Me A Read screen, Read page redesign
 - Phase 3: DEFERRED (awaiting ElevenLabs credentials)
-- Phase 4: COMPLETE
-- Phase 5: COMPLETE
+- Phase 4: COMPLETE — Pre-trade checklist, P&L verified
+- Phase 5: COMPLETE — Alert system, all triggers tested
+- Phase 6: COMPLETE — LivePriceBubble wired into dashboard (WebSocket, session-aware, 4 states)
+- Phase 7: COMPLETE — Track page (trade log, P&L summary, CRUD with edit/delete confirm)
+- Consolidation session (2026-04-15): lib/redis, lib/safeParse, lib/config, lib/format extracted; useAlerts deduplication; news double-classification fixed; dead files deleted
+
+## Active Lib Files (shared utilities — import these, do not duplicate)
+
+| File | Exports | Used by |
+|------|---------|---------|
+| `lib/redis.js` | `getRedis()` | All API routes that touch KV |
+| `lib/safeParse.js` | `safeParse(val, fallback)` | API routes reading KV values |
+| `lib/config.js` | `EARNINGS_DATE`, `FOMC_DATE`, `CONFIG_DEFAULTS`, `getBaseUrl()` | API routes, hooks, pages |
+| `lib/format.js` | `fmtUSD(n)`, `fmtEUR(n)`, `pnlColor(n)` | Track components (TradeTable, SummaryCards) |
+| `lib/calculations.js` | `calcTrade()`, `daysUntil()`, etc. | Trade page, alerts hook, checklist API |
+| `lib/thesisEngine.js` | `getThesisStatus()`, `getBuyChecklist()` | Dashboard, checklist API |
+| `lib/alertEngine.js` | 5 pure check functions | useAlerts hook |
+| `lib/newsClassifier.js` | `classifyWithKeywords()`, `classifyWithClaude()` | news API, analysis API |
+| `lib/formatBrief.js` | `formatBrief()` | analysis API |
+| `lib/tradeCalculations.js` | `calcTrade()` | Track API, Track page |
 
 ## Claude Code Session Rules
 1. Read this file completely before any code
