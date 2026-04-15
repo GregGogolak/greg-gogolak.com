@@ -3,15 +3,24 @@
 import { useState, useEffect } from 'react'
 import { fmtEUR } from '@/lib/format'
 
-function LeaderCard({ title, icon, name, value, valueColor, sub, style: extraStyle }) {
+function LeaderCard({ title, icon, value, valueColor, winners, style }) {
   return (
-    <div style={{ ...leaderCard, ...extraStyle }}>
+    <div style={{ ...leaderCard, ...style }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
         <div style={leaderCardTitle}>{title}</div>
         <span style={{ fontSize: '16px' }}>{icon}</span>
       </div>
       <div style={{ ...leaderCardValue, color: valueColor }}>{value}</div>
-      <div style={leaderCardName}>{name}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
+        {winners.map((name, i) => (
+          <span key={i} style={leaderCardName}>
+            {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
+          </span>
+        ))}
+        {winners.length > 1 && (
+          <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', marginLeft: '2px' }}>TIED</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -47,15 +56,30 @@ export default function LedgerPage() {
   const fundStats = data?.fundStats ?? {}
 
   const leaderboard = members.length > 0 ? {
-    mostProfitable: [...members].sort((a, b) => b.totalNetEur - a.totalNetEur)[0],
-    bestWinRate: [...members]
-      .filter(m => m.tradeCount >= 3)
-      .sort((a, b) => b.winRate - a.winRate)[0] ?? null,
-    bestSingleTrade: [...members]
-      .filter(m => m.bestTrade)
-      .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)[0] ?? null,
-    mostActive: [...members].sort((a, b) => b.tradeCount - a.tradeCount)[0],
-    bestThisMonth: [...members].sort((a, b) => b.thisMonthNet - a.thisMonthNet)[0],
+    mostProfitable: (() => {
+      const top = Math.max(...members.map(m => m.totalNetEur))
+      return members.filter(m => m.totalNetEur === top)
+    })(),
+    bestWinRate: (() => {
+      const qualified = members.filter(m => m.tradeCount >= 3)
+      if (qualified.length === 0) return []
+      const top = Math.max(...qualified.map(m => m.winRate))
+      return qualified.filter(m => m.winRate === top)
+    })(),
+    bestSingleTrade: (() => {
+      const withTrades = members.filter(m => m.bestTrade)
+      if (withTrades.length === 0) return []
+      const top = Math.max(...withTrades.map(m => m.bestTrade.net_eur))
+      return withTrades.filter(m => m.bestTrade.net_eur === top)
+    })(),
+    mostActive: (() => {
+      const top = Math.max(...members.map(m => m.tradeCount))
+      return members.filter(m => m.tradeCount === top)
+    })(),
+    bestThisMonth: (() => {
+      const top = Math.max(...members.map(m => m.thisMonthNet))
+      return members.filter(m => m.thisMonthNet === top)
+    })(),
   } : null
 
   return (
@@ -108,46 +132,41 @@ export default function LedgerPage() {
             <LeaderCard
               title='MOST PROFITABLE'
               icon='💰'
-              name={leaderboard.mostProfitable?.name}
-              value={fmtEUR(leaderboard.mostProfitable?.totalNetEur)}
+              winners={leaderboard.mostProfitable.map(m => m.name)}
+              value={fmtEUR(leaderboard.mostProfitable[0]?.totalNetEur)}
               valueColor='#22c55e'
-              sub='all time'
             />
 
             <LeaderCard
               title='BEST WIN RATE'
               icon='🎯'
-              name={leaderboard.bestWinRate?.name ?? '—'}
-              value={leaderboard.bestWinRate ? `${leaderboard.bestWinRate.winRate}%` : 'min 3 trades'}
+              winners={leaderboard.bestWinRate.length > 0 ? leaderboard.bestWinRate.map(m => m.name) : ['min 3 trades']}
+              value={leaderboard.bestWinRate.length > 0 ? `${leaderboard.bestWinRate[0].winRate}%` : '—'}
               valueColor='#7b8cde'
-              sub='min 3 trades'
             />
 
             <LeaderCard
               title='BEST SINGLE TRADE'
               icon='⚡'
-              name={leaderboard.bestSingleTrade?.name ?? '—'}
-              value={leaderboard.bestSingleTrade ? fmtEUR(leaderboard.bestSingleTrade.bestTrade.net_eur) : '—'}
+              winners={leaderboard.bestSingleTrade.length > 0 ? leaderboard.bestSingleTrade.map(m => m.name) : ['—']}
+              value={leaderboard.bestSingleTrade.length > 0 ? fmtEUR(leaderboard.bestSingleTrade[0].bestTrade.net_eur) : '—'}
               valueColor='#f59e0b'
-              sub='highest net EUR'
             />
 
             <LeaderCard
               title='MOST ACTIVE'
               icon='🔥'
-              name={leaderboard.mostActive?.name}
-              value={`${leaderboard.mostActive?.tradeCount} trades`}
+              winners={leaderboard.mostActive.map(m => m.name)}
+              value={`${leaderboard.mostActive[0]?.tradeCount} trades`}
               valueColor='#e8eaf6'
-              sub='total trades'
             />
 
             <LeaderCard
               title='BEST THIS MONTH'
               icon='📅'
-              name={leaderboard.bestThisMonth?.name}
-              value={fmtEUR(leaderboard.bestThisMonth?.thisMonthNet)}
-              valueColor={leaderboard.bestThisMonth?.thisMonthNet >= 0 ? '#22c55e' : '#ef4444'}
-              sub={new Date().toLocaleString('default', { month: 'long' })}
+              winners={leaderboard.bestThisMonth.map(m => m.name)}
+              value={fmtEUR(leaderboard.bestThisMonth[0]?.thisMonthNet)}
+              valueColor={leaderboard.bestThisMonth[0]?.thisMonthNet >= 0 ? '#22c55e' : '#ef4444'}
               style={{ gridColumn: 'span 2' }}
             />
 
