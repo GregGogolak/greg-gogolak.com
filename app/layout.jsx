@@ -3,6 +3,7 @@ import './globals.css'
 import SideNav from '@/components/UI/SideNav'
 import AlertBanner from '@/components/Alerts/AlertBanner'
 import { NVDALiveContextProvider } from '@/context/NVDALiveContext'
+import { ClerkProvider, UserButton } from '@clerk/nextjs'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const interTight = Inter_Tight({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-inter-tight' })
@@ -14,16 +15,21 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
-      <body style={{ fontFamily: 'var(--font-inter, Inter, sans-serif)', display: 'flex' }}>
-        <NVDALiveContextProvider>
-          <AlertBanner />
-          <SideNav />
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, marginLeft: '90px' }}>
-            {children}
-          </div>
-        </NVDALiveContextProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
+        <body style={{ fontFamily: 'var(--font-inter, Inter, sans-serif)', display: 'flex' }}>
+          <NVDALiveContextProvider>
+            <AlertBanner />
+            <SideNav />
+            <div style={{ position: 'relative', zIndex: 1, flex: 1, marginLeft: '90px' }}>
+              <div style={{ position: 'fixed', top: '12px', right: '16px', zIndex: 100 }}>
+                <UserButton />
+              </div>
+              {children}
+            </div>
+          </NVDALiveContextProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
