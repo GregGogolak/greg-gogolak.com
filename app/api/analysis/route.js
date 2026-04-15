@@ -3,14 +3,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import { classifyWithKeywords, classifyWithClaude } from '@/lib/newsClassifier'
 import { formatBrief } from '@/lib/formatBrief'
 import { daysUntil } from '@/lib/calculations'
+import { EARNINGS_DATE, FOMC_DATE, getBaseUrl } from '@/lib/config'
 
 const CACHE_KEY    = 'analysis:latest'
 const CACHE_TTL_MS = 30 * 60 * 1000   // 30 minutes
 const CACHE_TTL_S  = 30 * 60          // 30 minutes in seconds (for Redis ex)
-
-const BASE_URL = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
 
 // GET — return full history list for tab population
 export async function GET() {
@@ -40,12 +37,13 @@ export async function POST() {
     }
 
     // Fetch all live data in parallel
+    const baseUrl = getBaseUrl()
     const [priceRes, macroRes, newsRes, fundamentalsRes, positionsRes] = await Promise.all([
-      fetch(`${BASE_URL}/api/price`),
-      fetch(`${BASE_URL}/api/macro`),
-      fetch(`${BASE_URL}/api/news`),
-      fetch(`${BASE_URL}/api/fundamentals`),
-      fetch(`${BASE_URL}/api/positions`),
+      fetch(`${baseUrl}/api/price`),
+      fetch(`${baseUrl}/api/macro`),
+      fetch(`${baseUrl}/api/news`),
+      fetch(`${baseUrl}/api/fundamentals`),
+      fetch(`${baseUrl}/api/positions`),
     ])
 
     for (const [res, name] of [
@@ -86,8 +84,8 @@ export async function POST() {
     // Compute derived fundamentals values
     const analystTarget = fundamentals.analystTarget ?? 264
     const targetGapPct  = ((analystTarget - price.price) / price.price) * 100
-    const daysToEarnings = daysUntil('2026-05-20')
-    const daysToFomc     = daysUntil('2026-04-28')
+    const daysToEarnings = daysUntil(EARNINGS_DATE)
+    const daysToFomc     = daysUntil(FOMC_DATE)
 
     // Format the brief for Claude
     const brief = formatBrief({

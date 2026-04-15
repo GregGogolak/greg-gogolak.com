@@ -8,6 +8,7 @@ import { useNVDALive }    from '@/context/NVDALiveContext'
 import LivePriceBubble    from '@/components/LivePriceBubble'
 import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
 import { daysUntil } from '@/lib/calculations'
+import { EARNINGS_DATE } from '@/lib/config'
 
 import PricePanel    from '@/components/Dashboard/PricePanel'
 import ThesisStatus  from '@/components/Dashboard/ThesisStatus'
@@ -17,8 +18,6 @@ import PositionPanel from '@/components/Dashboard/PositionPanel'
 import SignalGauge   from '@/components/Dashboard/SignalGauge'
 import BuyChecklist  from '@/components/Dashboard/BuyChecklist'
 import NewsPanel     from '@/components/Dashboard/NewsPanel'
-
-const EARNINGS_DATE = '2026-05-20'
 
 function SentimentChip() {
   const [pulse, setPulse] = useState(null)

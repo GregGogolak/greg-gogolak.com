@@ -12,6 +12,7 @@ import {
   daysUntil,
 } from '@/lib/calculations'
 import { getBuyChecklist } from '@/lib/thesisEngine'
+import { EARNINGS_DATE } from '@/lib/config'
 
 /* ─── Design tokens ───────────────────────────────────────────────────── */
 const GREEN  = '#34d399'
@@ -200,7 +201,7 @@ export default function TradePage() {
     hasBucketCNews: hasBucketC,
     qqqPctChange:   macro.qqq?.pctChange  ?? 0,
     vix:            macro.vix?.level      ?? 0,
-    daysToEarnings: daysUntil('2026-05-20'),
+    daysToEarnings: daysUntil(EARNINGS_DATE),
   }) : null
 
   const passCount = checklist?.filter(c => c.pass).length ?? 0

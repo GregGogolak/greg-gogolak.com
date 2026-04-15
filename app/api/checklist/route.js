@@ -1,10 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getBuyChecklist, getThesisStatus } from '@/lib/thesisEngine'
 import { daysUntil } from '@/lib/calculations'
-
-const BASE_URL = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
+import { EARNINGS_DATE, getBaseUrl } from '@/lib/config'
 
 export async function POST(request) {
   try {
@@ -26,10 +23,11 @@ export async function POST(request) {
     }
 
     // Fetch live market context in parallel
+    const baseUrl = getBaseUrl()
     const [priceRes, macroRes, newsRes] = await Promise.all([
-      fetch(`${BASE_URL}/api/price`),
-      fetch(`${BASE_URL}/api/macro`),
-      fetch(`${BASE_URL}/api/news`),
+      fetch(`${baseUrl}/api/price`),
+      fetch(`${baseUrl}/api/macro`),
+      fetch(`${baseUrl}/api/news`),
     ])
 
     const [price, macro, newsData] = await Promise.all([
@@ -42,7 +40,7 @@ export async function POST(request) {
     const articles       = newsData.articles || []
     const nowSec         = Date.now() / 1000
     const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)
-    const daysToEarnings = daysUntil('2026-05-20')
+    const daysToEarnings = daysUntil(EARNINGS_DATE)
 
     const checklist = getBuyChecklist({
       price:          price.price,

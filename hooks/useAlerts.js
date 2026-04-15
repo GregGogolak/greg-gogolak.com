@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { daysUntil } from '@/lib/calculations'
+import { EARNINGS_DATE, CONFIG_DEFAULTS } from '@/lib/config'
 import {
   checkPriceDropAlert,
   checkCustomLevelAlerts,
@@ -11,15 +12,6 @@ import {
 
 const DISMISSED_KEY  = 'dismissed-alerts'
 const BUFFER_MAX     = 120 // 2hrs at 60s intervals
-const EARNINGS_DATE  = '2026-05-20'
-
-const CONFIG_DEFAULTS = {
-  priceDrop:        true,
-  interestErosion:  true,
-  oilMove:          true,
-  earnings14d:      true,
-  earnings3d:       true,
-}
 
 function loadDismissed() {
   if (typeof window === 'undefined') return new Set()

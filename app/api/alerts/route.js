@@ -1,17 +1,10 @@
 import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
+import { CONFIG_DEFAULTS } from '@/lib/config'
 
 const KEYS = {
   config:       'alerts:config',
   customLevels: 'alerts:custom-levels',
-}
-
-const CONFIG_DEFAULTS = {
-  priceDrop:       true,
-  interestErosion: true,
-  oilMove:         true,
-  earnings14d:     true,
-  earnings3d:      true,
 }
 
 export async function GET() {
