@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useNVDAData }   from '@/hooks/useNVDAData'
-import { useMacroData }  from '@/hooks/useMacroData'
-import { useNews }       from '@/hooks/useNews'
+import { useNVDAData }      from '@/hooks/useNVDAData'
+import { useMacroData }     from '@/hooks/useMacroData'
+import { useNews }          from '@/hooks/useNews'
+import { useFundamentals }  from '@/hooks/useFundamentals'
+import { useNVDALive }    from '@/context/NVDALiveContext'
+import LivePriceBubble    from '@/components/LivePriceBubble'
 import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
 import { daysUntil } from '@/lib/calculations'
 
@@ -16,7 +19,6 @@ import BuyChecklist  from '@/components/Dashboard/BuyChecklist'
 import NewsPanel     from '@/components/Dashboard/NewsPanel'
 
 const EARNINGS_DATE = '2026-05-20'
-const FOMC_DATE     = '2026-04-29'
 
 function SentimentChip() {
   const [pulse, setPulse] = useState(null)
@@ -54,12 +56,13 @@ export default function Dashboard() {
   const { data: priceData, loading: priceLoading }  = useNVDAData()
   const { data: macroData, loading: macroLoading }  = useMacroData()
   const { articles, loading: newsLoading }          = useNews()
+  const { data: fundamentalsData }                  = useFundamentals()
+  const { livePrice, wsConnected } = useNVDALive()
 
   // Persisted state (KV-backed)
-  const [positions,   setPositions]  = useState([])
-  const [cash,        setCash]       = useState(0)
-  const [iranStatus,  setIranStatus] = useState('ESCALATING')
-  const [posLoading,  setPosLoading] = useState(true)
+  const [positions,  setPositions]  = useState([])
+  const [cash,       setCash]       = useState(0)
+  const [iranStatus, setIranStatus] = useState('ESCALATING')
 
   // Load positions + KV state on mount
   useEffect(() => {
@@ -71,7 +74,6 @@ export default function Dashboard() {
         setIranStatus(d.iranStatus || 'ESCALATING')
       })
       .catch(() => {})
-      .finally(() => setPosLoading(false))
   }, [])
 
   // Position CRUD
@@ -89,7 +91,7 @@ export default function Dashboard() {
     const res  = await fetch('/api/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'remove', payload: id }),
+      body: JSON.stringify({ action: 'remove', payload: { id } }),
     })
     const data = await res.json()
     setPositions(data.positions || [])
@@ -100,7 +102,7 @@ export default function Dashboard() {
     await fetch('/api/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setCash', payload: amount }),
+      body: JSON.stringify({ action: 'setCash', payload: { cash: amount } }),
     })
   }, [])
 
@@ -109,24 +111,25 @@ export default function Dashboard() {
     await fetch('/api/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setIran', payload: status }),
+      body: JSON.stringify({ action: 'setIran', payload: { status } }),
     })
   }, [])
 
   // Derived values
-  const price    = priceData?.price   ?? null
-  const sma200   = priceData?.sma200  ?? null
-  const vix      = macroData?.vix?.level ?? 0
-  const oilTwo   = macroData?.oil?.twoSessionPct ?? 0
-  const qqqPct   = macroData?.qqq?.pctChange ?? 0
+  const price          = priceData?.price   ?? null
+  const sma200         = priceData?.sma200  ?? null
+  const vix            = macroData?.vix?.level ?? 0
+  const oilTwo         = macroData?.oil?.twoSessionPct ?? 0
+  const qqqPct         = macroData?.qqq?.pctChange ?? 0
+  const analystTarget  = fundamentalsData?.analystTarget ?? 264
 
   const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix })
 
   const checklistItems = getBuyChecklist({
     price:          price ?? 0,
     sma200:         sma200 ?? 0,
-    analystTarget:  264,
-    hasBucketCNews: false,
+    analystTarget,
+    hasBucketCNews: articles.some(a => a.bucket === 'C'),
     qqqPctChange:   qqqPct,
     vix,
     daysToEarnings: daysUntil(EARNINGS_DATE),
@@ -230,8 +233,15 @@ export default function Dashboard() {
           className="dashboard-grid"
         >
           {/* ── PRICE  (col 1, rows 1-2) ─────────────────────────────── */}
-          <div style={{ gridArea: 'price', display: 'flex', flexDirection: 'column' }}>
-            <PricePanel data={priceData} loading={loading} />
+          <div style={{ gridArea: 'price', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <LivePriceBubble
+              livePrice={livePrice}
+              prevClose={priceData?.prevClose ?? null}
+              pctChange={priceData?.pctChange ?? null}
+              wsConnected={wsConnected}
+              marketOpen={priceData?.marketOpen ?? null}
+            />
+            <PricePanel data={priceData} loading={loading} analystTarget={analystTarget} />
           </div>
 
           {/* ── MACRO ENV  (col 2, row 1) ────────────────────────────── */}
