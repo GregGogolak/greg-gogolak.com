@@ -202,7 +202,6 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
               <input
                 type="date"
                 value={form.sell_date}
-                min={form.buy_date}
                 onChange={e => handleChange('sell_date', e.target.value)}
                 required
                 style={FIELD_STYLE}
@@ -320,7 +319,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
               }}>
                 <span>Gross: ${preview.gross_pnl_usd.toFixed(0)}</span>
                 <span>Fees: ${preview.total_costs_usd.toFixed(0)}</span>
-                <span>Days: {preview.calendar_days}</span>
+                <span>Days: {preview.interest_days}</span>
               </div>
             )}
           </div>
