@@ -124,7 +124,7 @@ export default function Dashboard() {
   const qqqPct         = macroData?.qqq?.pctChange ?? 0
   const analystTarget  = fundamentalsData?.analystTarget ?? 264
 
-  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix })
+  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
 
   const nowSec         = Date.now() / 1000
   const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)

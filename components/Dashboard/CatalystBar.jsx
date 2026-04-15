@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { daysUntil } from '@/lib/calculations'
-
-const EARNINGS_DATE = '2026-05-20'
-const FOMC_DATE     = '2026-04-29'
+import { EARNINGS_DATE, FOMC_DATE } from '@/lib/config'
 
 // Catalyst ring — SVG circular progress
 function CatalystRing({ label, date, cycleDays, color, loading }) {
