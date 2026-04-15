@@ -19,6 +19,7 @@ import PositionPanel from '@/components/Dashboard/PositionPanel'
 import SignalGauge   from '@/components/Dashboard/SignalGauge'
 import BuyChecklist  from '@/components/Dashboard/BuyChecklist'
 import NewsPanel     from '@/components/Dashboard/NewsPanel'
+import SignalFeed    from '@/components/Dashboard/SignalFeed'
 
 function SentimentChip() {
   const [pulse, setPulse] = useState(null)
@@ -270,6 +271,7 @@ export default function Dashboard() {
               <BuyChecklist items={checklistItems} />
             </div>
             <NewsPanel articles={articles} loading={newsLoading && articles.length === 0} />
+            <SignalFeed articles={articles} />
           </div>
         </div>
       </main>
