@@ -35,8 +35,8 @@ export default function SignalGauge({ passCount = 0, totalCount = 6 }) {
   const scoreColor = score >= 0.8 ? '#34d399' : score >= 0.5 ? '#fbbf24' : '#f87171'
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <svg viewBox="0 0 220 130" style={{ width: '100%', maxWidth: '240px', overflow: 'visible' }}>
+    <div style={{ position: 'relative', width: '100%', maxWidth: '240px', margin: '0 auto' }}>
+      <svg viewBox="0 0 220 130" style={{ width: '100%', display: 'block', overflow: 'visible' }}>
         <defs>
           <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stopColor="#f87171" />
@@ -55,20 +55,33 @@ export default function SignalGauge({ passCount = 0, totalCount = 6 }) {
           strokeWidth="10" strokeLinecap="round"
           strokeDasharray={`0 ${ARC_LEN}`} />
         {/* Score */}
-        <text x="110" y="100" textAnchor="middle"
+        <text x="110" y="96" textAnchor="middle"
           fontFamily="'Inter Tight', sans-serif"
           fontSize="28" fontWeight="300" fill={scoreColor}>
           {passCount}/{totalCount}
         </text>
-        <text x="110" y="118" textAnchor="middle"
-          fontFamily="'Inter', sans-serif"
-          fontSize="9" letterSpacing="0.08em" fill="#3d4a5c">
-          CONDITIONS MET
-        </text>
       </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 12px', marginTop: '-4px', fontSize: '10px', color: '#3d4a5c', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-        <span>Sell</span><span>Wait</span><span>Buy</span>
-      </div>
+      {/* SELL — aligns with left arc endpoint */}
+      <span style={{
+        position: 'absolute', bottom: '8px', left: '8px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '10px', color: '#3d4a5c',
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>Sell</span>
+      {/* WAIT — aligns with arc midpoint (top centre) */}
+      <span style={{
+        position: 'absolute', bottom: '0px', left: '50%', transform: 'translateX(-50%)',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '10px', color: '#3d4a5c',
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>Wait</span>
+      {/* BUY — aligns with right arc endpoint */}
+      <span style={{
+        position: 'absolute', bottom: '8px', right: '8px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '10px', color: '#3d4a5c',
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+      }}>Buy</span>
     </div>
   )
 }

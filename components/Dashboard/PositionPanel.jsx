@@ -22,8 +22,7 @@ export default function PositionPanel({ positions = [], currentPrice, onAdd, onR
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', ...styleProp }}>
       {/* Positions */}
       <div style={{ ...card, flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Positions</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '12px' }}>
           <button onClick={() => setShowForm(v => !v)} style={{
             background: 'rgba(91,156,246,0.12)', border: '1px solid rgba(91,156,246,0.25)',
             color: '#5b9cf6', borderRadius: '7px', padding: '3px 10px',

@@ -190,7 +190,7 @@ export default function Dashboard() {
   const macroRow = (name, valueNode, badgeNode, last = false) => (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '10px 0',
+      padding: '8px 0',
       borderBottom: last ? 'none' : '0.5px solid rgba(255,255,255,0.04)',
     }}>
       <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{name}</span>
@@ -232,7 +232,7 @@ export default function Dashboard() {
       }}>
 
         {/* Zone 1 — Live Price */}
-        <div style={HERO_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset', padding: '20px 24px'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           {/* Dynamic price bloom */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: priceBloom }} />
           <LivePriceBubble
@@ -244,7 +244,9 @@ export default function Dashboard() {
           />
           {sma200 != null && price != null && (
             <div style={{
-              marginTop: '12px',
+              marginTop: '16px',
+              paddingTop: '14px',
+              borderTop: '0.5px solid rgba(255,255,255,0.06)',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px',
               color: 'rgba(255,255,255,0.3)',
@@ -255,28 +257,30 @@ export default function Dashboard() {
         </div>
 
         {/* Zone 2 — Thesis Status */}
-        <div style={HERO_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           {/* Dynamic thesis bloom */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: thesisBloom }} />
           <span style={EYE}>THESIS</span>
-          <ThesisStatus
-            status={thesis.status}
-            triggers={thesis.triggers}
-            price={price}
-            sma200={sma200}
-            loading={loading}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderRadius: 0,
-              padding: 0,
-              overflow: 'visible',
-            }}
-          />
+          <div style={{ transform: 'scale(0.9)', transformOrigin: 'left center' }}>
+            <ThesisStatus
+              status={thesis.status}
+              triggers={thesis.triggers}
+              price={price}
+              sma200={sma200}
+              loading={loading}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 0,
+                padding: 0,
+                overflow: 'visible',
+              }}
+            />
+          </div>
         </div>
 
         {/* Zone 3 — Signal Strength */}
-        <div style={HERO_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <span style={EYE}>SIGNAL STRENGTH</span>
           <SignalGauge passCount={passCount} totalCount={checklistItems.length} />
           <div style={{
@@ -339,7 +343,7 @@ export default function Dashboard() {
           {checklistItems.map((item, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 0',
+              padding: '7px 0',
               borderBottom: i < checklistItems.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
