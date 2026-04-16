@@ -11,14 +11,12 @@ import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
 import { daysUntil } from '@/lib/calculations'
 import { EARNINGS_DATE } from '@/lib/config'
 
-import PricePanel    from '@/components/Dashboard/PricePanel'
 import ThesisStatus  from '@/components/Dashboard/ThesisStatus'
 import MacroPanel    from '@/components/Dashboard/MacroPanel'
 import CatalystBar   from '@/components/Dashboard/CatalystBar'
 import PositionPanel from '@/components/Dashboard/PositionPanel'
 import SignalGauge   from '@/components/Dashboard/SignalGauge'
 import BuyChecklist  from '@/components/Dashboard/BuyChecklist'
-import NewsPanel     from '@/components/Dashboard/NewsPanel'
 import SignalFeed    from '@/components/Dashboard/SignalFeed'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -91,7 +89,7 @@ function SentimentChip() {
 export default function Dashboard() {
   const { data: priceData, loading: priceLoading }  = useNVDAData()
   const { data: macroData, loading: macroLoading }  = useMacroData()
-  const { articles, loading: newsLoading }          = useNews()
+  const { articles }                                = useNews()
   const { data: fundamentalsData }                  = useFundamentals()
   const { livePrice, wsConnected } = useNVDALive()
   useAlerts({ externalPriceData: priceData, externalMacroData: macroData })
@@ -382,154 +380,11 @@ export default function Dashboard() {
       {/* ── ROW 3 — CONTEXTUAL ────────────────────────────────────────────── */}
       <div className="dashboard-row-3" style={{
         display: 'grid',
-        gridTemplateColumns: '2fr 1fr 1fr 2fr',
+        gridTemplateColumns: '1fr 1fr',
         gap: '12px',
       }}>
 
-        {/* Col 1 — Price History / Charts (2fr) */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>PRICE HISTORY</span>
-          <PricePanel data={priceData} loading={loading} analystTarget={analystTarget} />
-        </div>
-
-        {/* Col 2 — SMA Distance (1fr) */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>SMA DISTANCE</span>
-
-          {/* Current price */}
-          <div style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '16px', fontWeight: 500,
-            color: '#f0f0f8',
-            marginBottom: '16px',
-          }}>
-            {price ? `$${price.toFixed(2)}` : '—'}
-          </div>
-
-          {/* 200d SMA row */}
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-              <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
-                200d SMA{sma200 != null && (
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(255,255,255,0.2)', marginLeft: '6px' }}>
-                    ${sma200.toFixed(2)}
-                  </span>
-                )}
-              </span>
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', fontWeight: 500,
-                color: loading || !price || !sma200 ? 'rgba(255,255,255,0.2)'
-                  : price >= sma200 ? '#22c55e' : '#ef4444',
-              }}>
-                {price && sma200
-                  ? `${price >= sma200 ? '+' : ''}${((price - sma200) / sma200 * 100).toFixed(1)}%`
-                  : '—'}
-              </span>
-            </div>
-            <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: '2px',
-                width: price && sma200
-                  ? `${Math.min(100, Math.abs((price - sma200) / sma200 * 100) * 4)}%`
-                  : '0%',
-                background: price && sma200 && price >= sma200
-                  ? 'linear-gradient(90deg, rgba(34,197,94,0.3), #22c55e)'
-                  : 'linear-gradient(90deg, rgba(239,68,68,0.3), #ef4444)',
-                transition: 'width 1.2s cubic-bezier(0.25,1,0.5,1)',
-              }} />
-            </div>
-          </div>
-
-          {/* 50d SMA row */}
-          {priceData?.sma50 != null && price != null && (
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
-                  50d SMA<span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(255,255,255,0.2)', marginLeft: '6px' }}>
-                    ${priceData.sma50.toFixed(2)}
-                  </span>
-                </span>
-                <span style={{
-                  fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', fontWeight: 500,
-                  color: price >= priceData.sma50 ? '#22c55e' : '#ef4444',
-                }}>
-                  {price >= priceData.sma50 ? '+' : ''}{((price - priceData.sma50) / priceData.sma50 * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: '2px',
-                  width: `${Math.min(100, Math.abs((price - priceData.sma50) / priceData.sma50 * 100) * 4)}%`,
-                  background: price >= priceData.sma50
-                    ? 'linear-gradient(90deg, rgba(34,197,94,0.3), #22c55e)'
-                    : 'linear-gradient(90deg, rgba(239,68,68,0.3), #ef4444)',
-                  transition: 'width 1.2s cubic-bezier(0.25,1,0.5,1)',
-                }} />
-              </div>
-            </div>
-          )}
-
-          {/* Volume + 10d high */}
-          <div style={{
-            display: 'flex', gap: '12px',
-            paddingTop: '12px', marginBottom: '12px',
-            borderTop: '0.5px solid rgba(255,255,255,0.04)',
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '3px' }}>
-                Vol vs Avg
-              </div>
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', fontWeight: 500,
-                color: priceData?.volumeRatio == null ? 'rgba(255,255,255,0.2)'
-                  : priceData.volumeRatio >= 1.5 ? '#f59e0b'
-                  : priceData.volumeRatio >= 1   ? '#22c55e'
-                  : 'rgba(255,255,255,0.4)',
-              }}>
-                {priceData?.volumeRatio != null ? `${priceData.volumeRatio.toFixed(1)}x` : '—'}
-              </div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '3px' }}>
-                % from 10d high
-              </div>
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', fontWeight: 500,
-                color: priceData?.pctBelowHigh == null ? 'rgba(255,255,255,0.2)'
-                  : priceData.pctBelowHigh <= 1 ? '#22c55e'
-                  : priceData.pctBelowHigh <= 5 ? '#f59e0b'
-                  : '#ef4444',
-              }}>
-                {priceData?.pctBelowHigh != null ? `-${priceData.pctBelowHigh.toFixed(1)}%` : '—'}
-              </div>
-            </div>
-          </div>
-
-          {/* Analyst consensus */}
-          {analystTarget != null && price != null && (
-            <div style={{ paddingTop: '12px', borderTop: '0.5px solid rgba(255,255,255,0.04)' }}>
-              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '4px' }}>
-                Analyst consensus
-              </div>
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '22px', fontWeight: 500,
-                color: '#22c55e',
-              }}>
-                +{((analystTarget - price) / price * 100).toFixed(2)}%
-              </div>
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '11px', color: 'rgba(255,255,255,0.25)',
-                marginTop: '2px',
-              }}>
-                target ${analystTarget.toFixed(2)}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Col 3 — Positions (1fr) */}
+        {/* Col 1 — Positions */}
         <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <span style={EYE}>POSITIONS</span>
           <PositionPanel
@@ -540,21 +395,9 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Col 4 — News Feed (2fr) */}
+        {/* Col 2 — Signals (Bucket B/C only, compact) */}
         <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ ...EYE, marginBottom: 0 }}>NEWS FEED</span>
-            {articles.length > 0 && (
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '10px',
-                color: 'rgba(255,255,255,0.25)',
-              }}>
-                {articles.length} articles
-              </span>
-            )}
-          </div>
-          <NewsPanel articles={articles} loading={newsLoading && articles.length === 0} />
+          <span style={EYE}>SIGNALS</span>
           <SignalFeed articles={articles} />
         </div>
       </div>
