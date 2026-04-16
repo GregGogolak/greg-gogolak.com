@@ -795,43 +795,6 @@ export default function TrackPage() {
         </div>
       )}
 
-      {/* Trade log */}
-      <div style={{
-        fontSize: '11px',
-        fontWeight: 500,
-        color: '#3d4a5c',
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        marginBottom: '12px',
-      }}>
-        Trade Log {!loading && trades.length > 0 && `· ${trades.length} trades`}
-      </div>
-
-      {loading ? (
-        <div style={{
-          height: '200px',
-          background: 'rgba(255,255,255,0.018)',
-          border: '1px solid rgba(255,255,255,0.05)',
-          borderRadius: '14px',
-          animation: 'pulse 1.5s ease-in-out infinite',
-        }} />
-      ) : (
-        <TradeTable
-          trades={trades}
-          platformFeeMap={platformFeeMap}
-          onEdit={openEdit}
-          onDelete={handleDelete}
-        />
-      )}
-
-      {/* Form modal */}
-      <TradeForm
-        open={formOpen}
-        editTrade={editTrade}
-        onClose={handleClose}
-        onSaved={handleSaved}
-      />
-
       {/* PAYOUTS SECTION */}
       <div style={{ marginTop: '24px' }}>
         <div style={{
@@ -1097,6 +1060,43 @@ export default function TrackPage() {
           </div>
         </div>
       </div>
+
+      {/* Trade log */}
+      <div style={{
+        fontSize: '11px',
+        fontWeight: 500,
+        color: '#3d4a5c',
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        marginBottom: '12px',
+      }}>
+        Trade Log {!loading && trades.length > 0 && `· ${trades.length} trades`}
+      </div>
+
+      {loading ? (
+        <div style={{
+          height: '200px',
+          background: 'rgba(255,255,255,0.018)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '14px',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }} />
+      ) : (
+        <TradeTable
+          trades={trades}
+          platformFeeMap={platformFeeMap}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {/* Form modal */}
+      <TradeForm
+        open={formOpen}
+        editTrade={editTrade}
+        onClose={handleClose}
+        onSaved={handleSaved}
+      />
 
       <style>{`
         @keyframes pulse {
