@@ -123,6 +123,18 @@ async function fetchDaily() {
   }
 }
 
+async function fetchRSI() {
+  try {
+    const rsiUrl = `${FINNHUB}/indicator?symbol=NVDA&resolution=15&indicator=rsi&timeperiod=14&token=${FH_KEY}`
+    const res    = await fetch(rsiUrl, { cache: 'no-store' })
+    const json   = await res.json()
+    const values = json?.rsi ?? []
+    return values.length > 0 ? values[values.length - 1] : null
+  } catch {
+    return null
+  }
+}
+
 async function fetchMarketStatus() {
   if (Date.now() - marketStatusCache.ts < MARKET_STATUS_TTL && marketStatusCache.data !== null) {
     return marketStatusCache.data
@@ -146,6 +158,7 @@ export async function GET() {
     // Start Finnhub calls immediately (don't count toward AV rate limit)
     const quotePromise        = fetchQuote()
     const marketStatusPromise = fetchMarketStatus()
+    const rsiPromise          = fetchRSI()
 
     // TD calls run sequentially with a 1s gap to stay within the 8 credits/min rate limit.
     // With 6-hour caching, this only fires on cold start (once every 6hr).
@@ -156,6 +169,7 @@ export async function GET() {
     const daily  = await fetchDaily()
     const quote  = await quotePromise
     const marketOpen = await marketStatusPromise
+    const rsi    = await rsiPromise
 
     const price = quote.c
 
@@ -187,6 +201,7 @@ export async function GET() {
       sparkline7d,
       sparkline30d,
       marketOpen,
+      rsi,
       lastUpdated:    Date.now(),
     })
   } catch (err) {

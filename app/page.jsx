@@ -183,6 +183,7 @@ export default function Dashboard() {
   const oilPrice       = macroData?.oil?.price ?? null
   const oilPct         = macroData?.oil?.pctChange ?? null
   const qqq            = macroData?.qqq?.pctChange ?? 0
+  const rsi            = priceData?.rsi ?? null
   const analystTarget  = fundamentalsData?.analystTarget ?? null
   const analystPctDiff = (analystTarget && price) ? ((analystTarget - price) / price) * 100 : null
 
@@ -358,10 +359,23 @@ export default function Dashboard() {
             badgeColour={pctFrom50 != null ? (pctFrom50 < 0 ? '#22c55e' : '#f59e0b') : 'rgba(255,255,255,0.2)'}
           />
           <DataRow
-            label="RSI"
-            badge="Soon"
-            badgeColour="rgba(255,255,255,0.15)"
-            dimmed
+            label="RSI (15m)"
+            value={rsi ? rsi.toFixed(1) : null}
+            badge={
+              rsi === null ? 'Loading' :
+              rsi < 30 ? 'OVERSOLD' :
+              rsi < 50 ? 'RECOVERING' :
+              rsi < 70 ? 'NEUTRAL' :
+              'OVERBOUGHT'
+            }
+            badgeColour={
+              rsi === null ? 'rgba(255,255,255,0.15)' :
+              rsi < 30 ? '#22c55e' :
+              rsi < 50 ? '#f59e0b' :
+              rsi < 70 ? 'rgba(255,255,255,0.4)' :
+              '#ef4444'
+            }
+            dimmed={rsi === null}
           />
           <DataRow
             label="QQQ"
