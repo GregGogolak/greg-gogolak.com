@@ -5,11 +5,12 @@
 This codebase is maintained by one non-technical owner with Claude Code as
 the builder. Every session should:
 
-1. Read this file completely before writing any code
-2. Make only the changes explicitly requested
-3. Not create new files without stating the intention first
-4. Not modify files not mentioned in the prompt
-5. End every session by listing exactly what was created and what was changed
+1. Read DESIGN.md completely before writing any UI-related code
+2. Read this file completely before writing any code
+3. Make only the changes explicitly requested
+4. Not create new files without stating the intention first
+5. Not modify files not mentioned in the prompt
+6. End every session by listing exactly what was created and what was changed
 
 When in doubt, do less and report back rather than assuming.
 
@@ -113,6 +114,7 @@ UPSTASH_REDIS_REST_TOKEN          server-side only
 ```
 nvda-jarvis/
 ├── CLAUDE.md
+├── DESIGN.md                          visual design system — read before any UI work
 ├── .env.local                         (gitignored — see Vercel dashboard for values)
 ├── package.json
 ├── next.config.mjs
@@ -273,13 +275,20 @@ Give Me A Read re-classifies ambiguous null-bucket articles using Claude (costs 
 
 ## UI Rules
 
-- Background: #080910
+- Read DESIGN.md before making any UI-related change. DESIGN.md is
+  the design authority. CLAUDE.md defers to it on all visual decisions.
+- Background: #0d0d14 base with soft blue-indigo bloom overlays
+  (see DESIGN.md atmosphere section for exact implementation)
 - Mobile-first, 390px primary width (iPhone 14)
 - Every screen readable in 30 seconds
-- Green = buy signal, Yellow = watch/caution, Red = risk/loss
-- Monospace font for all numbers
+- Navigation: floating pill at top of screen with sliding active
+  indicator — see DESIGN.md navigation section. Not a side rail.
+- Fonts: Inter for hero numbers and body text, JetBrains Mono for
+  all financial data, tables, and labels
+- Green = profit/positive only. Red = loss/negative only.
+  Amber = caution only. Blue = informational/identity only.
+  No colour used decoratively — see DESIGN.md colour section.
 - No scrolling on dashboard — everything above fold
-- Navigation: Dashboard / Read / Trade / Alerts / Track
 - No charting (owner uses TradingView for charts)
 - No order execution
 - NVDA only — do not generalise to other tickers

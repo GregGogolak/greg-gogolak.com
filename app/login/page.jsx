@@ -1,262 +1,350 @@
+'use client'
+
+import { useEffect } from 'react'
 import { SignIn } from '@clerk/nextjs'
 
 export default function LoginPage() {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        const continueButton = document.querySelector('.cl-formButtonPrimary')
+        if (continueButton) {
+          continueButton.click()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes drift1 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(30px, -20px); }
-        }
-        @keyframes drift2 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(-25px, 20px); }
-        }
-        @keyframes drift3 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(20px, 25px); }
-        }
-        @keyframes panelIn {
-          from { opacity: 0; transform: translateX(16px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes formIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .user-button-wrap { display: none !important; }
-        .hamburger-btn    { display: none !important; }
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 200,
+      overflowY: 'auto',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      background: 'transparent',
+    }}>
 
-        /* ── Clerk SignIn overrides ── */
-        .cl-rootBox  { width: 100%; }
-        .cl-card     { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; width: 100% !important; }
-        .cl-header   { display: none !important; }
-        .cl-footer   { display: none !important; }
-        .cl-socialButtonsBlockButton { display: none !important; }
-        .cl-dividerRow  { display: none !important; }
-        .cl-formFieldLabel {
-          font-family: 'Courier New', monospace !important;
-          font-size: 10px !important;
-          color: #3f3f46 !important;
-          letter-spacing: 0.1em !important;
-          text-transform: uppercase !important;
-        }
-        .cl-formFieldInput {
-          background: #0d1018 !important;
-          border: 0.5px solid #1a1f2e !important;
-          border-radius: 10px !important;
-          color: #e4e4e7 !important;
-          font-size: 14px !important;
-          padding: 12px 14px !important;
-          transition: border-color 0.2s ease !important;
-        }
-        .cl-formFieldInput:focus {
-          border-color: #2a2f42 !important;
-          box-shadow: none !important;
-          outline: none !important;
-        }
-        .cl-formButtonPrimary {
-          background: linear-gradient(135deg, #1e2340 0%, #141828 100%) !important;
-          border: 0.5px solid #2a3060 !important;
-          border-radius: 10px !important;
-          color: #7b8cde !important;
-          font-family: 'Courier New', monospace !important;
-          font-size: 13px !important;
-          letter-spacing: 0.08em !important;
-          box-shadow: none !important;
-          transition: background 0.2s ease !important;
-        }
-        .cl-formButtonPrimary:hover {
-          background: linear-gradient(135deg, #252b4a 0%, #181e36 100%) !important;
-        }
-        .cl-formButtonPrimary:focus {
-          box-shadow: none !important;
-        }
-        .cl-formResendCodeLink,
-        .cl-footerActionLink,
-        .cl-identityPreviewEditButton {
-          color: #3f3f46 !important;
-        }
-        .cl-formFieldErrorText,
-        .cl-formGlobalErrorText {
-          color: #ef4444 !important;
-          font-size: 11px !important;
-        }
-        .cl-internal-b3fm6y { display: none !important; }
-        .cl-alternativeMethodsBlockButton {
-          background: #0d1018 !important;
-          border: 0.5px solid #1a1f2e !important;
-          border-radius: 10px !important;
-          color: #52525b !important;
-        }
-
-        @media (max-width: 640px) {
-          .login-left       { display: none !important; }
-          .login-right      { width: 100% !important; }
-          .login-form-wrap  { padding: 40px 24px !important; }
-        }
-      `}} />
-
+      {/* CLOUD LAYER */}
       <div style={{
         position: 'fixed',
         inset: 0,
-        display: 'flex',
-        background: '#09090b',
-        zIndex: 200,
+        zIndex: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}>
+        {/* Cloud 1 — large indigo, top left */}
+        <div style={{
+          position: 'absolute',
+          width: '65vw',
+          height: '65vw',
+          maxWidth: '700px',
+          maxHeight: '700px',
+          top: '-20%',
+          left: '-15%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at center, rgba(67,56,202,0.75) 0%, rgba(67,56,202,0.28) 35%, transparent 70%)',
+          filter: 'blur(70px)',
+          animation: 'cloudDrift1 22s ease-in-out infinite',
+        }}/>
+
+        {/* Cloud 2 — blue, top right */}
+        <div style={{
+          position: 'absolute',
+          width: '55vw',
+          height: '55vw',
+          maxWidth: '600px',
+          maxHeight: '600px',
+          top: '-15%',
+          right: '-10%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at center, rgba(59,130,246,0.59) 0%, rgba(59,130,246,0.20) 40%, transparent 70%)',
+          filter: 'blur(80px)',
+          animation: 'cloudDrift2 28s ease-in-out infinite',
+        }}/>
+
+        {/* Cloud 3 — deep violet, bottom left */}
+        <div style={{
+          position: 'absolute',
+          width: '50vw',
+          height: '50vw',
+          maxWidth: '550px',
+          maxHeight: '550px',
+          bottom: '-15%',
+          left: '5%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at center, rgba(109,40,217,0.52) 0%, rgba(109,40,217,0.16) 45%, transparent 70%)',
+          filter: 'blur(90px)',
+          animation: 'cloudDrift3 34s ease-in-out infinite',
+        }}/>
+
+        {/* Cloud 4 — blue, bottom right */}
+        <div style={{
+          position: 'absolute',
+          width: '50vw',
+          height: '50vw',
+          maxWidth: '550px',
+          maxHeight: '550px',
+          bottom: '-20%',
+          right: '0%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at center, rgba(37,99,235,0.46) 0%, rgba(37,99,235,0.14) 50%, transparent 70%)',
+          filter: 'blur(100px)',
+          animation: 'cloudDrift1 26s ease-in-out infinite reverse',
+        }}/>
+
+        {/* Cloud 5 — faint centre ambient */}
+        <div style={{
+          position: 'absolute',
+          width: '80vw',
+          height: '40vw',
+          maxWidth: '900px',
+          maxHeight: '450px',
+          top: '25%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderRadius: '50%',
+          background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.18) 0%, transparent 65%)',
+          filter: 'blur(60px)',
+        }}/>
+      </div>
+
+      {/* GLASS PANEL WRAPPER */}
+      <div style={{
+        position: 'relative',
+        zIndex: 10,
+        width: '100%',
+        maxWidth: '460px',
       }}>
 
-        {/* ── Left panel ── */}
-        <div className="login-left" style={{
-          width: '45%',
-          background: '#080910',
-          borderRight: '0.5px solid #111118',
+        {/* Layer 1 — the actual glass blur layer, behind content */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '28px',
+          backdropFilter: 'blur(48px)',
+          WebkitBackdropFilter: 'blur(48px)',
+          background: 'rgba(160, 180, 255, 0.08)',
+          border: '0.5px solid rgba(255,255,255,0.18)',
+          boxShadow: `
+            0 32px 80px rgba(0,0,0,0.5),
+            0 8px 32px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.18),
+            inset 0 0 60px rgba(160,180,255,0.05)
+          `,
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}/>
+
+        {/* Layer 2 — content sits on top, fully transparent background */}
+        <div style={{
           position: 'relative',
-          overflow: 'hidden',
+          zIndex: 1,
+          padding: '36px 44px 36px 44px',
+          background: 'transparent',
         }}>
 
-          {/* Aurora blobs */}
+          {/* Identity section */}
           <div style={{
-            position: 'absolute', top: '-50px', left: '-50px',
-            width: '400px', height: '400px',
-            background: 'radial-gradient(#4f46e5, transparent 70%)',
-            filter: 'blur(80px)', opacity: 0.25,
-            animation: 'drift1 14s ease-in-out infinite',
-          }} />
-          <div style={{
-            position: 'absolute', top: '-30px', right: '-60px',
-            width: '350px', height: '350px',
-            background: 'radial-gradient(#059669, transparent 70%)',
-            filter: 'blur(80px)', opacity: 0.25,
-            animation: 'drift2 18s ease-in-out infinite',
-          }} />
-          <div style={{
-            position: 'absolute', top: '40%', left: '20%',
-            width: '250px', height: '250px',
-            background: 'radial-gradient(#d97706, transparent 70%)',
-            filter: 'blur(80px)', opacity: 0.25,
-            animation: 'drift3 22s ease-in-out infinite',
-          }} />
-
-          {/* Hero content */}
-          <div style={{
-            position: 'relative', zIndex: 1,
-            height: '100%', display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', padding: '48px',
-            animation: 'panelIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both',
+            textAlign: 'center',
+            paddingBottom: '20px',
+            marginBottom: '8px',
+            borderBottom: '0.5px solid rgba(255,255,255,0.06)',
           }}>
             <div style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: '10px', color: '#3f3f46',
-              letterSpacing: '0.25em', textTransform: 'uppercase',
-              marginBottom: '24px',
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(109,40,217,0.25))',
+              border: '0.5px solid rgba(59,130,246,0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              boxShadow: '0 4px 20px rgba(59,130,246,0.2)',
             }}>
-              NVDA JARVIS
+              <div style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                background: 'rgba(59,130,246,0.95)',
+                boxShadow: '0 0 10px rgba(59,130,246,0.6)',
+              }}/>
             </div>
             <div style={{
-              fontFamily: 'var(--font-inter-tight, var(--font-inter, sans-serif))',
-              fontSize: '56px', fontWeight: 200,
-              letterSpacing: '-3px', lineHeight: 1.1, color: '#fafafa',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '20px',
+              fontWeight: '500',
+              color: 'rgba(255,255,255,0.92)',
+              letterSpacing: '-0.3px',
+              marginBottom: '6px',
             }}>
-              Trade with<br />precision.
+              NVDA <span style={{
+                color: 'rgba(59,130,246,0.9)',
+                fontWeight: '400',
+              }}>Jarvis</span>
             </div>
             <div style={{
-              fontFamily: 'var(--font-inter, sans-serif)',
-              fontSize: '14px', fontWeight: 300,
-              color: '#52525b', lineHeight: 1.6, marginTop: '16px',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '12px',
+              fontWeight: '300',
+              color: 'rgba(255,255,255,0.25)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
             }}>
-              AI-powered NVDA trading intelligence.<br />
-              Built for serious decisions.
+              Trading Terminal
             </div>
           </div>
 
-          {/* Live data strip */}
-          <div style={{
-            position: 'absolute', bottom: '32px', left: '32px', right: '32px',
-            display: 'flex', gap: '20px', alignItems: 'center', zIndex: 1,
-          }}>
-            {[
-              { label: 'NVDA', value: '$197.43', change: '+1.2%', up: true },
-              { label: 'VIX',  value: '18.2',    change: 'LOW',     up: true },
-              { label: 'QQQ',  value: '+0.8%',   change: 'BULLISH', up: true },
-            ].map(item => (
-              <div key={item.label} style={{ flex: 1 }}>
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: '8px', color: '#27272a', letterSpacing: '0.15em', marginBottom: '3px' }}>{item.label}</div>
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: '13px', fontWeight: 500, color: '#e4e4e7' }}>{item.value}</div>
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: '9px', color: item.up ? '#059669' : '#ef4444' }}>{item.change}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Right panel ── */}
-        <div className="login-right" style={{
-          width: '55%',
-          background: '#09090b',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflowY: 'auto',
-        }}>
-          <div className="login-form-wrap" style={{
-            width: '100%',
-            maxWidth: '360px',
-            padding: '48px 40px',
-            animation: 'formIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both',
-          }}>
-
-            {/* App mark */}
-            <div style={{
-              width: '40px', height: '40px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #1a1f2e 0%, #0d1018 100%)',
-              border: '0.5px solid #1a1f2e',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '28px',
-            }}>
-              <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #059669)' }} />
-            </div>
-
-            <div style={{
-              fontFamily: 'var(--font-inter, sans-serif)',
-              fontSize: '28px', fontWeight: 500, color: '#fafafa', marginBottom: '6px',
-            }}>
-              Welcome back
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-inter, sans-serif)',
-              fontSize: '13px', fontWeight: 300, color: '#52525b', marginBottom: '32px',
-            }}>
-              Sign in to your trading dashboard
-            </div>
-
-            <SignIn
-              routing="hash"
-              afterSignInUrl="/"
-              appearance={{
-                variables: {
-                  colorBackground:      '#09090b',
-                  colorInputBackground: '#0d1018',
-                  colorInputText:       '#e4e4e7',
-                  colorText:            '#e4e4e7',
-                  colorTextSecondary:   '#52525b',
-                  colorPrimary:         '#6366f1',
-                  colorDanger:          '#ef4444',
-                  colorNeutral:         '#3f3f46',
-                  borderRadius:         '10px',
-                  fontFamily:           'var(--font-inter, sans-serif)',
+          {/* Clerk SignIn */}
+          <SignIn
+            routing="hash"
+            appearance={{
+              layout: {
+                showOptionalFields: false,
+                logoPlacement: 'none',
+              },
+              variables: {
+                colorBackground: 'transparent',
+                colorInputBackground: 'rgba(0,0,0,0.2)',
+                colorInputText: 'rgba(255,255,255,0.88)',
+                colorText: 'rgba(255,255,255,0.75)',
+                colorTextSecondary: 'rgba(255,255,255,0.38)',
+                colorPrimary: '#3b82f6',
+                colorDanger: '#ef4444',
+                borderRadius: '10px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+              },
+              elements: {
+                rootBox: {
+                  width: '100%',
+                  overflow: 'visible',
                 },
-              }}
-            />
-
-            <p style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: '10px', color: '#27272a',
-              textAlign: 'center', marginTop: '24px', letterSpacing: '0.05em',
-            }}>
-              Access restricted · Authorised personnel only
-            </p>
-          </div>
+                card: {
+                  background: 'transparent',
+                  boxShadow: 'none',
+                  border: 'none',
+                  padding: '0',
+                  margin: '0',
+                  width: '100%',
+                  maxWidth: '100%',
+                },
+                cardBox: {
+                  width: '100%',
+                  maxWidth: '100%',
+                  boxShadow: 'none',
+                },
+                header: {
+                  display: 'none',
+                },
+                headerTitle: {
+                  display: 'none',
+                },
+                headerSubtitle: {
+                  display: 'none',
+                },
+                socialButtonsBlockButton: {
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '0.5px solid rgba(255,255,255,0.12)',
+                  borderRadius: '10px',
+                  color: 'rgba(255,255,255,0.72)',
+                  fontSize: '13px',
+                  padding: '10px 16px',
+                  transition: 'all 0.2s ease',
+                },
+                socialButtonsBlockButtonText: {
+                  color: 'rgba(255,255,255,0.72)',
+                  fontFamily: 'Inter, sans-serif',
+                },
+                dividerRow: {
+                  margin: '4px 0',
+                },
+                dividerLine: {
+                  background: 'rgba(255,255,255,0.07)',
+                },
+                dividerText: {
+                  color: 'rgba(255,255,255,0.22)',
+                  fontSize: '12px',
+                },
+                formFieldLabel: {
+                  color: 'rgba(255,255,255,0.55)',
+                  fontSize: '11px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  marginBottom: '6px',
+                },
+                formFieldInput: {
+                  background: 'rgba(0, 0, 0, 0.28)',
+                  border: '0.5px solid rgba(255,255,255,0.15)',
+                  borderRadius: '10px',
+                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '14px',
+                  padding: '11px 14px',
+                  fontFamily: 'Inter, sans-serif',
+                },
+                formFieldInputShowPasswordButton: {
+                  color: 'rgba(255,255,255,0.35)',
+                },
+                formButtonPrimary: {
+                  background: 'rgba(59,130,246,0.75)',
+                  border: '0.5px solid rgba(59,130,246,0.4)',
+                  borderRadius: '9999px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif',
+                  letterSpacing: '0.01em',
+                  padding: '11px 24px',
+                  boxShadow: '0 4px 20px rgba(59,130,246,0.25)',
+                  transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
+                  marginTop: '4px',
+                },
+                footerAction: {
+                  marginTop: '8px',
+                },
+                footerActionText: {
+                  color: 'rgba(255,255,255,0.28)',
+                  fontSize: '12px',
+                  fontFamily: 'Inter, sans-serif',
+                },
+                footerActionLink: {
+                  color: 'rgba(59,130,246,0.85)',
+                  fontSize: '12px',
+                  fontFamily: 'Inter, sans-serif',
+                },
+                footer: {
+                  background: 'transparent',
+                  borderTop: 'none',
+                  padding: '8px 0 0',
+                },
+                badge: {
+                  display: 'none',
+                },
+                identityPreviewText: {
+                  color: 'rgba(255,255,255,0.7)',
+                },
+                identityPreviewEditButton: {
+                  color: 'rgba(59,130,246,0.8)',
+                },
+                alert: {
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '0.5px solid rgba(239,68,68,0.2)',
+                  borderRadius: '8px',
+                },
+                alertText: {
+                  color: 'rgba(239,68,68,0.85)',
+                  fontSize: '13px',
+                },
+              },
+            }}
+          />
         </div>
       </div>
-    </>
+    </div>
   )
 }
