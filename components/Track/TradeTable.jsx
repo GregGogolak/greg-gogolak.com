@@ -196,6 +196,9 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
             const sharedFees = calculateSharedPlatformFee(t, platformFeeMap)
             const { adjustedNetEur, adjustedPlatformFee } = recalculateNetWithSharedFees(t, sharedFees)
             const displayNetEur = platformFeeMap ? adjustedNetEur : t.net_eur
+            const displayTotalCosts = platformFeeMap
+              ? (t.transaction_fees_usd ?? 0) + sharedFees.totalPlatformFee + (t.interest_usd ?? 0)
+              : (t.total_costs_usd ?? 0)
             const feeIsShared = platformFeeMap && (sharedFees.buyUsers > 1 || sharedFees.sellUsers > 1)
 
             return (
@@ -317,7 +320,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
 
                 {/* Total Costs */}
                 <TD style={{ color: '#4a5568' }}>
-                  {fmtUSD(t.total_costs_usd)}
+                  {fmtUSD(displayTotalCosts)}
                 </TD>
 
                 {/* Net EUR — hero column */}
