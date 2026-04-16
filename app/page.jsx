@@ -285,13 +285,15 @@ export default function Dashboard() {
         </div>
 
         {/* Card 2 — Thesis Status */}
-        <div style={HEADER_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{ ...HEADER_CARD, display: 'flex', flexDirection: 'column', minHeight: '140px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <span style={EYE}>Thesis</span>
-          <ThesisStatus
-            status={thesis.status}
-            triggers={thesis.triggers}
-            style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: '0 0 14px 14px' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', flex: 1 }}>
+            <ThesisStatus
+              status={thesis.status}
+              triggers={thesis.triggers}
+              style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: '0 0 14px 14px' }}
+            />
+          </div>
         </div>
 
         {/* Card 3 — Market Status */}
