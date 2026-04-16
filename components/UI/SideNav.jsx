@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
@@ -23,6 +24,25 @@ export default function SideNav() {
   const { user } = useUser()
   const role = user?.publicMetadata?.role ?? user?.privateMetadata?.role ?? 'member'
   const navItems = role === 'admin' ? adminNav : memberNav
+
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Close nav when route changes on mobile
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
+
+  // Prevent body scroll when nav is open on mobile
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  if (pathname === '/login') return null
 
   return (
     <>
@@ -87,18 +107,91 @@ export default function SideNav() {
           background: rgba(255,255,255,0.06);
           margin: 6px 0;
         }
+        @media (max-width: 640px) {
+          .sidenav {
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 80px;
+          }
+          .sidenav.sidenav-open {
+            transform: translateX(0);
+            box-shadow: 4px 0 40px rgba(0,0,0,0.6);
+          }
+          .hamburger-btn {
+            display: flex !important;
+          }
+          .mobile-nav-backdrop {
+            display: block;
+          }
+        }
+        @media (min-width: 641px) {
+          .sidenav {
+            transform: none !important;
+            transition: none;
+          }
+          .hamburger-btn {
+            display: none !important;
+          }
+        }
       `}</style>
 
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, bottom: 0, width: '90px',
-        background: 'linear-gradient(180deg, rgba(10,11,20,0.97) 0%, rgba(8,9,16,0.97) 100%)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        paddingTop: '24px', paddingBottom: '24px', gap: '4px',
-        zIndex: 100,
-      }}>
+      {/* Hamburger button — mobile only */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          top: '12px',
+          left: '14px',
+          zIndex: 200,
+          background: 'rgba(13,16,25,0.9)',
+          border: '0.5px solid #1a1f2e',
+          borderRadius: '8px',
+          width: '36px',
+          height: '36px',
+          cursor: 'pointer',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: '4px',
+          padding: '0',
+        }}
+        className='hamburger-btn'
+        aria-label='Open navigation'
+      >
+        <span style={{width:'16px',height:'1.5px',background:'#7b8cde',borderRadius:'2px',display:'block'}}/>
+        <span style={{width:'16px',height:'1.5px',background:'#7b8cde',borderRadius:'2px',display:'block'}}/>
+        <span style={{width:'10px',height:'1.5px',background:'#7b8cde',borderRadius:'2px',display:'block'}}/>
+      </button>
+
+      {/* Backdrop — mobile only, shown when nav is open */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 149,
+            backdropFilter: 'blur(2px)',
+          }}
+          className='mobile-nav-backdrop'
+        />
+      )}
+
+      <nav
+        className={`sidenav${mobileOpen ? ' sidenav-open' : ''}`}
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0, width: '90px',
+          background: 'linear-gradient(180deg, rgba(10,11,20,0.97) 0%, rgba(8,9,16,0.97) 100%)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          paddingTop: '24px', paddingBottom: '24px', gap: '4px',
+          zIndex: 150,
+        }}
+      >
         {/* Logo mark */}
         <div style={{
           width: '36px', height: '36px', borderRadius: '11px',

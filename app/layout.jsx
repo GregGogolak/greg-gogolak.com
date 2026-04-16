@@ -15,14 +15,14 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider signInUrl="/login" afterSignOutUrl="/login">
       <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
         <body style={{ fontFamily: 'var(--font-inter, Inter, sans-serif)', display: 'flex' }}>
           <NVDALiveContextProvider>
             <AlertBanner />
             <SideNav />
-            <div style={{ position: 'relative', zIndex: 1, flex: 1, marginLeft: '90px' }}>
-              <div style={{ position: 'fixed', top: '12px', right: '16px', zIndex: 100 }}>
+            <div className='main-content' style={{ position: 'relative', zIndex: 1, flex: 1 }}>
+              <div style={{ position: 'fixed', top: '12px', right: '16px', zIndex: 100 }} className='user-button-wrap'>
                 <UserButton />
               </div>
               {children}

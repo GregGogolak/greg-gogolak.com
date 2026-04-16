@@ -82,3 +82,18 @@ body::before {
 .lpb-flash-down { animation: lpbFlashDown 300ms ease-out forwards }
 @keyframes lpbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.8)} }
 .lpb-dot { animation: lpbPulse 2s ease-in-out infinite }
+
+/* ── Mobile navigation layout ── */
+.main-content {
+  margin-left: 90px;
+}
+@media (max-width: 640px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: 56px;
+  }
+  .user-button-wrap {
+    top: 12px;
+    right: 12px;
+  }
+}
