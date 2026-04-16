@@ -399,7 +399,7 @@ export default function BriefPage() {
   const refreshLabel  = getRefreshLabel()
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#080910', color: '#eef2ff', paddingBottom: 48 }}>
+    <div style={{ minHeight: '100dvh', background: '#080910', color: '#eef2ff', paddingBottom: 48, marginTop: '-68px', paddingTop: '68px' }}>
 
       {/* Refresh button — fixed top right */}
       <button

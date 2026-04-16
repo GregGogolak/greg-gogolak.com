@@ -261,7 +261,7 @@ export default function TradePage() {
 
   /* ── Render ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: '100dvh', background: '#080910', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100dvh', background: '#080910', paddingBottom: 80, marginTop: '-68px', paddingTop: '68px' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }

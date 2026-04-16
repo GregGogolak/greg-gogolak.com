@@ -133,7 +133,7 @@ export default function Dashboard() {
   const loading   = priceLoading && !priceData
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--color-bg, #080910)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg, #080910)', position: 'relative', overflow: 'hidden', marginTop: '-68px', paddingTop: '68px' }}>
       {/* Subtle grid background */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
@@ -143,64 +143,6 @@ export default function Dashboard() {
         `,
         backgroundSize: '40px 40px',
       }} />
-
-      {/* Header */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(8,9,16,0.8)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.055)',
-        padding: '0 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: '52px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Logo mark */}
-          <div style={{
-            width: '28px', height: '28px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, rgba(91,156,246,0.3) 0%, rgba(91,156,246,0.08) 100%)',
-            border: '1px solid rgba(91,156,246,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '13px', color: '#5b9cf6',
-          }}>⬡</div>
-          <span style={{
-            fontFamily: "'Inter Tight', sans-serif",
-            fontSize: '15px', fontWeight: 600, color: '#eef2ff', letterSpacing: '0.01em',
-          }}>
-            NVDA <span style={{ color: '#5b9cf6' }}>Jarvis</span>
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Live indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{
-              width: '6px', height: '6px', borderRadius: '50%',
-              background: loading ? '#fbbf24' : '#34d399',
-              boxShadow: loading ? '0 0 6px #fbbf24' : '0 0 6px #34d399',
-              animation: 'pulseDot 2s ease-in-out infinite',
-            }} />
-            <span style={{ fontSize: '10px', color: '#3d4a5c', fontFamily: 'Inter, sans-serif', letterSpacing: '0.05em' }}>
-              {loading ? 'LOADING' : 'LIVE'}
-            </span>
-          </div>
-
-          {/* Thesis badge in header */}
-          {thesis.status !== 'UNKNOWN' && (
-            <span style={{
-              fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em',
-              padding: '2px 9px', borderRadius: '20px',
-              color:       thesis.status === 'INTACT'  ? '#34d399' : thesis.status === 'AT RISK' ? '#fbbf24' : '#f87171',
-              background:  thesis.status === 'INTACT'  ? 'rgba(52,211,153,0.1)' : thesis.status === 'AT RISK' ? 'rgba(251,191,36,0.1)' : 'rgba(248,113,113,0.1)',
-              border: `1px solid ${thesis.status === 'INTACT' ? 'rgba(52,211,153,0.25)' : thesis.status === 'AT RISK' ? 'rgba(251,191,36,0.25)' : 'rgba(248,113,113,0.25)'}`,
-              fontFamily: 'Inter, sans-serif',
-            }}>
-              {thesis.status}
-            </span>
-          )}
-        </div>
-      </header>
 
       {/* Main grid — 3 independent flex columns, no row spanning */}
       <main style={{ position: 'relative', zIndex: 1 }}>

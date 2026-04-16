@@ -289,7 +289,7 @@ export default function AlertsPage() {
   } = useAlerts()
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--color-bg, #080910)', color: '#eef2ff' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg, #080910)', color: '#eef2ff', marginTop: '-68px', paddingTop: '68px' }}>
 
       {/* Sticky header */}
       <div style={{

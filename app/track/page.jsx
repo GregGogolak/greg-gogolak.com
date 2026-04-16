@@ -68,7 +68,8 @@ export default function TrackPage() {
       background: '#080910',
       padding: '28px 24px',
       maxWidth: '1400px',
-      margin: '0 auto',
+      margin: '-68px auto 0',
+      paddingTop: '96px',
     }}>
       {/* Page header */}
       <div style={{
