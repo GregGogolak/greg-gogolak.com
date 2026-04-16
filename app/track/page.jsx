@@ -6,6 +6,7 @@ import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/
 import SummaryCards from '@/components/Track/SummaryCards'
 import TradeTable   from '@/components/Track/TradeTable'
 import TradeForm    from '@/components/Track/TradeForm'
+import CSVImport    from '@/components/Track/CSVImport'
 
 export default function TrackPage() {
   const { livePrice } = useNVDALive()
@@ -17,6 +18,7 @@ export default function TrackPage() {
   const [openPositions, setOpenPositions] = useState([])
   const [includeOpen,   setIncludeOpen]   = useState(false)
   const [platformFeeMap, setPlatformFeeMap] = useState(null)
+  const [showImport,    setShowImport]    = useState(false)
   const [closingId,     setClosingId]     = useState(null)
   const [exitPrice,     setExitPrice]     = useState('')
   const [exitDate,      setExitDate]      = useState(new Date().toISOString().split('T')[0])
@@ -152,35 +154,55 @@ export default function TrackPage() {
           </h1>
         </div>
 
-        <button
-          onClick={openAdd}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '9px 18px',
-            borderRadius: '10px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            background: 'rgba(91,156,246,0.13)',
-            border: '1px solid rgba(91,156,246,0.28)',
-            color: '#7aabf8',
-            letterSpacing: '0.02em',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(91,156,246,0.2)'
-            e.currentTarget.style.borderColor = 'rgba(91,156,246,0.4)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(91,156,246,0.13)'
-            e.currentTarget.style.borderColor = 'rgba(91,156,246,0.28)'
-          }}
-        >
-          <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
-          Add Trade
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowImport(v => !v)}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '10px',
+              background: showImport ? 'rgba(59,130,246,0.12)' : 'transparent',
+              border: `1px solid ${showImport ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.1)'}`,
+              color: showImport ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.35)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {showImport ? 'Hide Import' : 'Import CSV'}
+          </button>
+
+          <button
+            onClick={openAdd}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 18px',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: 'rgba(91,156,246,0.13)',
+              border: '1px solid rgba(91,156,246,0.28)',
+              color: '#7aabf8',
+              letterSpacing: '0.02em',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(91,156,246,0.2)'
+              e.currentTarget.style.borderColor = 'rgba(91,156,246,0.4)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(91,156,246,0.13)'
+              e.currentTarget.style.borderColor = 'rgba(91,156,246,0.28)'
+            }}
+          >
+            <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+            Add Trade
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -210,6 +232,21 @@ export default function TrackPage() {
           />
         )}
       </div>
+
+      {/* CSV import panel */}
+      {showImport && (
+        <CSVImport
+          onImportComplete={() => {
+            setShowImport(false)
+            fetch('/api/trades').then(r => r.json()).then(data => {
+              setTrades(Array.isArray(data) ? data : [])
+            })
+            fetch('/api/platform-fees').then(r => r.json()).then(data => {
+              setPlatformFeeMap(data.dateMap ?? null)
+            })
+          }}
+        />
+      )}
 
       {/* Open positions section — shown above the closed trades table */}
       {openPositions.length > 0 && (
