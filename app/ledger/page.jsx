@@ -9,7 +9,7 @@ import { useNVDALive } from '@/context/NVDALiveContext'
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t) }
 
 // ─── useCountUp ──────────────────────────────────────────────────────────────
-function useCountUp(target, duration = 1200, delay = 0) {
+function useCountUp(target, duration = 800, delay = 0) {
   const [val, setVal] = useState(0)
   useEffect(() => {
     if (!target) { setVal(0); return }
@@ -28,14 +28,7 @@ function useCountUp(target, duration = 1200, delay = 0) {
   return val
 }
 
-// ─── Name → warm palette color ───────────────────────────────────────────────
-function nameColor(name) {
-  const palette = ['#c8a870', '#d4806a', '#8aae88', '#c87a8a', '#70a898', '#d4a060', '#a8a870']
-  let h = 0
-  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
-  return palette[h % palette.length]
-}
-
+// ─── Initials helper ─────────────────────────────────────────────────────────
 function getInitials(name) {
   const parts = (name || '').trim().split(/\s+/)
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
@@ -50,15 +43,8 @@ function fmtSigned(v) {
 
 // ─── Global CSS ──────────────────────────────────────────────────────────────
 const STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@200;300;400;500;600;700;800&family=Geist+Mono:wght@300;400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; }
-* { font-family: 'Geist', sans-serif; }
 
-@keyframes holoShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -71,42 +57,7 @@ const STYLES = `
 .pod-card-tilt {
   position: relative;
   overflow: hidden;
-  border-radius: 20px;
   will-change: transform;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.3);
-}
-.pod-card-tilt.holo-1 {
-  background: linear-gradient(135deg,
-    #ffd6e0 0%, #c3fbd8 15%, #a8d8ff 30%,
-    #ffd6a0 45%, #e8c3ff 60%, #c3fbd8 75%,
-    #ffd6e0 90%, #a8d8ff 100%
-  );
-  background-size: 300% 300%;
-  animation: holoShift 6s ease infinite;
-}
-.pod-card-tilt.holo-2 {
-  background: linear-gradient(135deg,
-    #e8f4ff 0%, #d4e8ff 30%, #c8d8f0 60%, #e0ecff 100%
-  );
-}
-.pod-card-tilt.holo-3 {
-  background: linear-gradient(135deg,
-    #fff4e8 0%, #f0e8d8 30%, #e8dcc8 60%, #f8f0e4 100%
-  );
-}
-.pod-ghost {
-  position: absolute;
-  bottom: -20px;
-  right: 8px;
-  font-size: 140px;
-  font-weight: 800;
-  color: rgba(0,0,0,0.07);
-  line-height: 1;
-  pointer-events: none;
-  user-select: none;
-  font-family: 'Geist', sans-serif;
-  letter-spacing: -8px;
-  z-index: 0;
 }
 
 .cat-grid {
@@ -119,13 +70,14 @@ const STYLES = `
 }
 
 .cat-card {
-  background: #1f1610;
+  background: #13131e;
   border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 14px;
   padding: 20px;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 .cat-card::before {
   content: '';
@@ -137,22 +89,23 @@ const STYLES = `
 }
 .cat-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .member-card {
-  background: #150f09;
-  border: 0.5px solid rgba(255,255,255,0.05);
+  background: #13131e;
+  border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 14px;
   padding: 18px 20px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: border-color 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 .member-card.no-trades { cursor: default; }
 .member-card.rank-1 {
-  border-left: 2px solid rgba(200,168,112,0.6);
-  background: linear-gradient(135deg, #1a1208 0%, #120e06 100%);
+  border-left: 2px solid rgba(59,130,246,0.3);
+  background: linear-gradient(135deg, #141422 0%, #111120 100%);
 }
 .member-card.is-open {
   border-radius: 14px 14px 0 0;
@@ -161,7 +114,7 @@ const STYLES = `
 }
 
 .trade-panel {
-  background: #0f0a06;
+  background: #0d0d18;
   border: 0.5px solid rgba(255,255,255,0.05);
   border-top: none;
   border-radius: 0 0 14px 14px;
@@ -176,20 +129,21 @@ const STYLES = `
 `
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 48 }) {
-  const color = nameColor(name || '')
+function Avatar({ name, size = 48, highlight = false }) {
   const inits = getInitials(name || '')
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: `linear-gradient(135deg, ${color}33, ${color}77)`,
-      border: '2px solid rgba(255,255,255,0.75)',
+      background: 'rgba(59,130,246,0.12)',
+      border: '0.5px solid rgba(59,130,246,0.25)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'Geist, sans-serif',
+      fontFamily: 'Inter, sans-serif',
       fontSize: Math.round(size * 0.34),
-      fontWeight: '600',
-      color: '#1a0f0a',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+      fontWeight: '500',
+      color: 'rgba(255,255,255,0.8)',
+      boxShadow: highlight
+        ? '0 4px 20px rgba(0,0,0,0.5), 0 0 0 2px rgba(59,130,246,0.2), 0 0 16px rgba(59,130,246,0.15)'
+        : '0 4px 16px rgba(0,0,0,0.4), 0 0 0 2px rgba(59,130,246,0.1)',
       flexShrink: 0,
       userSelect: 'none',
     }}>
@@ -204,42 +158,89 @@ function PodCard({ member, rank, started }) {
   const avatarSize = isFirst ? 64 : 48
   const cardMinH = isFirst ? 230 : 185
   const delay = rank === 1 ? 200 : rank === 2 ? 400 : 600
-  const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 1200, delay)
+  const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 800, delay)
 
   const statFontSize = isFirst ? 18 : 13
+
+  const cardBg = rank === 1
+    ? 'linear-gradient(145deg, #1e1e2e 0%, #16162a 50%, #1a1a2e 100%)'
+    : rank === 2
+    ? 'linear-gradient(145deg, #191927 0%, #141420 100%)'
+    : 'linear-gradient(145deg, #161622 0%, #111119 100%)'
+
+  const cardBorder = rank === 1
+    ? '0.5px solid rgba(255,255,255,0.12)'
+    : rank === 2
+    ? '0.5px solid rgba(255,255,255,0.07)'
+    : '0.5px solid rgba(255,255,255,0.05)'
+
+  const cardShadow = rank === 1
+    ? '0 -8px 40px rgba(59,130,246,0.12), 0 0 0 0.5px rgba(59,130,246,0.15), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 40px rgba(59,130,246,0.04)'
+    : rank === 2
+    ? '0 16px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)'
+    : '0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
+
+  const ghostColor = rank === 1
+    ? 'rgba(59,130,246,0.08)'
+    : rank === 2
+    ? 'rgba(255,255,255,0.04)'
+    : 'rgba(255,255,255,0.03)'
 
   return (
     <div style={{ flex: isFirst ? '1.4' : '1', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
       {/* Avatar floating above */}
       <div style={{ marginBottom: -4, position: 'relative', zIndex: 10 }}>
         {member
-          ? <Avatar name={member.name} size={avatarSize} />
-          : <div style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '2px solid rgba(255,255,255,0.08)' }} />
+          ? <Avatar name={member.name} size={avatarSize} highlight={isFirst} />
+          : <div style={{
+              width: avatarSize, height: avatarSize, borderRadius: '50%',
+              background: 'rgba(59,130,246,0.05)',
+              border: '0.5px dashed rgba(59,130,246,0.15)',
+            }} />
         }
       </div>
 
       {/* Card + Platform */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
-        {/* Holographic card */}
+        {/* Pod card */}
         <div
-          className={`pod-card-tilt holo-${rank}`}
-          style={{ width: '100%', minHeight: cardMinH, padding: 'clamp(12px,2.5vw,28px) clamp(10px,2vw,24px)', borderRadius: '20px 20px 0 0', position: 'relative', zIndex: 1 }}
+          className="pod-card-tilt"
+          style={{
+            width: '100%', minHeight: cardMinH,
+            padding: 'clamp(12px,2.5vw,28px) clamp(10px,2vw,24px)',
+            borderRadius: '20px 20px 0 0',
+            position: 'relative', zIndex: 1,
+            background: cardBg,
+            border: cardBorder,
+            boxShadow: cardShadow,
+          }}
         >
-          <div className="pod-ghost">{rank}</div>
+          {/* Ghost watermark */}
+          <div style={{
+            position: 'absolute',
+            bottom: -20, right: 8,
+            fontSize: 120, fontWeight: '600',
+            color: ghostColor,
+            lineHeight: 1,
+            pointerEvents: 'none', userSelect: 'none',
+            fontFamily: 'Inter, sans-serif',
+            letterSpacing: '-8px',
+            zIndex: 0,
+          }}>{rank}</div>
 
           <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
             {member ? (
               <>
                 <div style={{
-                  fontFamily: 'Geist, sans-serif', fontSize: 16, fontWeight: 600,
-                  color: '#1a0f0a', marginBottom: 3,
+                  fontFamily: 'Inter, sans-serif', fontSize: 16, fontWeight: 600,
+                  color: 'rgba(255,255,255,0.92)', marginBottom: 3,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {member.name}
                 </div>
                 <div style={{
-                  fontFamily: 'Geist, sans-serif', fontSize: 11, fontWeight: 400,
-                  color: '#5a4535', marginBottom: 16, textTransform: 'capitalize',
+                  fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 400,
+                  color: 'rgba(255,255,255,0.35)', marginBottom: 16, textTransform: 'capitalize',
                 }}>
                   {member.role || 'Trader'}
                 </div>
@@ -247,30 +248,41 @@ function PodCard({ member, rank, started }) {
                 {/* Stats row */}
                 <div style={{ display: 'flex', alignItems: 'stretch' }}>
                   <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
-                      <span style={{ color: '#3a2a1a' }}>{netVal < 0 ? '-€' : '+€'}</span>
-                      <span style={{ color: '#1a0f0a' }}>{Math.abs(netVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>{netVal < 0 ? '-€' : '+€'}</span>
+                      <span style={{ color: netVal >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {Math.abs(netVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>P&L</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>P&L</div>
                   </div>
-                  <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
+                  <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', margin: '0 6px' }} />
                   <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: 'rgba(255,255,255,0.7)', lineHeight: 1.2 }}>
                       {member.winRate != null ? `${member.winRate}%` : '—'}
                     </div>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>WIN</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>WIN</div>
                   </div>
-                  <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
+                  <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', margin: '0 6px' }} />
                   <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: 'rgba(255,255,255,0.7)', lineHeight: 1.2 }}>
                       {member.tradeCount}
                     </div>
-                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>TRADES</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>TRADES</div>
                   </div>
                 </div>
               </>
             ) : (
-              <div style={{ color: 'rgba(0,0,0,0.15)', fontFamily: 'Geist Mono', fontSize: 13, textAlign: 'center', paddingBottom: 8 }}>—</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px' }}>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  border: '0.5px dashed rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.1)' }}>{rank}</span>
+                </div>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.15)' }}>Waiting for member</span>
+              </div>
             )}
           </div>
         </div>
@@ -281,14 +293,9 @@ function PodCard({ member, rank, started }) {
           height: rank === 1 ? '44px' : '30px',
           marginTop: '-4px',
           borderRadius: '0 0 14px 14px',
-          background: rank === 1
-            ? 'linear-gradient(180deg, #b8983a 0%, #8a6e28 60%, #6a5218 100%)'
-            : rank === 2
-            ? 'linear-gradient(180deg, #9aa8b8 0%, #7a8898 60%, #5a6878 100%)'
-            : 'linear-gradient(180deg, #b87848 0%, #8a5830 60%, #6a3c18 100%)',
-          boxShadow: rank === 1
-            ? '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)'
-            : '0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+          background: 'linear-gradient(180deg, #0f0f1a 0%, #0a0a12 100%)',
+          border: '0.5px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           position: 'relative',
           zIndex: 0,
           flexShrink: 0,
@@ -300,45 +307,46 @@ function PodCard({ member, rank, started }) {
 
 // ─── CatCard ─────────────────────────────────────────────────────────────────
 function CatCard({ label, color, rawValue, formatValue, winner, runners, started, delay = 0 }) {
-  const counted = useCountUp(started ? (rawValue ?? 0) : 0, 1100, 400 + delay)
+  const counted = useCountUp(started ? (rawValue ?? 0) : 0, 1000, 400 + delay)
   return (
     <div className="cat-card" style={{ '--cat-accent': color }}>
       <div style={{
-        fontFamily: 'Geist Mono, monospace', fontSize: 8, color: '#8a6a4a',
-        letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10,
+        fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fontWeight: 400,
+        color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em',
+        textTransform: 'uppercase', marginBottom: 10,
       }}>
         {label}
       </div>
       <div style={{
-        fontFamily: 'Geist Mono, monospace', fontSize: 28, fontWeight: 500,
-        color, opacity: 1, lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
+        fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500,
+        color, lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
       }}>
         {formatValue(counted)}
       </div>
       <div style={{
-        fontFamily: 'Geist, sans-serif', fontSize: 12, fontWeight: 300,
-        color: '#c8b898', marginBottom: runners.length > 0 ? 10 : 0,
+        fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 300,
+        color: 'rgba(255,255,255,0.5)', marginBottom: runners.length > 0 ? 10 : 0,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         {winner}
       </div>
       {runners.length > 0 && (
         <>
-          <div style={{ height: 1, background: '#2a1e10', marginBottom: 8 }} />
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {runners.slice(0, 3).map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{
-                  background: '#2a1e10', color: '#6b4a35',
-                  fontFamily: 'Geist Mono, monospace', fontSize: 8,
-                  padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                  padding: '1px 6px', borderRadius: '9999px', flexShrink: 0,
                 }}>
                   {i + 2}
                 </span>
-                <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 10, color: '#6b4a35', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {r.name}
                 </span>
-                <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#6b4a35', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
                   {r.value}
                 </span>
               </div>
@@ -365,7 +373,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
       el.style.opacity = '0'
       el.style.transform = 'translateX(-8px)'
       const t = setTimeout(() => {
-        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+        el.style.transition = 'opacity 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1)'
         el.style.opacity = '1'
         el.style.transform = 'translateX(0)'
       }, i * 50)
@@ -383,8 +391,8 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Rank */}
           <div style={{
-            fontFamily: 'Geist Mono, monospace', fontSize: 18, fontWeight: 600,
-            color: isFirst ? 'rgba(200,168,112,0.8)' : '#8a6a4a',
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 18, fontWeight: 600,
+            color: 'rgba(255,255,255,0.2)',
             width: 32, flexShrink: 0, textAlign: 'right',
           }}>
             {rank}
@@ -397,37 +405,37 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
               <span style={{
-                fontFamily: 'Geist, sans-serif', fontSize: 14, fontWeight: 500,
-                color: '#f0ece8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 500,
+                color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {member.name}
               </span>
               {isFirst && (
                 <span style={{
-                  background: 'rgba(200,168,112,0.1)', border: '0.5px solid rgba(200,168,112,0.25)',
-                  borderRadius: 4, padding: '2px 7px',
-                  fontFamily: 'Geist Mono, monospace', fontSize: 7,
-                  color: 'rgba(200,168,112,0.8)', letterSpacing: '0.08em', flexShrink: 0,
+                  background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)',
+                  borderRadius: '9999px', padding: '2px 8px',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
+                  color: '#22c55e', letterSpacing: '0.1em', flexShrink: 0,
                 }}>
                   WINNING
                 </span>
               )}
               {!isFirst && member.winStreak >= 2 && (
                 <span style={{
-                  background: 'rgba(200,168,112,0.06)', border: '0.5px solid rgba(200,168,112,0.12)',
-                  borderRadius: 4, padding: '2px 6px',
-                  fontFamily: 'Geist Mono, monospace', fontSize: 7,
-                  color: 'rgba(200,168,112,0.5)', letterSpacing: '0.06em', flexShrink: 0,
+                  background: 'rgba(34,197,94,0.05)', border: '0.5px solid rgba(34,197,94,0.12)',
+                  borderRadius: '9999px', padding: '2px 6px',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
+                  color: 'rgba(34,197,94,0.5)', letterSpacing: '0.06em', flexShrink: 0,
                 }}>
                   {member.winStreak}W
                 </span>
               )}
             </div>
-            <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#a08060' }}>
+            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
               {member.tradeCount} trades
               {member.winRate != null ? ` · ${member.winRate}%` : ''}
               {' · '}
-              <span style={{ color: member.thisMonthNet >= 0 ? 'rgba(22,163,74,0.65)' : 'rgba(220,38,38,0.65)' }}>
+              <span style={{ color: member.thisMonthNet >= 0 ? 'rgba(34,197,94,0.65)' : 'rgba(239,68,68,0.65)' }}>
                 {member.thisMonthNet >= 0 ? '+' : ''}{fmtEUR(member.thisMonthNet)} mo
               </span>
             </div>
@@ -436,13 +444,13 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           {/* Total */}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{
-              fontFamily: 'Geist Mono, monospace', fontSize: 16, fontWeight: 500,
-              color: member.totalNetEur >= 0 ? '#16a34a' : '#dc2626',
+              fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 500,
+              color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444',
             }}>
               {fmtEUR(member.totalNetEur)}
             </div>
             {hasTrades && (
-              <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 2 }}>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>
                 {isExpanded ? '▲' : '▼'}
               </div>
             )}
@@ -464,8 +472,8 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           <div style={{
             display: 'grid', gridTemplateColumns: '80px 56px 48px 62px 62px 1fr',
             gap: 4, padding: '7px 16px',
-            fontFamily: 'Geist Mono, monospace', fontSize: 8,
-            color: '#8a6a4a', letterSpacing: '0.08em', textTransform: 'uppercase',
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 8,
+            color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase',
             borderBottom: '0.5px solid rgba(255,255,255,0.03)',
           }}>
             <span>Date</span><span>Type</span><span>Shrs</span>
@@ -481,16 +489,16 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
                 display: 'grid', gridTemplateColumns: '80px 56px 48px 62px 62px 1fr',
                 gap: 4, padding: '9px 16px',
                 borderBottom: '0.5px solid rgba(255,255,255,0.03)',
-                borderLeft: `2px solid ${t.net_eur >= 0 ? 'rgba(22,163,74,0.35)' : 'rgba(220,38,38,0.35)'}`,
-                fontFamily: 'Geist Mono, monospace', fontSize: 10,
+                borderLeft: `2px solid ${t.net_eur >= 0 ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`,
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
               }}
             >
-              <span style={{ color: '#8a6a4a' }}>{t.sell_date}</span>
-              <span style={{ color: 'rgba(99,102,241,0.5)' }}>{t.type}</span>
-              <span style={{ color: '#8a6a4a' }}>{t.shares}</span>
-              <span style={{ color: '#8a6a4a' }}>${t.buy_price}</span>
-              <span style={{ color: '#8a6a4a' }}>${t.sell_price}</span>
-              <span style={{ color: t.net_eur >= 0 ? '#16a34a' : '#dc2626', fontWeight: 500 }}>
+              <span style={{ color: 'rgba(255,255,255,0.3)' }}>{t.sell_date}</span>
+              <span style={{ color: 'rgba(59,130,246,0.6)' }}>{t.type}</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)' }}>{t.shares}</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)' }}>${t.buy_price}</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)' }}>${t.sell_price}</span>
+              <span style={{ color: t.net_eur >= 0 ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
                 {fmtEUR(t.net_eur)}
               </span>
             </div>
@@ -499,10 +507,10 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           {/* Footer */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', padding: '8px 16px',
-            fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#8a6a4a',
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)',
           }}>
             <span>{member.tradeCount} trades · {member.winRate ?? '—'}% win</span>
-            <span style={{ color: member.totalNetEur >= 0 ? '#16a34a' : '#dc2626' }}>
+            <span style={{ color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444' }}>
               {fmtEUR(member.totalNetEur)}
             </span>
           </div>
@@ -580,16 +588,15 @@ export default function LedgerPage() {
     })(),
   } : null
 
-  const heroVal = useCountUp(started ? (fundStats?.totalNetEur ?? 0) : 0, 1800, 300)
+  const heroVal = useCountUp(started ? (fundStats?.totalNetEur ?? 0) : 0, 900, 300)
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0e0a07',
+      background: '#0d0d14',
       backgroundImage: `
-        radial-gradient(ellipse at 20% 20%, rgba(180,80,20,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 80%, rgba(120,60,10,0.06) 0%, transparent 60%),
-        url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E")
+        radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(99,40,217,0.06) 0%, transparent 60%)
       `,
       marginTop: '-68px',
       paddingTop: '68px',
@@ -609,7 +616,7 @@ export default function LedgerPage() {
             {[0, 1, 2].map(i => (
               <div key={i} style={{
                 width: 8, height: 8, borderRadius: '50%',
-                background: '#3a2a1a',
+                background: 'rgba(59,130,246,0.3)',
                 animation: `dotPulse 1.2s ease-in-out ${i * 0.2}s infinite`,
               }} />
             ))}
@@ -618,7 +625,7 @@ export default function LedgerPage() {
 
         {/* Error */}
         {error && (
-          <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 11, color: 'rgba(220,38,38,0.5)', paddingTop: 60 }}>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'rgba(239,68,68,0.5)', paddingTop: 60 }}>
             {error}
           </div>
         )}
@@ -629,8 +636,8 @@ export default function LedgerPage() {
             {/* ── Header ────────────────────────────────────────────── */}
             <div className="fade-up" style={{ animationDelay: '0ms', marginBottom: 48 }}>
               <div style={{
-                fontFamily: 'Geist Mono, monospace', fontSize: 9, fontWeight: 400,
-                color: '#8a6a4a', letterSpacing: '0.25em', textTransform: 'uppercase',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fontWeight: 400,
+                color: 'rgba(255,255,255,0.25)', letterSpacing: '0.25em', textTransform: 'uppercase',
                 marginBottom: 12,
               }}>
                 Fund
@@ -638,25 +645,29 @@ export default function LedgerPage() {
 
               {/* Hero total */}
               <div style={{
-                fontFamily: 'Geist Mono, monospace', fontSize: 'clamp(40px,7vw,64px)',
-                fontWeight: 200, letterSpacing: '-4px', color: '#faf8f5',
+                fontFamily: 'Inter, sans-serif', fontSize: '72px',
+                fontWeight: '600', letterSpacing: '-2px', color: '#f0f0f8',
                 lineHeight: 1, marginBottom: 20,
               }}>
-                <span style={{ color: '#3a2a1a', fontWeight: 100 }}>€</span>
+                <span style={{
+                  fontSize: '32px', fontWeight: '300', color: 'rgba(255,255,255,0.3)',
+                  fontFamily: 'Inter, sans-serif', verticalAlign: 'top',
+                  marginTop: '8px', display: 'inline-block',
+                }}>€</span>
                 {heroVal < 0 ? '-' : ''}
                 {Math.abs(heroVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
 
               {/* Three inline stats */}
               <div style={{
-                fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#a08060',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'rgba(255,255,255,0.35)',
                 display: 'flex', alignItems: 'center', gap: 8,
                 flexWrap: 'wrap', marginBottom: 20,
               }}>
                 <span>{fundStats.totalTrades ?? 0} trades</span>
-                <span style={{ color: '#a08060' }}>·</span>
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
                 <span>{fundStats.fundWinRate != null ? `${fundStats.fundWinRate}% win rate` : '—'}</span>
-                <span style={{ color: '#a08060' }}>·</span>
+                <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
                 <span>{fundStats.totalOpenPositions ?? 0} open positions</span>
               </div>
 
@@ -664,18 +675,18 @@ export default function LedgerPage() {
               {fundStats.bestTradeEver && (
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                  background: 'rgba(180,80,20,0.1)', border: '0.5px solid rgba(180,80,20,0.2)',
-                  borderRadius: 8, padding: '8px 14px',
+                  background: 'rgba(34,197,94,0.06)', border: '0.5px solid rgba(34,197,94,0.15)',
+                  borderRadius: '9999px', padding: '8px 14px',
                 }}>
-                  <span style={{ color: '#c8a870', fontSize: 14 }}>★</span>
-                  <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 12, fontWeight: 500, color: '#f0ece8' }}>
+                  <span style={{ color: '#22c55e', fontSize: 14 }}>★</span>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
                     {fundStats.bestTradeEver.memberName}
                   </span>
-                  <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#e8b870' }}>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#22c55e' }}>
                     +€{fundStats.bestTradeEver.net_eur?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {fundStats.bestTradeEver.buy_price && (
-                    <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 11, color: '#8a7060' }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
                       ${fundStats.bestTradeEver.buy_price}→${fundStats.bestTradeEver.sell_price}
                     </span>
                   )}
@@ -700,7 +711,7 @@ export default function LedgerPage() {
                 <div className="cat-grid">
                   <CatCard
                     label="Most Profitable"
-                    color="#16a34a"
+                    color="#22c55e"
                     rawValue={lb.mostProfitable[0]?.totalNetEur ?? 0}
                     formatValue={v => fmtSigned(v)}
                     winner={lb.mostProfitable.map(m => m.name).join(' · ')}
@@ -711,7 +722,7 @@ export default function LedgerPage() {
                   />
                   <CatCard
                     label="Best Win Rate"
-                    color="#6366f1"
+                    color="rgba(59,130,246,0.85)"
                     rawValue={lb.bestWinRate[0]?.winRate ?? 0}
                     formatValue={v => lb.bestWinRate.length > 0 ? `${Math.round(v)}%` : '—'}
                     winner={lb.bestWinRate.length > 0 ? lb.bestWinRate.map(m => m.name).join(' · ') : 'min 3 trades'}
@@ -723,7 +734,7 @@ export default function LedgerPage() {
                   />
                   <CatCard
                     label="Best Single Trade"
-                    color="#c8a870"
+                    color="#22c55e"
                     rawValue={lb.bestSingleTrade[0]?.bestTrade?.net_eur ?? 0}
                     formatValue={v => lb.bestSingleTrade.length > 0 ? fmtSigned(v) : '—'}
                     winner={lb.bestSingleTrade.length > 0 ? lb.bestSingleTrade.map(m => m.name).join(' · ') : '—'}
@@ -735,7 +746,7 @@ export default function LedgerPage() {
                   />
                   <CatCard
                     label="Best This Month"
-                    color="#e07040"
+                    color="rgba(255,255,255,0.7)"
                     rawValue={lb.bestThisMonth[0]?.thisMonthNet ?? 0}
                     formatValue={v => fmtSigned(v)}
                     winner={lb.bestThisMonth.map(m => m.name).join(' · ')}
@@ -755,7 +766,7 @@ export default function LedgerPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04))' }} />
                   <div style={{
-                    fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#8a6a4a',
+                    fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)',
                     letterSpacing: '0.2em', textTransform: 'uppercase',
                   }}>
                     Members
@@ -778,7 +789,7 @@ export default function LedgerPage() {
             {members.length === 0 && (
               <div style={{
                 textAlign: 'center', paddingTop: 80,
-                fontFamily: 'Geist, sans-serif', fontSize: 14, color: '#8a6a4a',
+                fontFamily: 'Inter, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.2)',
               }}>
                 No members yet.
               </div>
@@ -842,9 +853,9 @@ export default function LedgerPage() {
                             fontSize: '9px',
                             padding: '2px 7px',
                             borderRadius: '9999px',
-                            background: pos.type === 'SCALP' ? 'rgba(59,130,246,0.1)' : 'rgba(99,102,241,0.1)',
-                            border: `0.5px solid ${pos.type === 'SCALP' ? 'rgba(59,130,246,0.25)' : 'rgba(99,102,241,0.25)'}`,
-                            color: pos.type === 'SCALP' ? 'rgba(59,130,246,0.8)' : 'rgba(99,102,241,0.8)',
+                            background: 'rgba(59,130,246,0.1)',
+                            border: '0.5px solid rgba(59,130,246,0.25)',
+                            color: 'rgba(59,130,246,0.8)',
                             letterSpacing: '0.06em',
                           }}>{pos.type ?? 'CONVICTION'}</span>
                         </div>
