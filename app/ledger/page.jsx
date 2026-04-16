@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { fmtEUR } from '@/lib/format'
+import { calculateEstimatedPnL } from '@/lib/calculations'
+import { useNVDALive } from '@/context/NVDALiveContext'
 
 // ─── easeOutExpo ─────────────────────────────────────────────────────────────
 function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t) }
@@ -197,12 +199,12 @@ function Avatar({ name, size = 48 }) {
 }
 
 // ─── PodCard ─────────────────────────────────────────────────────────────────
-function PodCard({ member, rank, started }) {
+function PodCard({ member, rank, started, extraNet = 0 }) {
   const isFirst = rank === 1
   const avatarSize = isFirst ? 64 : 48
   const cardMinH = isFirst ? 230 : 185
   const delay = rank === 1 ? 200 : rank === 2 ? 400 : 600
-  const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 1200, delay)
+  const netVal = useCountUp(started ? ((member?.totalNetEur ?? 0) + extraNet) : 0, 1200, delay)
 
   const statFontSize = isFirst ? 18 : 13
 
@@ -349,11 +351,12 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
 }
 
 // ─── MemberRow ───────────────────────────────────────────────────────────────
-function MemberRow({ member, rank, isExpanded, onToggle }) {
+function MemberRow({ member, rank, isExpanded, onToggle, extraNet = 0 }) {
   const tradeListRef = useRef(null)
   const trades = member.allTrades ?? member.recentTrades ?? []
   const hasTrades = member.tradeCount > 0
   const isFirst = rank === 1
+  const displayNet = (member.totalNetEur ?? 0) + extraNet
 
   useEffect(() => {
     if (!isExpanded || !tradeListRef.current) return
@@ -435,9 +438,9 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{
               fontFamily: 'Geist Mono, monospace', fontSize: 16, fontWeight: 500,
-              color: member.totalNetEur >= 0 ? '#16a34a' : '#dc2626',
+              color: displayNet >= 0 ? '#16a34a' : '#dc2626',
             }}>
-              {fmtEUR(member.totalNetEur)}
+              {fmtEUR(displayNet)}
             </div>
             {hasTrades && (
               <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 2 }}>
@@ -517,6 +520,8 @@ export default function LedgerPage() {
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(null)
   const [started, setStarted] = useState(false)
+  const [includeLedgerOpen, setIncludeLedgerOpen] = useState(false)
+  const { livePrice } = useNVDALive()
 
   useEffect(() => {
     fetch('/api/ledger')
@@ -578,6 +583,15 @@ export default function LedgerPage() {
   } : null
 
   const heroVal = useCountUp(started ? (fundStats?.totalNetEur ?? 0) : 0, 1800, 300)
+
+  const memberOpenEstimates = useMemo(() => {
+    if (!includeLedgerOpen || !livePrice || !data?.allOpenPositions) return {}
+    return data.allOpenPositions.reduce((acc, pos) => {
+      const est = calculateEstimatedPnL(pos, livePrice)
+      acc[pos.userId] = (acc[pos.userId] ?? 0) + est.estimatedNetEur
+      return acc
+    }, {})
+  }, [includeLedgerOpen, livePrice, data?.allOpenPositions])
 
   return (
     <div style={{
@@ -684,10 +698,171 @@ export default function LedgerPage() {
             {members.length > 0 && (
               <div className="fade-up" style={{ animationDelay: '80ms', marginBottom: 36 }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-                  <PodCard member={members[1] ?? null} rank={2} started={started} />
-                  <PodCard member={members[0] ?? null} rank={1} started={started} />
-                  <PodCard member={members[2] ?? null} rank={3} started={started} />
+                  <PodCard member={members[1] ?? null} rank={2} started={started} extraNet={memberOpenEstimates[members[1]?.userId] ?? 0} />
+                  <PodCard member={members[0] ?? null} rank={1} started={started} extraNet={memberOpenEstimates[members[0]?.userId] ?? 0} />
+                  <PodCard member={members[2] ?? null} rank={3} started={started} extraNet={memberOpenEstimates[members[2]?.userId] ?? 0} />
                 </div>
+              </div>
+            )}
+
+            {/* ── All open positions ────────────────────────────────── */}
+            {data?.allOpenPositions?.length > 0 && (
+              <div style={{
+                background: '#13131e',
+                border: '0.5px solid rgba(59,130,246,0.12)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                marginBottom: '16px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59,130,246,0.05)',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                }}>
+                  <span style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px',
+                    color: 'rgba(59,130,246,0.5)',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                  }}>All Open Positions</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '9px',
+                      color: 'rgba(255,255,255,0.25)',
+                      letterSpacing: '0.08em',
+                    }}>Include in leaderboard</span>
+                    <div
+                      onClick={() => setIncludeLedgerOpen(v => !v)}
+                      style={{
+                        width: '36px',
+                        height: '20px',
+                        borderRadius: '9999px',
+                        background: includeLedgerOpen
+                          ? 'rgba(59,130,246,0.4)'
+                          : 'rgba(255,255,255,0.08)',
+                        border: `0.5px solid ${includeLedgerOpen
+                          ? 'rgba(59,130,246,0.5)'
+                          : 'rgba(255,255,255,0.1)'}`,
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: includeLedgerOpen ? '18px' : '2px',
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: includeLedgerOpen
+                          ? '#3b82f6'
+                          : 'rgba(255,255,255,0.3)',
+                        transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                      }} />
+                    </div>
+                  </div>
+                </div>
+
+                {data.allOpenPositions.map((pos, i) => {
+                  const estimated = livePrice
+                    ? calculateEstimatedPnL(pos, livePrice)
+                    : null
+                  return (
+                    <div key={pos.id ?? i} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 0',
+                      borderBottom: i < data.allOpenPositions.length - 1
+                        ? '0.5px solid rgba(255,255,255,0.04)'
+                        : 'none',
+                      gap: '16px',
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: 'rgba(255,255,255,0.8)',
+                          marginBottom: '3px',
+                        }}>{pos.memberName}</div>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '10px',
+                          color: 'rgba(255,255,255,0.25)',
+                        }}>
+                          {pos.shares?.toLocaleString()} shares @ ${pos.entryPrice}
+                          {' · '}{pos.entryDate}
+                          {estimated ? ` · ${estimated.daysHeld}d held` : ''}
+                        </div>
+                      </div>
+                      {estimated && (
+                        <div style={{ display: 'flex', gap: '20px', textAlign: 'right' }}>
+                          <div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '9px',
+                              color: 'rgba(255,255,255,0.2)',
+                              letterSpacing: '0.1em',
+                              textTransform: 'uppercase',
+                              marginBottom: '2px',
+                            }}>Est. Gross</div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '13px',
+                              color: estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
+                            }}>
+                              {estimated.estimatedGross >= 0 ? '+' : ''}
+                              ${estimated.estimatedGross.toFixed(0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '9px',
+                              color: 'rgba(255,255,255,0.2)',
+                              letterSpacing: '0.1em',
+                              textTransform: 'uppercase',
+                              marginBottom: '2px',
+                            }}>Est. Net EUR</div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              color: estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
+                            }}>
+                              {estimated.estimatedNetEur >= 0 ? '+' : ''}
+                              €{estimated.estimatedNetEur.toFixed(0)}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '9px',
+                              color: 'rgba(255,255,255,0.2)',
+                              letterSpacing: '0.1em',
+                              textTransform: 'uppercase',
+                              marginBottom: '2px',
+                            }}>Running Cost</div>
+                            <div style={{
+                              fontFamily: 'JetBrains Mono, monospace',
+                              fontSize: '13px',
+                              color: '#ef4444',
+                            }}>
+                              -${estimated.totalCosts.toFixed(0)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
@@ -767,6 +942,7 @@ export default function LedgerPage() {
                     rank={i + 1}
                     isExpanded={expanded === member.userId}
                     onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
+                    extraNet={memberOpenEstimates[member.userId] ?? 0}
                   />
                 ))}
               </div>

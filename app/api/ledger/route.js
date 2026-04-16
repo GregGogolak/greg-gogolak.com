@@ -107,7 +107,17 @@ export async function GET() {
       totalOpenPositions: members.reduce((s, m) => s + m.openPositions.length, 0),
     }
 
-    return Response.json({ members, fundStats })
+    const allOpenPositions = members
+      .flatMap(m =>
+        (m.openPositions ?? []).map(p => ({
+          ...p,
+          memberName: m.name,
+          userId: m.userId,
+        }))
+      )
+      .filter(p => p.entryPrice && p.shares)
+
+    return Response.json({ members, fundStats, allOpenPositions })
   } catch (err) {
     console.error('[/api/ledger]', err)
     return Response.json({ error: err.message }, { status: 500 })
