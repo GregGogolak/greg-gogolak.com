@@ -143,6 +143,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
       case 'shares':     aVal = a.shares;         bVal = b.shares;        break
       case 'buy_price':  aVal = a.buy_price;      bVal = b.buy_price;     break
       case 'sell_price': aVal = a.sell_price;     bVal = b.sell_price;    break
+      case 'sell_date':  aVal = a.sell_date;      bVal = b.sell_date;     break
       case 'gross_pnl':  aVal = a.gross_pnl_usd;  bVal = b.gross_pnl_usd; break
       case 'net_eur':    aVal = a.net_eur;         bVal = b.net_eur;       break
       default:           aVal = a.buy_date;       bVal = b.buy_date
@@ -173,7 +174,8 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
         <thead>
           <tr>
-            <SortableHeader col="buy_date"   label="Dates"      sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="buy_date"   label="Buy Date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="sell_date"  label="Sell Date"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="type"       label="Type"       sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="shares"     label="Shares"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="buy_price"  label="Buy Price"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
@@ -206,13 +208,31 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                   transition: 'background 0.15s ease',
                 }}
               >
-                {/* Dates */}
-                <TD style={{ textAlign: 'left', color: '#8892a8', fontFamily: 'Inter, sans-serif', fontSize: '11px' }}>
+                {/* Buy Date */}
+                <td style={{
+                  padding: '10px 12px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.5)',
+                  whiteSpace: 'nowrap',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                }}>
                   {t.buy_date}
-                  {t.buy_date !== t.sell_date && (
-                    <> <span style={{ color: '#3d4a5c' }}>→</span> {t.sell_date}</>
-                  )}
-                </TD>
+                </td>
+
+                {/* Sell Date */}
+                <td style={{
+                  padding: '10px 12px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '11px',
+                  color: t.sell_date === t.buy_date
+                    ? 'rgba(255,255,255,0.25)'
+                    : 'rgba(255,255,255,0.5)',
+                  whiteSpace: 'nowrap',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                }}>
+                  {t.sell_date === t.buy_date ? 'same day' : t.sell_date}
+                </td>
 
                 {/* Type */}
                 <TD style={{ textAlign: 'left' }}>
@@ -345,7 +365,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
 
               {confirmId === t.id && (
                 <DeleteConfirmRow
-                  colSpan={14}
+                  colSpan={15}
                   trade={t}
                   onConfirm={handleDelete}
                   onCancel={() => setConfirmId(null)}
