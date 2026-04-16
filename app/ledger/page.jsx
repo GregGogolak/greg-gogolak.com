@@ -282,7 +282,7 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
   return (
     <div className="cat-card">
       <div style={{
-        fontFamily: 'Geist Mono, monospace', fontSize: 8, color: '#4a3525',
+        fontFamily: 'Geist Mono, monospace', fontSize: 8, color: '#8a6a4a',
         letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10,
       }}>
         {label}
@@ -295,7 +295,7 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
       </div>
       <div style={{
         fontFamily: 'Geist, sans-serif', fontSize: 12, fontWeight: 300,
-        color: '#6b4a35', marginBottom: runners.length > 0 ? 10 : 0,
+        color: '#8a6a4a', marginBottom: runners.length > 0 ? 10 : 0,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         {winner}
@@ -306,10 +306,10 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {runners.slice(0, 3).map((r, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 10, color: '#3a2510', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
+                <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 10, color: '#8a6a4a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
                   {r.name}
                 </span>
-                <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#3a2510', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#8a6a4a', flexShrink: 0 }}>
                   {r.value}
                 </span>
               </div>
@@ -355,7 +355,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           {/* Rank */}
           <div style={{
             fontFamily: 'Geist Mono, monospace', fontSize: 18, fontWeight: 600,
-            color: isFirst ? 'rgba(200,168,112,0.8)' : '#3a2a1a',
+            color: isFirst ? 'rgba(200,168,112,0.8)' : '#8a6a4a',
             width: 32, flexShrink: 0, textAlign: 'right',
           }}>
             {rank}
@@ -394,7 +394,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
                 </span>
               )}
             </div>
-            <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#4a3525' }}>
+            <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#a08060' }}>
               {member.tradeCount} trades
               {member.winRate != null ? ` · ${member.winRate}%` : ''}
               {' · '}
@@ -413,7 +413,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
               {fmtEUR(member.totalNetEur)}
             </div>
             {hasTrades && (
-              <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#2a1a10', marginTop: 2 }}>
+              <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 2 }}>
                 {isExpanded ? '▲' : '▼'}
               </div>
             )}
@@ -436,7 +436,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
             display: 'grid', gridTemplateColumns: '80px 56px 48px 62px 62px 1fr',
             gap: 4, padding: '7px 16px',
             fontFamily: 'Geist Mono, monospace', fontSize: 8,
-            color: '#4a3525', letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: '#8a6a4a', letterSpacing: '0.08em', textTransform: 'uppercase',
             borderBottom: '0.5px solid rgba(255,255,255,0.03)',
           }}>
             <span>Date</span><span>Type</span><span>Shrs</span>
@@ -456,11 +456,11 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
                 fontFamily: 'Geist Mono, monospace', fontSize: 10,
               }}
             >
-              <span style={{ color: '#4a3525' }}>{t.sell_date}</span>
+              <span style={{ color: '#8a6a4a' }}>{t.sell_date}</span>
               <span style={{ color: 'rgba(99,102,241,0.5)' }}>{t.type}</span>
-              <span style={{ color: '#4a3525' }}>{t.shares}</span>
-              <span style={{ color: '#4a3525' }}>${t.buy_price}</span>
-              <span style={{ color: '#4a3525' }}>${t.sell_price}</span>
+              <span style={{ color: '#8a6a4a' }}>{t.shares}</span>
+              <span style={{ color: '#8a6a4a' }}>${t.buy_price}</span>
+              <span style={{ color: '#8a6a4a' }}>${t.sell_price}</span>
               <span style={{ color: t.net_eur >= 0 ? '#16a34a' : '#dc2626', fontWeight: 500 }}>
                 {fmtEUR(t.net_eur)}
               </span>
@@ -470,7 +470,7 @@ function MemberRow({ member, rank, isExpanded, onToggle }) {
           {/* Footer */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', padding: '8px 16px',
-            fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#3a2a1a',
+            fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#8a6a4a',
           }}>
             <span>{member.tradeCount} trades · {member.winRate ?? '—'}% win</span>
             <span style={{ color: member.totalNetEur >= 0 ? '#16a34a' : '#dc2626' }}>
@@ -598,7 +598,7 @@ export default function LedgerPage() {
             <div className="fade-up" style={{ animationDelay: '0ms', marginBottom: 48 }}>
               <div style={{
                 fontFamily: 'Geist Mono, monospace', fontSize: 9, fontWeight: 400,
-                color: '#4a3525', letterSpacing: '0.25em', textTransform: 'uppercase',
+                color: '#8a6a4a', letterSpacing: '0.25em', textTransform: 'uppercase',
                 marginBottom: 12,
               }}>
                 Fund
@@ -617,14 +617,14 @@ export default function LedgerPage() {
 
               {/* Three inline stats */}
               <div style={{
-                fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#4a3525',
+                fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#a08060',
                 display: 'flex', alignItems: 'center', gap: 8,
                 flexWrap: 'wrap', marginBottom: 20,
               }}>
                 <span>{fundStats.totalTrades ?? 0} trades</span>
-                <span style={{ color: '#2a1a10' }}>·</span>
+                <span style={{ color: '#a08060' }}>·</span>
                 <span>{fundStats.fundWinRate != null ? `${fundStats.fundWinRate}% win rate` : '—'}</span>
-                <span style={{ color: '#2a1a10' }}>·</span>
+                <span style={{ color: '#a08060' }}>·</span>
                 <span>{fundStats.totalOpenPositions ?? 0} open positions</span>
               </div>
 
@@ -639,11 +639,11 @@ export default function LedgerPage() {
                   <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 12, fontWeight: 500, color: '#f0ece8' }}>
                     {fundStats.bestTradeEver.memberName}
                   </span>
-                  <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#c8a870' }}>
+                  <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 12, color: '#e8b870' }}>
                     +€{fundStats.bestTradeEver.net_eur?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {fundStats.bestTradeEver.buy_price && (
-                    <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 11, color: '#4a3525' }}>
+                    <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 11, color: '#8a7060' }}>
                       ${fundStats.bestTradeEver.buy_price}→${fundStats.bestTradeEver.sell_price}
                     </span>
                   )}
@@ -723,7 +723,7 @@ export default function LedgerPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04))' }} />
                   <div style={{
-                    fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#4a3525',
+                    fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#8a6a4a',
                     letterSpacing: '0.2em', textTransform: 'uppercase',
                   }}>
                     Members
@@ -746,7 +746,7 @@ export default function LedgerPage() {
             {members.length === 0 && (
               <div style={{
                 textAlign: 'center', paddingTop: 80,
-                fontFamily: 'Geist, sans-serif', fontSize: 14, color: '#3a2a1a',
+                fontFamily: 'Geist, sans-serif', fontSize: 14, color: '#8a6a4a',
               }}>
                 No members yet.
               </div>
