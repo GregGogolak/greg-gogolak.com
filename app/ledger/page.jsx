@@ -109,19 +109,29 @@ const STYLES = `
 
 .cat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 @media (max-width: 640px) {
-  .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .cat-card {
-  background: #1a1208;
+  background: #1f1610;
   border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 14px;
   padding: 20px;
+  position: relative;
+  overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.cat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--cat-accent, rgba(255,255,255,0.1));
+  opacity: 0.15;
 }
 .cat-card:hover {
   transform: translateY(-3px);
@@ -280,7 +290,7 @@ function PodCard({ member, rank, started }) {
 function CatCard({ label, color, rawValue, formatValue, winner, runners, started, delay = 0 }) {
   const counted = useCountUp(started ? (rawValue ?? 0) : 0, 1100, 400 + delay)
   return (
-    <div className="cat-card">
+    <div className="cat-card" style={{ '--cat-accent': color }}>
       <div style={{
         fontFamily: 'Geist Mono, monospace', fontSize: 8, color: '#8a6a4a',
         letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10,
@@ -289,27 +299,34 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
       </div>
       <div style={{
         fontFamily: 'Geist Mono, monospace', fontSize: 28, fontWeight: 500,
-        color, lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
+        color, opacity: 1, lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
       }}>
         {formatValue(counted)}
       </div>
       <div style={{
         fontFamily: 'Geist, sans-serif', fontSize: 12, fontWeight: 300,
-        color: '#8a6a4a', marginBottom: runners.length > 0 ? 10 : 0,
+        color: '#c8b898', marginBottom: runners.length > 0 ? 10 : 0,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
         {winner}
       </div>
       {runners.length > 0 && (
         <>
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', marginBottom: 8 }} />
+          <div style={{ height: 1, background: '#2a1e10', marginBottom: 8 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {runners.slice(0, 3).map((r, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 10, color: '#8a6a4a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{
+                  background: '#2a1e10', color: '#6b4a35',
+                  fontFamily: 'Geist Mono, monospace', fontSize: 8,
+                  padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+                }}>
+                  {i + 2}
+                </span>
+                <span style={{ fontFamily: 'Geist, sans-serif', fontSize: 10, color: '#6b4a35', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                   {r.name}
                 </span>
-                <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#8a6a4a', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: 10, color: '#6b4a35', flexShrink: 0 }}>
                   {r.value}
                 </span>
               </div>
