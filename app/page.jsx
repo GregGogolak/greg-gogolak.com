@@ -1,23 +1,16 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useNVDAData }      from '@/hooks/useNVDAData'
-import { useMacroData }     from '@/hooks/useMacroData'
-import { useNews }          from '@/hooks/useNews'
-import { useFundamentals }  from '@/hooks/useFundamentals'
-import { useAlerts }        from '@/hooks/useAlerts'
-import { useNVDALive }      from '@/context/NVDALiveContext'
-import LivePriceBubble      from '@/components/LivePriceBubble'
-import { getThesisStatus, getBuyChecklist } from '@/lib/thesisEngine'
-import { daysUntil } from '@/lib/calculations'
-import { EARNINGS_DATE } from '@/lib/config'
+import { useNVDAData }     from '@/hooks/useNVDAData'
+import { useMacroData }    from '@/hooks/useMacroData'
+import { useNews }         from '@/hooks/useNews'
+import { useFundamentals } from '@/hooks/useFundamentals'
+import { useAlerts }       from '@/hooks/useAlerts'
+import { useNVDALive }     from '@/context/NVDALiveContext'
+import { getThesisStatus } from '@/lib/thesisEngine'
+import { getMarketSession } from '@/lib/sessionUtils'
 
 import ThesisStatus  from '@/components/Dashboard/ThesisStatus'
-import MacroPanel    from '@/components/Dashboard/MacroPanel'
-import CatalystBar   from '@/components/Dashboard/CatalystBar'
 import PositionPanel from '@/components/Dashboard/PositionPanel'
-import SignalGauge   from '@/components/Dashboard/SignalGauge'
-import BuyChecklist  from '@/components/Dashboard/BuyChecklist'
-import SignalFeed    from '@/components/Dashboard/SignalFeed'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const CARD = {
@@ -26,15 +19,13 @@ const CARD = {
   borderRadius: '18px',
   padding: '20px 24px',
   position: 'relative',
-  overflow: 'hidden',
   boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
   transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
-  cursor: 'default',
 }
 
-const HERO_CARD = {
+const HEADER_CARD = {
   ...CARD,
-  padding: '24px 28px',
+  padding: '16px 20px',
 }
 
 const EYE = {
@@ -43,44 +34,74 @@ const EYE = {
   color: 'rgba(255,255,255,0.25)',
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
-  marginBottom: '16px',
+  marginBottom: '14px',
   display: 'block',
 }
 
 function cardIn(e) {
-  e.currentTarget.style.border        = '0.5px solid rgba(255,255,255,0.12)'
-  e.currentTarget.style.transform     = 'translateY(-2px)'
-  e.currentTarget.style.boxShadow     = '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
+  e.currentTarget.style.border    = '0.5px solid rgba(255,255,255,0.12)'
+  e.currentTarget.style.transform = 'translateY(-2px)'
+  e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
 }
 function cardOut(e) {
-  e.currentTarget.style.border        = '0.5px solid rgba(255,255,255,0.07)'
-  e.currentTarget.style.transform     = 'translateY(0)'
-  e.currentTarget.style.boxShadow     = '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)'
+  e.currentTarget.style.border    = '0.5px solid rgba(255,255,255,0.07)'
+  e.currentTarget.style.transform = 'translateY(0)'
+  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)'
 }
 
-// ── SentimentChip (kept, not rendered in the new layout) ───────────────────
-function SentimentChip() {
-  const [pulse, setPulse] = useState(null)
-  useEffect(() => {
-    fetch('/api/analysis')
-      .then(r => r.json())
-      .then(res => {
-        const latest = Array.isArray(res) ? res[0] : res
-        if (latest?.marketPulse) setPulse(latest.marketPulse)
-      })
-      .catch(() => {})
-  }, [])
-  if (!pulse) return null
+// ── Helpers ────────────────────────────────────────────────────────────────
+function timeAgo(unixSeconds) {
+  const diff = Math.floor(Date.now() / 1000) - unixSeconds
+  if (diff < 60)   return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+function sessionInfo(session) {
+  switch (session) {
+    case 'open':       return { label: 'LIVE',        badgeLabel: 'MARKET OPEN',  isLive: true,  colour: '#22c55e' }
+    case 'premarket':  return { label: 'PRE-MARKET',  badgeLabel: 'PRE-MARKET',   isLive: false, colour: '#f59e0b' }
+    case 'afterhours': return { label: 'AFTER HOURS', badgeLabel: 'AFTER HOURS',  isLive: false, colour: '#f59e0b' }
+    default:           return { label: 'CLOSED',      badgeLabel: 'MARKET CLOSED',isLive: false, colour: 'rgba(255,255,255,0.4)' }
+  }
+}
+
+// ── DataRow — used in Technicals card ─────────────────────────────────────
+function DataRow({ label, value, badge, badgeColour, dimmed, last }) {
   return (
     <div style={{
-      marginTop: '12px', padding: '10px 14px', borderRadius: '10px',
-      background: 'rgba(91,156,246,0.05)', border: '1px solid rgba(91,156,246,0.12)',
-      display: 'flex', gap: '12px', alignItems: 'center',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '8px 0',
+      borderBottom: last ? 'none' : '0.5px solid rgba(255,255,255,0.04)',
     }}>
-      <span style={{ fontSize: '9px', color: '#3d4a5c', letterSpacing: '0.1em', fontFamily: 'Inter, sans-serif' }}>PULSE</span>
-      <span style={{ fontSize: '11px', color: '#eef2ff', fontFamily: 'Inter, sans-serif' }}>🧑 {pulse.retail.label}</span>
-      <span style={{ color: '#3d4a5c' }}>·</span>
-      <span style={{ fontSize: '11px', color: '#eef2ff', fontFamily: 'Inter, sans-serif' }}>🏦 {pulse.hedge.label}</span>
+      <span style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '12px',
+        color: dimmed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.55)',
+      }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {value && (
+          <span style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '12px',
+            color: dimmed ? 'rgba(255,255,255,0.3)' : '#f0f0f8',
+          }}>{value}</span>
+        )}
+        {badge && (
+          <span style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '10px',
+            padding: '2px 6px',
+            borderRadius: '9999px',
+            background: `${badgeColour}18`,
+            border: `0.5px solid ${badgeColour}40`,
+            color: badgeColour,
+          }}>{badge}</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -88,17 +109,18 @@ function SentimentChip() {
 // ── Dashboard ──────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { data: priceData, loading: priceLoading }  = useNVDAData()
-  const { data: macroData, loading: macroLoading }  = useMacroData()
-  const { articles }                                = useNews()
-  const { data: fundamentalsData }                  = useFundamentals()
-  const { livePrice, wsConnected } = useNVDALive()
+  const { data: macroData }                          = useMacroData()
+  const { articles }                                 = useNews()
+  const { data: fundamentalsData }                   = useFundamentals()
+  const { livePrice, wsConnected }                   = useNVDALive()
   useAlerts({ externalPriceData: priceData, externalMacroData: macroData })
 
-  // Persisted state (KV-backed)
+  // Positions + Iran (KV-backed)
   const [positions,  setPositions]  = useState([])
   const [iranStatus, setIranStatus] = useState('ESCALATING')
 
-  // Load positions + KV state on mount
+  // TODO: Replace manual iranStatus with AI-calculated status from news — see DESIGN.md
+
   useEffect(() => {
     fetch('/api/positions')
       .then(r => r.json())
@@ -108,6 +130,23 @@ export default function Dashboard() {
       })
       .catch(() => {})
   }, [])
+
+  // Calendar (AI-generated, cached 1h in Redis)
+  const [calendarData,    setCalendarData]    = useState(null)
+  const [calendarLoading, setCalendarLoading] = useState(false)
+
+  const fetchCalendar = useCallback(async (force = false) => {
+    setCalendarLoading(true)
+    try {
+      const res  = await fetch('/api/calendar', { method: force ? 'POST' : 'GET' })
+      const data = await res.json()
+      setCalendarData(data)
+    } finally {
+      setCalendarLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchCalendar() }, [fetchCalendar])
 
   // Position CRUD
   const handleAddPosition = useCallback(async (pos) => {
@@ -130,89 +169,38 @@ export default function Dashboard() {
     setPositions(data.positions || [])
   }, [])
 
-  const handleIranChange = useCallback(async (status) => {
-    setIranStatus(status)
-    await fetch('/api/positions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setIran', payload: { status } }),
-    })
-  }, [])
-
-  // Derived values
+  // ── Derived values ─────────────────────────────────────────────────────
+  const displayPrice   = livePrice ?? priceData?.price ?? null
   const price          = priceData?.price   ?? null
+  const prevClose      = priceData?.prevClose ?? null
+  const pctChange      = priceData?.pctChange ?? null
   const sma200         = priceData?.sma200  ?? null
+  const sma50          = priceData?.sma50   ?? null
+  const pctFrom200     = priceData?.pctFrom200 ?? null
+  const pctFrom50      = priceData?.pctFrom50  ?? null
   const vix            = macroData?.vix?.level ?? 0
   const oilTwo         = macroData?.oil?.twoSessionPct ?? 0
-  const qqqPct         = macroData?.qqq?.pctChange ?? 0
-  const analystTarget  = fundamentalsData?.analystTarget ?? 264
+  const oilPrice       = macroData?.oil?.price ?? null
+  const oilPct         = macroData?.oil?.pctChange ?? null
+  const qqq            = macroData?.qqq?.pctChange ?? 0
+  const analystTarget  = fundamentalsData?.analystTarget ?? null
+  const analystPctDiff = (analystTarget && price) ? ((analystTarget - price) / price) * 100 : null
 
   const nowSec         = Date.now() / 1000
   const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)
 
-  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
+  const thesis         = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
 
-  const checklistItems = getBuyChecklist({
-    price:          price ?? 0,
-    sma200:         sma200 ?? 0,
-    analystTarget,
-    hasBucketCNews,
-    qqqPctChange:   qqqPct,
-    vix,
-    daysToEarnings: daysUntil(EARNINGS_DATE),
-  })
+  const bucketBNews    = articles.filter(a => a.bucket === 'B')
+  const bucketCNews    = articles.filter(a => a.bucket === 'C')
 
-  const passCount = checklistItems.filter(i => i.pass).length
-  const loading   = priceLoading && !priceData
+  // Session
+  const session        = getMarketSession()
+  const sess           = sessionInfo(session)
+  const isLive         = sess.isLive
 
-  // Macro display values
-  const oilPrice  = macroData?.oil?.price
-  const oilPct    = macroData?.oil?.pctChange
-  const qqqPrice  = macroData?.qqq?.price
-  const vixLevel  = macroData?.vix?.level
-
-  const vixLabel  = !vixLevel ? '—' : vixLevel > 30 ? 'HIGH' : vixLevel > 20 ? 'ELEVATED' : 'LOW'
-  const vixColor  = !vixLevel ? 'rgba(255,255,255,0.3)' : vixLevel > 30 ? '#ef4444' : vixLevel > 20 ? '#f59e0b' : '#22c55e'
-  const vixBg     = !vixLevel ? 'rgba(255,255,255,0.04)' : vixLevel > 30 ? 'rgba(239,68,68,0.1)' : vixLevel > 20 ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)'
-
-  // Dynamic blooms
-  const priceIsUp   = (priceData?.pctChange ?? 0) >= 0
-  const priceBloom  = priceIsUp
-    ? 'radial-gradient(ellipse at 20% 80%, rgba(34,197,94,0.06) 0%, transparent 60%)'
-    : 'radial-gradient(ellipse at 20% 80%, rgba(239,68,68,0.06) 0%, transparent 60%)'
-  const thesisBloom = thesis.status === 'INTACT'
-    ? 'radial-gradient(ellipse at 20% 80%, rgba(34,197,94,0.06) 0%, transparent 60%)'
-    : thesis.status === 'AT RISK'
-    ? 'radial-gradient(ellipse at 20% 80%, rgba(245,158,11,0.06) 0%, transparent 60%)'
-    : 'radial-gradient(ellipse at 20% 80%, rgba(239,68,68,0.06) 0%, transparent 60%)'
-
-  // Inline row helper for macro card
-  const macroRow = (name, valueNode, badgeNode, last = false) => (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '8px 0',
-      borderBottom: last ? 'none' : '0.5px solid rgba(255,255,255,0.04)',
-    }}>
-      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {valueNode}
-        {badgeNode}
-      </div>
-    </div>
-  )
-
-  const pctBadge = (pct) => pct == null ? null : (
-    <span style={{
-      fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
-      padding: '2px 7px', borderRadius: '9999px',
-      background: pct >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-      color:      pct >= 0 ? '#22c55e' : '#ef4444',
-    }}>{pct >= 0 ? '+' : ''}{pct.toFixed(2)}%</span>
-  )
-
-  const monoVal = (text) => (
-    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: '#f0f0f8' }}>{text}</span>
-  )
+  // Oil change badge string
+  const oilChange      = oilPct != null ? `${oilPct >= 0 ? '+' : ''}${oilPct.toFixed(2)}%` : null
 
   return (
     <div style={{
@@ -220,198 +208,456 @@ export default function Dashboard() {
       background: '#08080f',
       padding: '88px 28px 40px', // 88 = 68px nav + 20px breathing room
       fontFamily: 'Inter, sans-serif',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
       marginTop: '-68px',
     }}>
 
-      {/* ── ROW 1 — HERO ──────────────────────────────────────────────────── */}
-      <div className="dashboard-row-1" style={{
+      {/* ── ROW 1 — THREE COMPACT HEADER CARDS ───────────────────────────── */}
+      <div className="dashboard-row" style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
         gap: '12px',
-        marginBottom: '12px',
       }}>
 
-        {/* Zone 1 — Live Price */}
-        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset', padding: '20px 24px'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          {/* Dynamic price bloom */}
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: priceBloom }} />
-          <LivePriceBubble
-            livePrice={livePrice}
-            prevClose={priceData?.prevClose ?? null}
-            pctChange={priceData?.pctChange ?? null}
-            wsConnected={wsConnected}
-            marketOpen={priceData?.marketOpen ?? null}
-          />
-          {sma200 != null && price != null && (
+        {/* Card 1 — Price */}
+        <div style={HEADER_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          {/* Session badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            padding: '3px 8px',
+            borderRadius: '9999px',
+            background: isLive ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
+            border: `0.5px solid ${isLive ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.1)'}`,
+            marginBottom: '10px',
+          }}>
             <div style={{
-              marginTop: '16px',
-              paddingTop: '14px',
-              borderTop: '0.5px solid rgba(255,255,255,0.06)',
+              width: '5px', height: '5px',
+              borderRadius: '50%',
+              background: isLive ? '#22c55e' : 'rgba(255,255,255,0.3)',
+              boxShadow: isLive ? '0 0 6px rgba(34,197,94,0.6)' : 'none',
+              animation: isLive ? 'pulse 2s ease-in-out infinite' : 'none',
+            }} />
+            <span style={{
               fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '11px',
-              color: 'rgba(255,255,255,0.3)',
-            }}>
-              200 SMA ${sma200.toFixed(2)} · {price > sma200 ? '+' : ''}{(((price - sma200) / sma200) * 100).toFixed(2)}% {price > sma200 ? 'above' : 'below'}
-            </div>
-          )}
-        </div>
+              fontSize: '10px',
+              color: isLive ? '#22c55e' : 'rgba(255,255,255,0.4)',
+              letterSpacing: '0.08em',
+            }}>{sess.label}</span>
+          </div>
 
-        {/* Zone 2 — Thesis Status */}
-        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          {/* Dynamic thesis bloom */}
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: thesisBloom }} />
-          <span style={EYE}>THESIS</span>
-          <div style={{ transform: 'scale(0.9)', transformOrigin: 'left center' }}>
-            <ThesisStatus
-              status={thesis.status}
-              triggers={thesis.triggers}
-              price={price}
-              sma200={sma200}
-              loading={loading}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderRadius: 0,
-                padding: 0,
-                overflow: 'visible',
-              }}
-            />
+          {/* Hero price */}
+          <div style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '48px',
+            fontWeight: '600',
+            color: '#f0f0f8',
+            letterSpacing: '-2px',
+            lineHeight: '1',
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '300' }}>$</span>
+            {displayPrice != null ? displayPrice.toFixed(2) : '—'}
           </div>
         </div>
 
-        {/* Zone 3 — Signal Strength */}
-        <div style={{...HERO_CARD, height: 'fit-content', minHeight: 'unset'}} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>SIGNAL STRENGTH</span>
-          <SignalGauge passCount={passCount} totalCount={checklistItems.length} />
+        {/* Card 2 — Thesis Status */}
+        <div style={HEADER_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <span style={EYE}>Thesis</span>
+          <ThesisStatus
+            status={thesis.status}
+            triggers={thesis.triggers}
+            style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: 0 }}
+          />
+        </div>
+
+        {/* Card 3 — Market Status */}
+        <div style={HEADER_CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <span style={EYE}>Market</span>
+
           <div style={{
-            marginTop: '14px',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.4)',
-            letterSpacing: '0.06em',
-          }}>
-            {passCount} / {checklistItems.length} CONDITIONS MET
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '18px',
+            fontWeight: '500',
+            color: sess.colour,
+            marginBottom: '12px',
+            letterSpacing: '-0.3px',
+          }}>{sess.badgeLabel}</div>
+
+          <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', marginBottom: '12px' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+              Prev close
+            </span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
+              {prevClose != null ? `$${prevClose.toFixed(2)}` : '—'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '6px' }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
+              vs yesterday
+            </span>
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: pctChange == null ? 'rgba(255,255,255,0.3)' : pctChange >= 0 ? '#22c55e' : '#ef4444',
+            }}>
+              {pctChange != null ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(2)}%` : '—'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ── ROW 2 — SUPPORTING DATA ───────────────────────────────────────── */}
-      <div className="dashboard-row-2" style={{
+      {/* ── ROW 2 — THREE TALL CONTENT CARDS ─────────────────────────────── */}
+      <div className="dashboard-row" style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
         gap: '12px',
-        marginBottom: '12px',
+        alignItems: 'stretch',
       }}>
 
-        {/* Card 1 — Macro Signals */}
+        {/* Card 1 — Technicals */}
         <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>MACRO SIGNALS</span>
-          {macroRow(
-            'Brent Crude',
-            monoVal(oilPrice ? `$${oilPrice.toFixed(2)}` : '—'),
-            oilPct != null ? pctBadge(oilPct) : null,
-          )}
-          {macroRow(
-            'QQQ',
-            qqqPrice != null ? monoVal(`$${qqqPrice.toFixed(2)}`) : null,
-            macroData?.qqq?.pctChange != null ? pctBadge(macroData.qqq.pctChange) : null,
-          )}
-          {macroRow(
-            'VIX',
-            monoVal(vixLevel ? vixLevel.toFixed(1) : '—'),
-            <span style={{
-              fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
-              padding: '2px 7px', borderRadius: '9999px',
-              background: vixBg, color: vixColor,
-            }}>{vixLabel}</span>,
-            true,
-          )}
+          <span style={EYE}>Technicals</span>
+
+          <DataRow
+            label="200 SMA"
+            value={sma200 != null ? `$${sma200.toFixed(2)}` : '—'}
+            badge={pctFrom200 != null ? `${pctFrom200 >= 0 ? '+' : ''}${pctFrom200.toFixed(1)}%` : null}
+            badgeColour={pctFrom200 != null ? (pctFrom200 < 0 ? '#22c55e' : '#ef4444') : 'rgba(255,255,255,0.2)'}
+          />
+          <DataRow
+            label="50 SMA"
+            value={sma50 != null ? `$${sma50.toFixed(2)}` : '—'}
+            badge={pctFrom50 != null ? `${pctFrom50 >= 0 ? '+' : ''}${pctFrom50.toFixed(1)}%` : null}
+            badgeColour={pctFrom50 != null ? (pctFrom50 < 0 ? '#22c55e' : '#f59e0b') : 'rgba(255,255,255,0.2)'}
+          />
+          <DataRow
+            label="RSI"
+            value="—"
+            badge="Coming soon"
+            badgeColour="rgba(255,255,255,0.2)"
+            dimmed
+          />
+          <DataRow
+            label="QQQ"
+            badge={qqq != null ? `${qqq >= 0 ? '+' : ''}${qqq.toFixed(2)}%` : null}
+            badgeColour={qqq >= 0 ? '#22c55e' : '#ef4444'}
+          />
+          <DataRow
+            label="VIX"
+            value={vix ? vix.toFixed(1) : '—'}
+            badge={vix ? (vix < 20 ? 'LOW' : vix < 30 ? 'ELEVATED' : 'HIGH') : null}
+            badgeColour={vix < 20 ? '#22c55e' : vix < 30 ? '#f59e0b' : '#ef4444'}
+          />
+          <DataRow
+            label="Brent Crude"
+            value={oilPrice != null ? `$${oilPrice.toFixed(1)}` : '—'}
+            badge={oilChange}
+            badgeColour={oilPct != null ? (oilPct <= 0 ? '#22c55e' : '#ef4444') : 'rgba(255,255,255,0.2)'}
+          />
+          <DataRow
+            label="Analyst Target"
+            value={analystTarget != null ? `$${analystTarget}` : '—'}
+            badge={analystPctDiff != null ? `+${analystPctDiff.toFixed(1)}%` : null}
+            badgeColour="#3b82f6"
+            last
+          />
         </div>
 
-        {/* Card 2 — Entry Checklist */}
+        {/* Card 2 — News Feed (Bucket B / C) */}
         <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ ...EYE, marginBottom: 0 }}>ENTRY CHECKLIST</span>
-            <span style={{
-              fontFamily: 'JetBrains Mono, monospace', fontSize: '10px',
-              padding: '2px 8px', borderRadius: '9999px',
-              background: passCount >= 5 ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
-              color:      passCount >= 5 ? '#22c55e' : '#f59e0b',
-              border: `0.5px solid ${passCount >= 5 ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)'}`,
-            }}>{passCount} / {checklistItems.length}</span>
-          </div>
-          {checklistItems.map((item, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '7px 0',
-              borderBottom: i < checklistItems.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{
-                  width: '16px', height: '16px', borderRadius: '50%', flexShrink: 0,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '9px', fontWeight: 700,
-                  color:      item.pass ? '#22c55e' : '#ef4444',
-                  background: item.pass ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                  border: `0.5px solid ${item.pass ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                }}>
-                  {item.pass ? '✓' : '✗'}
-                </span>
-                <span style={{
-                  fontFamily: 'Inter, sans-serif', fontSize: '12px',
-                  color: item.pass ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)',
-                }}>{item.label}</span>
+          <span style={EYE}>News Feed</span>
+
+          {/* Supporting — Bucket B */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '8px',
+              color: 'rgba(34,197,94,0.6)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              marginBottom: '6px',
+            }}>Supporting</div>
+
+            {bucketBNews.slice(0, 5).map((article, i) => (
+              <div key={article.id ?? i} style={{
+                padding: '6px 0',
+                borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+              }}>
+                <div style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.65)',
+                  lineHeight: '1.4',
+                  marginBottom: '2px',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}>{article.headline}</div>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'rgba(255,255,255,0.2)',
+                }}>{article.source} · {timeAgo(article.datetime)}</div>
               </div>
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: '11px',
-                color: item.pass ? '#22c55e' : 'rgba(255,255,255,0.2)',
-              }}>{item.value}</span>
+            ))}
+
+            {bucketBNews.length === 0 && (
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
+                No supporting signals
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
+
+          {/* Risk — Bucket C */}
+          <div>
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '8px',
+              color: 'rgba(239,68,68,0.6)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              marginBottom: '6px',
+            }}>Risk</div>
+
+            {bucketCNews.slice(0, 5).map((article, i) => (
+              <div key={article.id ?? i} style={{
+                padding: '6px 0',
+                borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+              }}>
+                <div style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.65)',
+                  lineHeight: '1.4',
+                  marginBottom: '2px',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}>{article.headline}</div>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'rgba(255,255,255,0.2)',
+                }}>{article.source} · {timeAgo(article.datetime)}</div>
+              </div>
+            ))}
+
+            {bucketCNews.length === 0 && (
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
+                No risk signals
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Card 3 — Things To Watch (AI calendar + Iran read-only) */}
+        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <span style={{ ...EYE, marginBottom: 0 }}>Things To Watch</span>
+            <button
+              onClick={() => fetchCalendar(true)}
+              disabled={calendarLoading}
+              style={{
+                background: 'none',
+                border: '0.5px solid rgba(255,255,255,0.1)',
+                borderRadius: '9999px',
+                padding: '3px 8px',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: calendarLoading ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.4)',
+                cursor: calendarLoading ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {calendarLoading ? 'LOADING' : 'REFRESH'}
+            </button>
+          </div>
+
+          {calendarData?.updatedAt && (
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '8px',
+              color: 'rgba(255,255,255,0.15)',
+              marginBottom: '10px',
+              letterSpacing: '0.06em',
+            }}>
+              Updated {new Date(calendarData.updatedAt).toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York',
+              })} ET
+            </div>
+          )}
+
+          {calendarLoading && !calendarData && (
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.2)', padding: '8px 0' }}>
+              Loading events...
+            </div>
+          )}
+
+          {calendarData?.events?.map((event, i) => (
+            <div key={i} style={{
+              padding: '8px 0',
+              borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
+                <span style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: event.impact === 'high' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)',
+                }}>{event.title}</span>
+                <span style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '10px',
+                  color: event.daysAway <= 7 ? '#f59e0b' : 'rgba(255,255,255,0.3)',
+                  flexShrink: 0,
+                  marginLeft: '8px',
+                }}>{event.daysAway}d</span>
+              </div>
+              <div style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.25)',
+                lineHeight: '1.4',
+              }}>{event.note}</div>
             </div>
           ))}
-        </div>
 
-        {/* Card 3 — Upcoming Catalysts */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>UPCOMING CATALYSTS</span>
-          <CatalystBar
-            iranStatus={iranStatus}
-            onIranChange={handleIranChange}
-            loading={macroLoading && !macroData}
-          />
+          {/* Iran / Hormuz — read-only status */}
+          <div style={{
+            marginTop: '10px',
+            paddingTop: '10px',
+            borderTop: '0.5px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '9px',
+              color: 'rgba(255,255,255,0.2)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+            }}>Iran / Hormuz</span>
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '10px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: iranStatus === 'WAR'
+                ? 'rgba(239,68,68,0.1)'
+                : iranStatus === 'ESCALATING'
+                ? 'rgba(245,158,11,0.1)'
+                : 'rgba(34,197,94,0.1)',
+              border: `0.5px solid ${
+                iranStatus === 'WAR'
+                  ? 'rgba(239,68,68,0.3)'
+                  : iranStatus === 'ESCALATING'
+                  ? 'rgba(245,158,11,0.3)'
+                  : 'rgba(34,197,94,0.3)'
+              }`,
+              color: iranStatus === 'WAR' ? '#ef4444' : iranStatus === 'ESCALATING' ? '#f59e0b' : '#22c55e',
+            }}>{iranStatus ?? 'UNKNOWN'}</span>
+          </div>
         </div>
       </div>
 
-      {/* ── ROW 3 — CONTEXTUAL ────────────────────────────────────────────── */}
-      <div className="dashboard-row-3" style={{
+      {/* ── ROW 3 — THREE EQUAL CARDS ─────────────────────────────────────── */}
+      <div className="dashboard-row" style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: '1fr 1fr 1fr',
         gap: '12px',
       }}>
 
-        {/* Col 1 — Positions */}
+        {/* Card 1 — Positions */}
         <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>POSITIONS</span>
+          <span style={EYE}>Positions</span>
           <PositionPanel
             positions={positions}
-            currentPrice={price}
+            currentPrice={displayPrice}
             onAdd={handleAddPosition}
             onRemove={handleRemovePosition}
           />
         </div>
 
-        {/* Col 2 — Signals (Bucket B/C only, compact) */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={EYE}>SIGNALS</span>
-          <SignalFeed articles={articles} />
+        {/* Card 2 — Position Moves (placeholder) */}
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '160px', gap: '10px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <span style={{ ...EYE, marginBottom: 0 }}>Position Moves</span>
+          <div style={{
+            width: '40px', height: '40px',
+            borderRadius: '50%',
+            background: 'rgba(59,130,246,0.08)',
+            border: '0.5px solid rgba(59,130,246,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ width: '14px', height: '14px', borderRadius: '2px', background: 'rgba(59,130,246,0.4)' }} />
+          </div>
+          <span style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '12px',
+            color: 'rgba(255,255,255,0.2)',
+            textAlign: 'center',
+            lineHeight: '1.5',
+          }}>AI position recommendations<br />coming soon</span>
+        </div>
+
+        {/* Card 3 — Jarvis Talk (placeholder) */}
+        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '160px', gap: '12px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <span style={{ ...EYE, marginBottom: 0 }}>Jarvis</span>
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              position: 'absolute',
+              width: '64px', height: '64px',
+              borderRadius: '50%',
+              border: '1px solid rgba(59,130,246,0.15)',
+              animation: 'jarvisPulse 2.5s ease-in-out infinite',
+            }} />
+            <div style={{
+              position: 'absolute',
+              width: '52px', height: '52px',
+              borderRadius: '50%',
+              border: '1px solid rgba(59,130,246,0.1)',
+              animation: 'jarvisPulse 2.5s ease-in-out infinite 0.4s',
+            }} />
+            <div style={{
+              width: '44px', height: '44px',
+              borderRadius: '50%',
+              background: 'rgba(59,130,246,0.1)',
+              border: '0.5px solid rgba(59,130,246,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="11" rx="3" fill="rgba(59,130,246,0.7)" />
+                <path d="M5 10a7 7 0 0014 0" stroke="rgba(59,130,246,0.7)" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="12" y1="17" x2="12" y2="21" stroke="rgba(59,130,246,0.7)" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+
+          <span style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '12px',
+            color: 'rgba(255,255,255,0.2)',
+          }}>Talk to Jarvis</span>
         </div>
       </div>
 
       {/* Responsive styles */}
       <style>{`
         @media (max-width: 640px) {
-          .dashboard-row-1,
-          .dashboard-row-2,
-          .dashboard-row-3 {
+          .dashboard-row {
             grid-template-columns: 1fr !important;
           }
         }
