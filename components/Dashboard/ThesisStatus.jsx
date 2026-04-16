@@ -20,10 +20,6 @@ export default function ThesisStatus({ status = 'UNKNOWN', triggers = [], style:
       position: 'relative', overflow: 'hidden',
       ...styleProp,
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 500, color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
-        Thesis
-      </div>
-
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {/* Animated orb */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -44,7 +40,6 @@ export default function ThesisStatus({ status = 'UNKNOWN', triggers = [], style:
         </div>
 
         <div>
-          <div style={{ fontSize: '10px', color: s.color + '88', letterSpacing: '0.1em', marginBottom: '3px' }}>STATUS</div>
           <div style={{
             fontFamily: "'Inter Tight', sans-serif",
             fontSize: '22px', fontWeight: 600, color: s.color,

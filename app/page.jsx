@@ -210,7 +210,7 @@ export default function Dashboard() {
       fontFamily: 'Inter, sans-serif',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
+      gap: '10px',
       marginTop: '-68px',
     }}>
 
@@ -258,9 +258,29 @@ export default function Dashboard() {
             letterSpacing: '-2px',
             lineHeight: '1',
           }}>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: '300' }}>$</span>
+            <span style={{ color: 'rgba(255,255,255,0.25)', fontWeight: '300', fontSize: '32px', verticalAlign: 'top', marginTop: '8px', display: 'inline-block' }}>$</span>
             {displayPrice != null ? displayPrice.toFixed(2) : '—'}
           </div>
+
+          {/* % change badge */}
+          {pctChange != null && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
+              borderRadius: '9999px',
+              background: pctChange >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+              border: `0.5px solid ${pctChange >= 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+              marginTop: '8px',
+            }}>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '12px',
+                color: pctChange >= 0 ? '#22c55e' : '#ef4444',
+              }}>{pctChange >= 0 ? '+' : ''}{pctChange.toFixed(2)}%</span>
+            </div>
+          )}
         </div>
 
         {/* Card 2 — Thesis Status */}
@@ -269,7 +289,7 @@ export default function Dashboard() {
           <ThesisStatus
             status={thesis.status}
             triggers={thesis.triggers}
-            style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: 0 }}
+            style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: '0 0 14px 14px' }}
           />
         </div>
 
@@ -290,7 +310,7 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
-              Prev close
+              Yesterday
             </span>
             <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
               {prevClose != null ? `$${prevClose.toFixed(2)}` : '—'}
@@ -322,7 +342,7 @@ export default function Dashboard() {
       }}>
 
         {/* Card 1 — Technicals */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{ ...CARD, minHeight: '320px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <span style={EYE}>Technicals</span>
 
           <DataRow
@@ -339,9 +359,8 @@ export default function Dashboard() {
           />
           <DataRow
             label="RSI"
-            value="—"
-            badge="Coming soon"
-            badgeColour="rgba(255,255,255,0.2)"
+            badge="Soon"
+            badgeColour="rgba(255,255,255,0.15)"
             dimmed
           />
           <DataRow
@@ -371,7 +390,7 @@ export default function Dashboard() {
         </div>
 
         {/* Card 2 — News Feed (Bucket B / C) */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{ ...CARD, minHeight: '320px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <span style={EYE}>News Feed</span>
 
           {/* Supporting — Bucket B */}
@@ -404,7 +423,7 @@ export default function Dashboard() {
                 <div style={{
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '9px',
-                  color: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.32)',
                 }}>{article.source} · {timeAgo(article.datetime)}</div>
               </div>
             ))}
@@ -448,7 +467,7 @@ export default function Dashboard() {
                 <div style={{
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '9px',
-                  color: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.32)',
                 }}>{article.source} · {timeAgo(article.datetime)}</div>
               </div>
             ))}
@@ -462,7 +481,7 @@ export default function Dashboard() {
         </div>
 
         {/* Card 3 — Things To Watch (AI calendar + Iran read-only) */}
-        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+        <div style={{ ...CARD, minHeight: '320px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <span style={{ ...EYE, marginBottom: 0 }}>Things To Watch</span>
             <button
@@ -501,6 +520,18 @@ export default function Dashboard() {
           {calendarLoading && !calendarData && (
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: 'rgba(255,255,255,0.2)', padding: '8px 0' }}>
               Loading events...
+            </div>
+          )}
+
+          {(!calendarData?.events || calendarData.events.length === 0) && !calendarLoading && (
+            <div style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.2)',
+              padding: '12px 0',
+              textAlign: 'center',
+            }}>
+              No upcoming events found — try refreshing
             </div>
           )}
 
@@ -600,7 +631,9 @@ export default function Dashboard() {
             border: '0.5px solid rgba(59,130,246,0.2)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <div style={{ width: '14px', height: '14px', borderRadius: '2px', background: 'rgba(59,130,246,0.4)' }} />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 19V5M5 12l7-7 7 7" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <span style={{
             fontFamily: 'Inter, sans-serif',
