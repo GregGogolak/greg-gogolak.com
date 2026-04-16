@@ -160,9 +160,38 @@ export default function ReadPage() {
           className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none' }}
         >
-          <p style={{ padding: '16px 20px 8px', fontSize: 10, fontFamily: 'monospace', color: '#374151', letterSpacing: '0.12em' }}>
-            HISTORY
-          </p>
+          <div style={{ padding: '16px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#374151', letterSpacing: '0.12em' }}>HISTORY</span>
+            <button
+              onClick={async () => {
+                if (!confirm('Clear all read history?')) return
+                await fetch('/api/analysis', { method: 'DELETE' })
+                setHistory([])
+              }}
+              style={{
+                background: 'none',
+                border: '0.5px solid rgba(239,68,68,0.2)',
+                borderRadius: '9999px',
+                padding: '3px 8px',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(239,68,68,0.45)',
+                cursor: 'pointer',
+                letterSpacing: '0.08em',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'
+                e.currentTarget.style.color = 'rgba(239,68,68,0.8)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'
+                e.currentTarget.style.color = 'rgba(239,68,68,0.45)'
+              }}
+            >
+              CLEAR
+            </button>
+          </div>
 
           {history.length === 0 ? (
             <div style={{ padding: '12px 20px 24px' }}>

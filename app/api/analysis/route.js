@@ -9,6 +9,17 @@ const CACHE_KEY    = 'analysis:latest'
 const CACHE_TTL_MS = 30 * 60 * 1000   // 30 minutes
 const CACHE_TTL_S  = 30 * 60          // 30 minutes in seconds (for Redis ex)
 
+// DELETE — clear full history
+export async function DELETE() {
+  try {
+    const redis = getRedis()
+    await redis.del('analysis:history')
+    return Response.json({ success: true })
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 })
+  }
+}
+
 // GET — return full history list for tab population
 export async function GET() {
   try {
