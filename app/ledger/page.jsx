@@ -1,359 +1,469 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
 import { fmtEUR } from '@/lib/format'
 
 // ─── useCountUp ───────────────────────────────────────────────────────────────
-// Animates a numeric value from 0 → target using easeOutExpo.
-function useCountUp(target, duration = 1400, delay = 0) {
-  const [val, setVal] = useState(0)
-
+function useCountUp(target, duration = 1200, delay = 0) {
+  const [value, setValue] = useState(0)
   useEffect(() => {
-    if (!Number.isFinite(target) || target === 0) return
-    let raf
-    const timer = setTimeout(() => {
-      const t0 = performance.now()
-      const step = (now) => {
-        const elapsed = now - t0
+    if (!target || target === 0) { setValue(0); return }
+    const timeout = setTimeout(() => {
+      const start = performance.now()
+      const tick = (now) => {
+        const elapsed = now - start
         const progress = Math.min(elapsed / duration, 1)
-        const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)
-        setVal(target * eased)
-        if (progress < 1) raf = requestAnimationFrame(step)
-        else setVal(target)
+        const eased = 1 - Math.pow(1 - progress, 4)
+        setValue(Math.round(target * eased * 100) / 100)
+        if (progress < 1) requestAnimationFrame(tick)
+        else setValue(target)
       }
-      raf = requestAnimationFrame(step)
+      requestAnimationFrame(tick)
     }, delay)
-    return () => { clearTimeout(timer); cancelAnimationFrame(raf) }
+    return () => clearTimeout(timeout)
   }, [target, duration, delay])
-
-  return val
+  return value
 }
 
-// ─── Counted display helpers ──────────────────────────────────────────────────
-function CountedEUR({ value, delay = 0, duration = 1400 }) {
-  const counted = useCountUp(value ?? 0, duration, delay)
-  const abs = Math.abs(counted)
-  const str = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return <>{value < 0 ? '-€' : '€'}{str}</>
+// ─── useFadeUp ────────────────────────────────────────────────────────────────
+function useFadeUp(delay = 0) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(16px)'
+    el.style.transition = `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`
+    const t = setTimeout(() => {
+      el.style.opacity = '1'
+      el.style.transform = 'translateY(0)'
+    }, 50)
+    return () => clearTimeout(t)
+  }, [delay])
+  return ref
 }
 
-function CountedPct({ value, delay = 0, duration = 900 }) {
-  const counted = useCountUp(value ?? 0, duration, delay)
-  return <>{Math.round(counted)}%</>
+// ─── useStaggerChildren ───────────────────────────────────────────────────────
+function useStaggerChildren(active, count) {
+  useEffect(() => {
+    if (!active) return
+    const items = document.querySelectorAll('.stagger-row')
+    items.forEach((el, i) => {
+      el.style.opacity = '0'
+      el.style.transform = 'translateX(-8px)'
+      setTimeout(() => {
+        el.style.opacity = '1'
+        el.style.transform = 'translateX(0)'
+        el.style.transition = 'opacity 0.25s ease, transform 0.25s ease'
+      }, i * 30)
+    })
+  }, [active])
 }
 
-function CountedInt({ value, delay = 0, duration = 800 }) {
-  const counted = useCountUp(value ?? 0, duration, delay)
-  return <>{Math.round(counted)}</>
-}
+// ─── HeroSection ──────────────────────────────────────────────────────────────
+function HeroSection({ fundStats }) {
+  const ref = useFadeUp(0)
+  const totalNetEur = fundStats.totalNetEur ?? 0
+  const animatedTotal = useCountUp(totalNetEur, 1400, 100)
 
-// ─── Animation variants ───────────────────────────────────────────────────────
-const EASE_OUT_EXPO = [0.16, 1, 0.3, 1]
+  return (
+    <div
+      ref={ref}
+      style={{
+        background: '#18181b',
+        border: '0.5px solid #27272a',
+        borderTop: '2px solid #6366f1',
+        borderRadius: '12px',
+        padding: '20px',
+        marginBottom: '12px',
+      }}
+    >
+      <div style={{
+        fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+        letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '8px',
+      }}>
+        Fund Overview
+      </div>
 
-const leaderContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-}
-const memberContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.0 } },
-}
-const cardItem = {
-  hidden: { opacity: 0, y: 10, scale: 0.98 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: EASE_OUT_EXPO } },
+      {/* Hero animated number */}
+      <div style={{
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '42px',
+        fontWeight: '600',
+        color: totalNetEur >= 0 ? '#10b981' : '#f43f5e',
+        lineHeight: 1,
+        marginBottom: '16px',
+      }}>
+        {animatedTotal >= 0 ? '+' : ''}€{Math.abs(animatedTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+
+      {/* Stat pills */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {[
+          { label: 'Trades', value: fundStats.totalTrades ?? 0 },
+          { label: 'Win rate', value: fundStats.fundWinRate != null ? `${fundStats.fundWinRate}%` : '—' },
+          { label: 'Open pos', value: fundStats.totalOpenPositions ?? 0 },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: '#27272a', borderRadius: '6px', padding: '6px 12px' }}>
+            <div style={{
+              fontSize: '9px', color: '#52525b', fontFamily: 'monospace',
+              letterSpacing: '0.1em', marginBottom: '2px',
+            }}>
+              {label.toUpperCase()}
+            </div>
+            <div style={{
+              fontSize: '16px', color: '#fafafa',
+              fontFamily: '"JetBrains Mono", monospace', fontWeight: '500',
+            }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Best trade ever */}
+      {fundStats.bestTradeEver && (
+        <div style={{
+          marginTop: '12px',
+          background: '#1c1500',
+          border: '0.5px solid rgba(245,158,11,0.3)',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: '10px', color: '#f59e0b', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+            ★ BEST TRADE EVER
+          </span>
+          <span style={{ fontSize: '13px', color: '#fafafa' }}>
+            {fundStats.bestTradeEver.memberName}
+          </span>
+          <span style={{
+            fontSize: '13px', color: '#10b981',
+            fontFamily: '"JetBrains Mono", monospace', fontWeight: '600',
+          }}>
+            {fmtEUR(fundStats.bestTradeEver.net_eur)}
+          </span>
+          <span style={{ fontSize: '11px', color: '#52525b', fontFamily: 'monospace' }}>
+            {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.buy_price} → ${fundStats.bestTradeEver.sell_price}
+          </span>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── LeaderCard ───────────────────────────────────────────────────────────────
-function LeaderCard({ title, icon, value, valueColor, winners, runners = [], className = '' }) {
+function LeaderCard({ title, icon, topColor, rawValue, formatValue, winners, runners, delay = 0 }) {
+  const ref = useFadeUp(delay)
+  const counted = useCountUp(rawValue, 1000)
+
   return (
-    <motion.div
-      variants={cardItem}
-      whileHover={{ y: -1, transition: { duration: 0.15 } }}
-      className={`relative rounded-xl overflow-hidden cursor-default ${className}`}
+    <div
+      ref={ref}
       style={{
-        background: 'rgba(255,255,255,0.028)',
-        border: '1px solid rgba(255,255,255,0.065)',
+        background: '#18181b',
+        border: '0.5px solid #27272a',
+        borderTop: `2px solid ${topColor}`,
+        borderRadius: '12px',
+        padding: '16px',
       }}
     >
-      {/* Left accent bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
-        style={{ background: 'linear-gradient(to bottom, #5b9cf6 0%, rgba(91,156,246,0.08) 100%)' }}
-      />
-
-      <div className="p-3 pl-[14px]">
-        {/* Category + icon */}
-        <div className="flex justify-between items-start mb-2">
-          <div className="font-mono text-[8px] text-[#3d4a5c] tracking-[0.12em] uppercase leading-tight">
-            {title}
-          </div>
-          <span className="text-[12px] opacity-40 ml-2">{icon}</span>
+      {/* Category + icon */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{
+          fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}>
+          {title}
         </div>
+        <span style={{ fontSize: '16px', opacity: 0.5 }}>{icon}</span>
+      </div>
 
-        {/* Winner value */}
-        <div className="font-mono text-[18px] font-medium leading-none mb-1.5" style={{ color: valueColor }}>
-          {value}
-        </div>
+      {/* Animated winner value */}
+      <div style={{
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '28px', fontWeight: '600',
+        color: topColor, lineHeight: 1, marginBottom: '6px',
+      }}>
+        {formatValue(counted)}
+      </div>
 
-        {/* Winner name(s) */}
-        <div className="flex flex-wrap items-center gap-1 mb-2">
-          {winners.map((name, i) => (
-            <span key={i} className="font-mono text-[10px] text-[#5b9cf6]">
-              {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
-            </span>
-          ))}
-          {winners.length > 1 && (
-            <span className="font-mono text-[8px] text-[#3d4a5c] ml-0.5">TIED</span>
-          )}
-        </div>
-
-        {/* Runner-up list */}
-        {runners.length > 0 && (
-          <div
-            className="pt-2 space-y-1.5"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.055)' }}
-          >
-            {runners.map((runner, i) => (
-              <div key={i} className="flex justify-between items-center gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span
-                    className="font-mono text-[8px] text-[#3d4a5c] rounded shrink-0 px-1 py-0.5"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}
-                  >
-                    #{i + 2}
-                  </span>
-                  <span className="font-mono text-[10px] text-[#8892a8] truncate">{runner.name}</span>
-                </div>
-                <span className="font-mono text-[10px] text-[#8892a8] shrink-0">{runner.value}</span>
-              </div>
-            ))}
-          </div>
+      {/* Winner name(s) */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px',
+        marginBottom: runners.length > 0 ? '10px' : '0',
+      }}>
+        {winners.map((name, i) => (
+          <span key={i} style={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '12px', color: '#6366f1',
+          }}>
+            {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
+          </span>
+        ))}
+        {winners.length > 1 && (
+          <span style={{
+            fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+            background: '#27272a', borderRadius: '3px', padding: '1px 5px',
+          }}>
+            TIED
+          </span>
         )}
       </div>
-    </motion.div>
+
+      {/* Runner-up list */}
+      {runners.length > 0 && (
+        <div style={{
+          borderTop: '0.5px solid #27272a', paddingTop: '10px',
+          display: 'flex', flexDirection: 'column', gap: '6px',
+        }}>
+          {runners.slice(0, 4).map((runner, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  fontFamily: 'monospace', fontSize: '11px', color: '#52525b',
+                  background: '#27272a', borderRadius: '4px',
+                  padding: '1px 6px', minWidth: '28px', textAlign: 'center',
+                }}>
+                  #{i + 2}
+                </span>
+                <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#71717a' }}>
+                  {runner.name}
+                </span>
+              </div>
+              <span style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px', color: '#71717a',
+              }}>
+                {runner.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
 // ─── MemberCard ───────────────────────────────────────────────────────────────
-function MemberCard({ member, rank, leaderboard, isExpanded, onToggle }) {
+function MemberCard({ member, rank, leaderboard, isExpanded, onToggle, delay = 0 }) {
+  const ref = useFadeUp(delay)
   const trades = member.allTrades ?? member.recentTrades
-  const isWinningThisMonth =
+  const isWinning =
     leaderboard?.bestThisMonth?.some(m => m.userId === member.userId) &&
     member.thisMonthNet > 0
 
+  useStaggerChildren(isExpanded, trades?.length ?? 0)
+
   return (
-    <motion.div
-      variants={cardItem}
-      className="rounded-xl mb-3 overflow-hidden"
+    <div
+      ref={ref}
+      className="member-card"
       style={{
-        background: 'rgba(255,255,255,0.028)',
-        border: '1px solid rgba(255,255,255,0.065)',
-      }}
-      whileHover={{
-        borderColor: 'rgba(91,156,246,0.22)',
-        transition: { duration: 0.15 },
+        background: '#18181b',
+        border: '0.5px solid #27272a',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '10px',
       }}
     >
-      <div className="relative p-4">
-        {/* Watermark rank — large, behind content */}
-        <div
-          className="absolute right-3 top-1/2 -translate-y-1/2 font-mono font-bold leading-none pointer-events-none select-none"
-          style={{ fontSize: '72px', color: 'rgba(238,242,255,0.025)' }}
-          aria-hidden="true"
-        >
-          {rank}
-        </div>
+      {/* Header row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
 
-        {/* Header row */}
-        <div className="flex items-start justify-between relative z-10">
-          <div className="flex items-start gap-3 min-w-0">
-            {/* Rank badge */}
-            <div
-              className="mt-0.5 font-mono text-[11px] text-[#3d4a5c] rounded-md px-2 py-1 min-w-[30px] text-center shrink-0"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
-            >
-              #{rank}
-            </div>
-
-            {/* Name + badges + sub-stats */}
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                <span className="text-sm font-medium text-[#eef2ff] font-tight">{member.name}</span>
-                {member.winStreak >= 2 && (
-                  <span
-                    className="font-mono text-[9px] rounded px-1.5 py-0.5 border shrink-0"
-                    style={{
-                      color: '#fbbf24',
-                      background: 'rgba(251,191,36,0.08)',
-                      borderColor: 'rgba(251,191,36,0.2)',
-                    }}
-                  >
-                    🔥 {member.winStreak}
-                  </span>
-                )}
-                {isWinningThisMonth && (
-                  <span
-                    className="font-mono text-[9px] rounded px-1.5 py-0.5 border shrink-0"
-                    style={{
-                      color: '#34d399',
-                      background: 'rgba(52,211,153,0.08)',
-                      borderColor: 'rgba(52,211,153,0.2)',
-                    }}
-                  >
-                    👑 WINNING
-                  </span>
-                )}
-              </div>
-              <div className="font-mono text-[10px] text-[#3d4a5c]">
-                {member.tradeCount} trades
-                {member.winRate !== null ? ` · ${member.winRate}% win` : ''}
-              </div>
-              <div
-                className="font-mono text-[10px]"
-                style={{ color: member.thisMonthNet >= 0 ? '#34d399' : '#f87171' }}
-              >
-                {member.thisMonthNet >= 0 ? '+' : ''}
-                {fmtEUR(member.thisMonthNet)} this month
-              </div>
-            </div>
+          {/* Rank badge */}
+          <div style={{
+            width: '28px', height: '28px', borderRadius: '50%',
+            background: '#27272a',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'monospace', fontSize: '11px', color: '#6366f1',
+            flexShrink: 0, marginTop: '2px',
+          }}>
+            {rank}
           </div>
 
-          {/* Total net P&L */}
-          <div className="text-right ml-3 shrink-0">
-            <div
-              className="font-mono text-sm font-medium"
-              style={{ color: member.totalNetEur >= 0 ? '#34d399' : '#f87171' }}
-            >
-              {fmtEUR(member.totalNetEur)}
-            </div>
-            <div className="font-mono text-[9px] text-[#3d4a5c]">total net</div>
-          </div>
-        </div>
-
-        {/* Open positions */}
-        {member.openPositions.length > 0 && (
-          <div className="mt-3 relative z-10">
-            <div className="font-mono text-[9px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
-              OPEN NOW
-            </div>
-            {member.openPositions.map((pos, j) => (
-              <div
-                key={j}
-                className="flex gap-3 items-center py-1.5 font-mono text-xs"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-              >
-                <span className="text-[#5b9cf6]">{pos.type}</span>
-                <span className="text-[#8892a8]">{pos.shares} sh @ ${pos.entryPrice}</span>
-                <span className="text-[#3d4a5c]">
-                  {Math.floor((Date.now() - new Date(pos.entryDate)) / 86400000)}d held
+          <div>
+            {/* Name + badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+              <span style={{ fontSize: '15px', fontWeight: '500', color: '#fafafa' }}>
+                {member.name}
+              </span>
+              {member.winStreak >= 2 && (
+                <span style={{
+                  background: '#1c0f00',
+                  border: '0.5px solid rgba(245,158,11,0.3)',
+                  color: '#f59e0b', fontSize: '9px',
+                  padding: '2px 7px', borderRadius: '4px',
+                  fontFamily: 'monospace',
+                }}>
+                  ★ {member.winStreak} streak
                 </span>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
+              {isWinning && (
+                <span style={{
+                  background: '#0a1f14',
+                  border: '0.5px solid rgba(16,185,129,0.3)',
+                  color: '#10b981', fontSize: '9px',
+                  padding: '2px 7px', borderRadius: '4px',
+                  fontFamily: 'monospace',
+                }}>
+                  ▲ winning
+                </span>
+              )}
+            </div>
 
-        {/* Expand / collapse toggle */}
-        {member.tradeCount > 0 && (
-          <button
-            onClick={onToggle}
-            className="mt-3 flex items-center gap-1.5 font-mono text-[10px] text-[#3d4a5c] hover:text-[#8892a8] transition-colors duration-150 relative z-10 cursor-pointer"
-          >
-            <motion.span
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="inline-block leading-none"
-            >
-              ▼
-            </motion.span>
-            {isExpanded
-              ? 'hide trades'
-              : `show all trades (${member.tradeCount})`}
-          </button>
-        )}
+            {/* Sub-stats */}
+            <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#52525b' }}>
+              {member.tradeCount} trades
+              {member.winRate !== null ? ` · ${member.winRate}% win` : ''}
+              {' · '}
+              <span style={{ color: member.thisMonthNet >= 0 ? '#10b981' : '#f43f5e' }}>
+                {member.thisMonthNet >= 0 ? '+' : ''}{fmtEUR(member.thisMonthNet)} this month
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total net */}
+        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '12px' }}>
+          <div style={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '18px', fontWeight: '600',
+            color: member.totalNetEur >= 0 ? '#10b981' : '#f43f5e',
+          }}>
+            {fmtEUR(member.totalNetEur)}
+          </div>
+          <div style={{ fontSize: '9px', color: '#52525b', fontFamily: 'monospace' }}>
+            total net
+          </div>
+        </div>
       </div>
 
-      {/* Inline trade history — animated open/close */}
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            key="history"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: EASE_OUT_EXPO }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.065)' }}>
-              {/* Horizontal scroll wrapper for mobile */}
-              <div className="overflow-x-auto no-scrollbar">
-                <div className="px-4 pt-3 pb-4" style={{ minWidth: '400px' }}>
-                  {/* Header row */}
+      {/* Open positions */}
+      {member.openPositions.length > 0 && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+          {member.openPositions.map((pos, j) => (
+            <span key={j} style={{
+              background: '#27272a', borderRadius: '4px',
+              padding: '2px 8px', fontSize: '10px',
+              color: '#a1a1aa', fontFamily: 'monospace',
+            }}>
+              {pos.type} {pos.shares}sh @ ${pos.entryPrice}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Expand / collapse button */}
+      {member.tradeCount > 0 && (
+        <button
+          onClick={onToggle}
+          style={{
+            marginTop: '10px',
+            background: 'none', border: 'none',
+            color: '#52525b', fontFamily: 'monospace', fontSize: '10px',
+            cursor: 'pointer', padding: '4px 0',
+            display: 'flex', alignItems: 'center', gap: '4px',
+            letterSpacing: '0.05em', transition: 'color 0.2s ease',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = '#a1a1aa'}
+          onMouseLeave={e => e.currentTarget.style.color = '#52525b'}
+        >
+          <span style={{
+            display: 'inline-block',
+            transition: 'transform 0.25s ease',
+            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}>
+            ▶
+          </span>
+          {isExpanded ? 'hide trades' : `show all trades (${member.tradeCount})`}
+        </button>
+      )}
+
+      {/* Trade history — max-height expand */}
+      {member.tradeCount > 0 && (
+        <div style={{
+          overflow: 'hidden',
+          maxHeight: isExpanded ? '2000px' : '0',
+          transition: 'max-height 0.4s ease',
+        }}>
+          <div style={{ borderTop: '0.5px solid #27272a', marginTop: '10px', paddingTop: '10px' }}>
+
+            {/* Table header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '90px 70px 60px 70px 70px 1fr',
+              gap: '4px',
+              padding: '8px 0',
+              fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              borderBottom: '0.5px solid #27272a',
+              marginBottom: '4px',
+            }}>
+              <span>DATE</span>
+              <span>TYPE</span>
+              <span>SHARES</span>
+              <span>ENTRY</span>
+              <span>EXIT</span>
+              <span>NET EUR</span>
+            </div>
+
+            {/* Trade rows — scrollable on mobile */}
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ minWidth: '430px' }}>
+                {trades.map((trade, j) => (
                   <div
-                    className="grid gap-1 pb-2 mb-1 font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em]"
+                    key={j}
+                    className="stagger-row"
                     style={{
-                      gridTemplateColumns: '78px 58px 38px 64px 64px 1fr',
-                      borderBottom: '1px solid rgba(255,255,255,0.065)',
+                      display: 'grid',
+                      gridTemplateColumns: '90px 70px 60px 70px 70px 1fr',
+                      gap: '4px',
+                      padding: '7px 8px 7px 10px',
+                      borderBottom: '0.5px solid #27272a',
+                      borderLeft: `2px solid ${trade.net_eur >= 0 ? '#10b981' : '#f43f5e'}`,
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
                     }}
                   >
-                    <span>DATE</span>
-                    <span>TYPE</span>
-                    <span className="text-right">SH</span>
-                    <span className="text-right">ENTRY</span>
-                    <span className="text-right">EXIT</span>
-                    <span className="text-right">NET EUR</span>
-                  </div>
-
-                  {/* Trade rows — staggered */}
-                  {trades.map((trade, j) => (
-                    <motion.div
-                      key={j}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: j * 0.015, duration: 0.18, ease: 'easeOut' }}
-                      className="grid gap-1 py-1.5 font-mono text-[11px] pl-2"
-                      style={{
-                        gridTemplateColumns: '78px 58px 38px 64px 64px 1fr',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                        borderLeft: `2px solid ${trade.net_eur >= 0 ? '#34d399' : '#f87171'}`,
-                      }}
-                    >
-                      <span className="text-[#3d4a5c]">{trade.sell_date}</span>
-                      <span className="text-[#5b9cf6]">{trade.type}</span>
-                      <span className="text-[#8892a8] text-right">{trade.shares}</span>
-                      <span className="text-[#8892a8] text-right">${trade.buy_price}</span>
-                      <span className="text-[#8892a8] text-right">${trade.sell_price}</span>
-                      <span
-                        className="text-right font-medium"
-                        style={{ color: trade.net_eur >= 0 ? '#34d399' : '#f87171' }}
-                      >
-                        {fmtEUR(trade.net_eur)}
-                      </span>
-                    </motion.div>
-                  ))}
-
-                  {/* Summary footer */}
-                  <div
-                    className="flex justify-between mt-3 pt-3"
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.065)' }}
-                  >
-                    <span className="font-mono text-[9px] text-[#3d4a5c]">
-                      {member.tradeCount} trades · {member.winRate}% win rate
-                    </span>
-                    <span
-                      className="font-mono text-[11px] font-medium"
-                      style={{ color: member.totalNetEur >= 0 ? '#34d399' : '#f87171' }}
-                    >
-                      {fmtEUR(member.totalNetEur)} total
+                    <span style={{ color: '#52525b' }}>{trade.sell_date}</span>
+                    <span style={{ color: '#6366f1' }}>{trade.type}</span>
+                    <span style={{ color: '#a1a1aa' }}>{trade.shares}</span>
+                    <span style={{ color: '#a1a1aa' }}>${trade.buy_price}</span>
+                    <span style={{ color: '#a1a1aa' }}>${trade.sell_price}</span>
+                    <span style={{
+                      color: trade.net_eur >= 0 ? '#10b981' : '#f43f5e',
+                      fontWeight: '500',
+                    }}>
+                      {fmtEUR(trade.net_eur)}
                     </span>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+
+            {/* Summary row */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '8px 0 4px',
+              borderTop: '0.5px solid #27272a',
+              marginTop: '4px',
+            }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#52525b' }}>
+                {member.tradeCount} trades · {member.winRate}% win rate
+              </span>
+              <span style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '12px', fontWeight: '500',
+                color: member.totalNetEur >= 0 ? '#10b981' : '#f43f5e',
+              }}>
+                {fmtEUR(member.totalNetEur)} total
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -371,38 +481,46 @@ export default function LedgerPage() {
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
+  const pageStyle = {
+    minHeight: '100vh',
+    background: '#09090b',
+    color: '#fafafa',
+    padding: '24px 16px 96px',
+    maxWidth: '600px',
+    margin: '0 auto',
+    fontFamily: 'Inter, sans-serif',
+  }
+
+  const titleStyle = {
+    fontFamily: 'monospace', fontSize: '11px', color: '#52525b',
+    letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '20px',
+  }
+
   if (loading) return (
-    <div className="min-h-screen px-4 pt-6 pb-24 max-w-[480px] mx-auto">
-      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-6">LEDGER</p>
-      <div className="space-y-3">
-        <div
-          className="h-44 rounded-xl animate-pulse"
-          style={{ background: 'rgba(255,255,255,0.028)' }}
-        />
-        <div className="grid grid-cols-2 gap-2">
-          {[0, 1, 2, 3].map(i => (
-            <div
-              key={i}
-              className="h-28 rounded-xl animate-pulse"
-              style={{ background: 'rgba(255,255,255,0.028)', animationDelay: `${i * 80}ms` }}
-            />
-          ))}
-        </div>
+    <div style={pageStyle}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap');`}</style>
+      <div style={titleStyle}>Ledger</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '40px 0' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6366f1' }} />
+        <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#52525b' }}>
+          Loading ledger...
+        </span>
       </div>
     </div>
   )
 
   if (error) return (
-    <div className="min-h-screen px-4 pt-6 pb-24 max-w-[480px] mx-auto">
-      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-6">LEDGER</p>
-      <p className="font-mono text-xs text-[#f87171]">{error}</p>
+    <div style={pageStyle}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap');`}</style>
+      <div style={titleStyle}>Ledger</div>
+      <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#f43f5e' }}>{error}</span>
     </div>
   )
 
   const members = data?.members ?? []
   const fundStats = data?.fundStats ?? {}
 
-  // ── Leaderboard — computed client-side (same logic as before) ──────────────
+  // ── Leaderboard — computed client-side (unchanged logic) ───────────────────
   const leaderboard = members.length > 0 ? {
     mostProfitable: (() => {
       const top = Math.max(...members.map(m => m.totalNetEur))
@@ -430,242 +548,166 @@ export default function LedgerPage() {
     })(),
   } : null
 
-  const totalIsPositive = (fundStats.totalNetEur ?? 0) >= 0
+  // EUR formatter for animated values
+  const fmtCounted = (v) => {
+    const abs = Math.abs(v)
+    const str = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return (v < 0 ? '-€' : '€') + str
+  }
 
   return (
-    <div className="min-h-screen pt-6 pb-24 max-w-[480px] mx-auto">
+    <div style={pageStyle}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap');
+        @media (min-width: 640px) {
+          .leaderboard-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+        }
+        .member-card { transition: border-color 0.2s ease; }
+        .member-card:hover { border-color: #3f3f46 !important; }
+      `}</style>
 
-      {/* ── Page label ── */}
-      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-5 px-4">
-        LEDGER
-      </p>
+      {/* Page title */}
+      <div style={titleStyle}>Ledger</div>
 
-      {/* ── Fund Hero ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
-        className="mx-4 mb-5 rounded-xl relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, rgba(91,156,246,${totalIsPositive ? '0.07' : '0.02'}) 0%, rgba(8,9,16,1) 55%)`,
-          border: '1px solid rgba(255,255,255,0.065)',
-        }}
-      >
-        <div className="p-5">
-          {/* Label */}
-          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-5">
-            FUND OVERVIEW
-          </div>
+      {/* ── Section A: Hero ── */}
+      <HeroSection fundStats={fundStats} />
 
-          {/* Hero counter — largest text on the page */}
-          <div className="mb-5">
-            <div className="font-mono text-[9px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-2">
-              TOTAL NET P&amp;L
-            </div>
-            <div
-              className="font-mono text-[44px] font-medium leading-none tabular-nums"
-              style={{ color: totalIsPositive ? '#34d399' : '#f87171' }}
-            >
-              <CountedEUR value={fundStats.totalNetEur ?? 0} delay={200} duration={1400} />
-            </div>
-          </div>
-
-          {/* 3-stat grid */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div
-              className="rounded-lg p-3"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
-            >
-              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
-                TRADES
-              </div>
-              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
-                <CountedInt value={fundStats.totalTrades ?? 0} delay={320} duration={800} />
-              </div>
-            </div>
-            <div
-              className="rounded-lg p-3"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
-            >
-              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
-                WIN RATE
-              </div>
-              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
-                {fundStats.fundWinRate != null
-                  ? <CountedPct value={fundStats.fundWinRate} delay={370} duration={900} />
-                  : '—'}
-              </div>
-            </div>
-            <div
-              className="rounded-lg p-3"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
-            >
-              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
-                OPEN POS
-              </div>
-              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
-                <CountedInt value={fundStats.totalOpenPositions ?? 0} delay={420} duration={600} />
-              </div>
-            </div>
-          </div>
-
-          {/* Best trade ever banner */}
-          {fundStats.bestTradeEver && (
-            <div
-              className="rounded-lg px-3 py-2.5 flex items-center flex-wrap gap-1"
-              style={{
-                background: 'rgba(251,191,36,0.06)',
-                border: '1px solid rgba(251,191,36,0.16)',
-              }}
-            >
-              <span className="font-mono text-[9px] text-[#fbbf24] tracking-[0.12em]">
-                ★ BEST TRADE EVER
-              </span>
-              <span className="font-mono text-[12px] text-[#eef2ff] ml-2">
-                {fundStats.bestTradeEver.memberName} — {fmtEUR(fundStats.bestTradeEver.net_eur)}
-              </span>
-              <span className="font-mono text-[10px] text-[#8892a8] ml-1">
-                {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.buy_price} → ${fundStats.bestTradeEver.sell_price}
-              </span>
-            </div>
-          )}
-        </div>
-      </motion.div>
-
-      {/* ── Leaderboard ── */}
+      {/* ── Section B: Leaderboard ── */}
       {leaderboard && (
-        <div className="px-4 mb-5">
-          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-3">
-            LEADERBOARD
+        <>
+          <div style={{
+            fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+            letterSpacing: '0.15em', textTransform: 'uppercase',
+            margin: '16px 0 10px',
+          }}>
+            Leaderboard
           </div>
 
-          <motion.div
-            variants={leaderContainer}
-            initial="hidden"
-            animate="show"
-            className="grid grid-cols-2 gap-2"
+          <div
+            className="leaderboard-grid"
+            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
           >
             <LeaderCard
-              title="MOST PROFITABLE"
+              title="Most Profitable"
               icon="💰"
+              topColor="#10b981"
+              rawValue={leaderboard.mostProfitable[0]?.totalNetEur ?? 0}
+              formatValue={fmtCounted}
               winners={leaderboard.mostProfitable.map(m => m.name)}
-              value={fmtEUR(leaderboard.mostProfitable[0]?.totalNetEur)}
-              valueColor={leaderboard.mostProfitable[0]?.totalNetEur >= 0 ? '#34d399' : '#f87171'}
               runners={[...members]
                 .sort((a, b) => b.totalNetEur - a.totalNetEur)
                 .filter(m => !leaderboard.mostProfitable.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.totalNetEur) }))}
+              delay={0}
             />
 
             <LeaderCard
-              title="BEST WIN RATE"
+              title="Best Win Rate"
               icon="🎯"
+              topColor="#6366f1"
+              rawValue={leaderboard.bestWinRate[0]?.winRate ?? 0}
+              formatValue={v =>
+                leaderboard.bestWinRate.length > 0 ? `${Math.round(v)}%` : '—'
+              }
               winners={
                 leaderboard.bestWinRate.length > 0
                   ? leaderboard.bestWinRate.map(m => m.name)
                   : ['min 3 trades']
               }
-              value={
-                leaderboard.bestWinRate.length > 0
-                  ? `${leaderboard.bestWinRate[0].winRate}%`
-                  : '—'
-              }
-              valueColor="#5b9cf6"
               runners={[...members]
                 .filter(m => m.tradeCount >= 3)
                 .sort((a, b) => b.winRate - a.winRate)
                 .filter(m => !leaderboard.bestWinRate.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: `${m.winRate}%` }))}
+              delay={80}
             />
 
             <LeaderCard
-              title="BEST SINGLE TRADE"
+              title="Best Single Trade"
               icon="⚡"
+              topColor="#f59e0b"
+              rawValue={leaderboard.bestSingleTrade[0]?.bestTrade?.net_eur ?? 0}
+              formatValue={v =>
+                leaderboard.bestSingleTrade.length > 0 ? fmtCounted(v) : '—'
+              }
               winners={
                 leaderboard.bestSingleTrade.length > 0
                   ? leaderboard.bestSingleTrade.map(m => m.name)
                   : ['—']
               }
-              value={
-                leaderboard.bestSingleTrade.length > 0
-                  ? fmtEUR(leaderboard.bestSingleTrade[0].bestTrade.net_eur)
-                  : '—'
-              }
-              valueColor="#fbbf24"
               runners={[...members]
                 .filter(m => m.bestTrade)
                 .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)
                 .filter(m => !leaderboard.bestSingleTrade.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.bestTrade.net_eur) }))}
+              delay={160}
             />
 
             <LeaderCard
-              title="MOST ACTIVE"
+              title="Most Active"
               icon="🔥"
+              topColor="#f43f5e"
+              rawValue={leaderboard.mostActive[0]?.tradeCount ?? 0}
+              formatValue={v => `${Math.round(v)} trades`}
               winners={leaderboard.mostActive.map(m => m.name)}
-              value={`${leaderboard.mostActive[0]?.tradeCount} trades`}
-              valueColor="#eef2ff"
               runners={[...members]
                 .sort((a, b) => b.tradeCount - a.tradeCount)
                 .filter(m => !leaderboard.mostActive.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: `${m.tradeCount} trades` }))}
+              delay={240}
             />
 
-            {/* BEST THIS MONTH — full width */}
             <LeaderCard
-              className="col-span-2"
-              title="BEST THIS MONTH"
+              title="Best This Month"
               icon="📅"
+              topColor="#10b981"
+              rawValue={leaderboard.bestThisMonth[0]?.thisMonthNet ?? 0}
+              formatValue={fmtCounted}
               winners={leaderboard.bestThisMonth.map(m => m.name)}
-              value={fmtEUR(leaderboard.bestThisMonth[0]?.thisMonthNet)}
-              valueColor={
-                leaderboard.bestThisMonth[0]?.thisMonthNet >= 0 ? '#34d399' : '#f87171'
-              }
               runners={[...members]
                 .sort((a, b) => b.thisMonthNet - a.thisMonthNet)
                 .filter(m => !leaderboard.bestThisMonth.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.thisMonthNet) }))}
+              delay={320}
             />
-          </motion.div>
+          </div>
+        </>
+      )}
+
+      {/* ── Section C: Members label ── */}
+      {members.length > 0 && (
+        <div style={{
+          fontFamily: 'monospace', fontSize: '9px', color: '#52525b',
+          letterSpacing: '0.15em', textTransform: 'uppercase',
+          margin: '16px 0 10px',
+        }}>
+          Members
         </div>
       )}
 
-      {/* ── Member cards ── */}
-      <div className="px-4">
-        {members.length > 0 && (
-          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-3">
-            MEMBERS
-          </div>
-        )}
+      {/* ── Section D: Member cards ── */}
+      {members.map((member, i) => (
+        <MemberCard
+          key={member.userId}
+          member={member}
+          rank={i + 1}
+          leaderboard={leaderboard}
+          isExpanded={expanded === member.userId}
+          onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
+          delay={i * 100}
+        />
+      ))}
 
-        <motion.div
-          variants={memberContainer}
-          initial="hidden"
-          animate="show"
-        >
-          {members.map((member, i) => (
-            <MemberCard
-              key={member.userId}
-              member={member}
-              rank={i + 1}
-              leaderboard={leaderboard}
-              isExpanded={expanded === member.userId}
-              onToggle={() =>
-                setExpanded(expanded === member.userId ? null : member.userId)
-              }
-            />
-          ))}
-        </motion.div>
-
-        {members.length === 0 && (
-          <p className="font-mono text-xs text-[#3d4a5c]">No members yet.</p>
-        )}
-      </div>
+      {members.length === 0 && (
+        <p style={{ fontFamily: 'monospace', fontSize: '12px', color: '#52525b' }}>
+          No members yet.
+        </p>
+      )}
     </div>
   )
 }
