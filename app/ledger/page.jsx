@@ -1,45 +1,363 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { fmtEUR } from '@/lib/format'
 
-function LeaderCard({ title, icon, value, valueColor, winners, runners = [], style }) {
+// ─── useCountUp ───────────────────────────────────────────────────────────────
+// Animates a numeric value from 0 → target using easeOutExpo.
+function useCountUp(target, duration = 1400, delay = 0) {
+  const [val, setVal] = useState(0)
+
+  useEffect(() => {
+    if (!Number.isFinite(target) || target === 0) return
+    let raf
+    const timer = setTimeout(() => {
+      const t0 = performance.now()
+      const step = (now) => {
+        const elapsed = now - t0
+        const progress = Math.min(elapsed / duration, 1)
+        const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress)
+        setVal(target * eased)
+        if (progress < 1) raf = requestAnimationFrame(step)
+        else setVal(target)
+      }
+      raf = requestAnimationFrame(step)
+    }, delay)
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf) }
+  }, [target, duration, delay])
+
+  return val
+}
+
+// ─── Counted display helpers ──────────────────────────────────────────────────
+function CountedEUR({ value, delay = 0, duration = 1400 }) {
+  const counted = useCountUp(value ?? 0, duration, delay)
+  const abs = Math.abs(counted)
+  const str = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return <>{value < 0 ? '-€' : '€'}{str}</>
+}
+
+function CountedPct({ value, delay = 0, duration = 900 }) {
+  const counted = useCountUp(value ?? 0, duration, delay)
+  return <>{Math.round(counted)}%</>
+}
+
+function CountedInt({ value, delay = 0, duration = 800 }) {
+  const counted = useCountUp(value ?? 0, duration, delay)
+  return <>{Math.round(counted)}</>
+}
+
+// ─── Animation variants ───────────────────────────────────────────────────────
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1]
+
+const leaderContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+}
+const memberContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.0 } },
+}
+const cardItem = {
+  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: EASE_OUT_EXPO } },
+}
+
+// ─── LeaderCard ───────────────────────────────────────────────────────────────
+function LeaderCard({ title, icon, value, valueColor, winners, runners = [], className = '' }) {
   return (
-    <div style={{ ...leaderCard, ...style }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div style={leaderCardTitle}>{title}</div>
-        <span style={{ fontSize: '16px' }}>{icon}</span>
-      </div>
-      <div style={{ ...leaderCardValue, color: valueColor }}>{value}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px', marginBottom: runners.length > 0 ? '10px' : '0' }}>
-        {winners.map((name, i) => (
-          <span key={i} style={leaderCardName}>
-            {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
-          </span>
-        ))}
-        {winners.length > 1 && (
-          <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', marginLeft: '2px' }}>TIED</span>
+    <motion.div
+      variants={cardItem}
+      whileHover={{ y: -1, transition: { duration: 0.15 } }}
+      className={`relative rounded-xl overflow-hidden cursor-default ${className}`}
+      style={{
+        background: 'rgba(255,255,255,0.028)',
+        border: '1px solid rgba(255,255,255,0.065)',
+      }}
+    >
+      {/* Left accent bar */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
+        style={{ background: 'linear-gradient(to bottom, #5b9cf6 0%, rgba(91,156,246,0.08) 100%)' }}
+      />
+
+      <div className="p-3 pl-[14px]">
+        {/* Category + icon */}
+        <div className="flex justify-between items-start mb-2">
+          <div className="font-mono text-[8px] text-[#3d4a5c] tracking-[0.12em] uppercase leading-tight">
+            {title}
+          </div>
+          <span className="text-[12px] opacity-40 ml-2">{icon}</span>
+        </div>
+
+        {/* Winner value */}
+        <div className="font-mono text-[18px] font-medium leading-none mb-1.5" style={{ color: valueColor }}>
+          {value}
+        </div>
+
+        {/* Winner name(s) */}
+        <div className="flex flex-wrap items-center gap-1 mb-2">
+          {winners.map((name, i) => (
+            <span key={i} className="font-mono text-[10px] text-[#5b9cf6]">
+              {name}{winners.length > 1 && i < winners.length - 1 ? ' ·' : ''}
+            </span>
+          ))}
+          {winners.length > 1 && (
+            <span className="font-mono text-[8px] text-[#3d4a5c] ml-0.5">TIED</span>
+          )}
+        </div>
+
+        {/* Runner-up list */}
+        {runners.length > 0 && (
+          <div
+            className="pt-2 space-y-1.5"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.055)' }}
+          >
+            {runners.map((runner, i) => (
+              <div key={i} className="flex justify-between items-center gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="font-mono text-[8px] text-[#3d4a5c] rounded shrink-0 px-1 py-0.5"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                  >
+                    #{i + 2}
+                  </span>
+                  <span className="font-mono text-[10px] text-[#8892a8] truncate">{runner.name}</span>
+                </div>
+                <span className="font-mono text-[10px] text-[#8892a8] shrink-0">{runner.value}</span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-      {runners.length > 0 && (
-        <div style={{ borderTop: '0.5px solid #1a1f2e', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          {runners.map((runner, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#2a2f3e', background: '#1a1f2e', borderRadius: '3px', padding: '1px 5px' }}>
-                  #{i + 2}
-                </span>
-                <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }}>{runner.name}</span>
-              </div>
-              <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }}>{runner.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </motion.div>
   )
 }
 
+// ─── MemberCard ───────────────────────────────────────────────────────────────
+function MemberCard({ member, rank, leaderboard, isExpanded, onToggle }) {
+  const trades = member.allTrades ?? member.recentTrades
+  const isWinningThisMonth =
+    leaderboard?.bestThisMonth?.some(m => m.userId === member.userId) &&
+    member.thisMonthNet > 0
+
+  return (
+    <motion.div
+      variants={cardItem}
+      className="rounded-xl mb-3 overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.028)',
+        border: '1px solid rgba(255,255,255,0.065)',
+      }}
+      whileHover={{
+        borderColor: 'rgba(91,156,246,0.22)',
+        transition: { duration: 0.15 },
+      }}
+    >
+      <div className="relative p-4">
+        {/* Watermark rank — large, behind content */}
+        <div
+          className="absolute right-3 top-1/2 -translate-y-1/2 font-mono font-bold leading-none pointer-events-none select-none"
+          style={{ fontSize: '72px', color: 'rgba(238,242,255,0.025)' }}
+          aria-hidden="true"
+        >
+          {rank}
+        </div>
+
+        {/* Header row */}
+        <div className="flex items-start justify-between relative z-10">
+          <div className="flex items-start gap-3 min-w-0">
+            {/* Rank badge */}
+            <div
+              className="mt-0.5 font-mono text-[11px] text-[#3d4a5c] rounded-md px-2 py-1 min-w-[30px] text-center shrink-0"
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
+              #{rank}
+            </div>
+
+            {/* Name + badges + sub-stats */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                <span className="text-sm font-medium text-[#eef2ff] font-tight">{member.name}</span>
+                {member.winStreak >= 2 && (
+                  <span
+                    className="font-mono text-[9px] rounded px-1.5 py-0.5 border shrink-0"
+                    style={{
+                      color: '#fbbf24',
+                      background: 'rgba(251,191,36,0.08)',
+                      borderColor: 'rgba(251,191,36,0.2)',
+                    }}
+                  >
+                    🔥 {member.winStreak}
+                  </span>
+                )}
+                {isWinningThisMonth && (
+                  <span
+                    className="font-mono text-[9px] rounded px-1.5 py-0.5 border shrink-0"
+                    style={{
+                      color: '#34d399',
+                      background: 'rgba(52,211,153,0.08)',
+                      borderColor: 'rgba(52,211,153,0.2)',
+                    }}
+                  >
+                    👑 WINNING
+                  </span>
+                )}
+              </div>
+              <div className="font-mono text-[10px] text-[#3d4a5c]">
+                {member.tradeCount} trades
+                {member.winRate !== null ? ` · ${member.winRate}% win` : ''}
+              </div>
+              <div
+                className="font-mono text-[10px]"
+                style={{ color: member.thisMonthNet >= 0 ? '#34d399' : '#f87171' }}
+              >
+                {member.thisMonthNet >= 0 ? '+' : ''}
+                {fmtEUR(member.thisMonthNet)} this month
+              </div>
+            </div>
+          </div>
+
+          {/* Total net P&L */}
+          <div className="text-right ml-3 shrink-0">
+            <div
+              className="font-mono text-sm font-medium"
+              style={{ color: member.totalNetEur >= 0 ? '#34d399' : '#f87171' }}
+            >
+              {fmtEUR(member.totalNetEur)}
+            </div>
+            <div className="font-mono text-[9px] text-[#3d4a5c]">total net</div>
+          </div>
+        </div>
+
+        {/* Open positions */}
+        {member.openPositions.length > 0 && (
+          <div className="mt-3 relative z-10">
+            <div className="font-mono text-[9px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
+              OPEN NOW
+            </div>
+            {member.openPositions.map((pos, j) => (
+              <div
+                key={j}
+                className="flex gap-3 items-center py-1.5 font-mono text-xs"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              >
+                <span className="text-[#5b9cf6]">{pos.type}</span>
+                <span className="text-[#8892a8]">{pos.shares} sh @ ${pos.entryPrice}</span>
+                <span className="text-[#3d4a5c]">
+                  {Math.floor((Date.now() - new Date(pos.entryDate)) / 86400000)}d held
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Expand / collapse toggle */}
+        {member.tradeCount > 0 && (
+          <button
+            onClick={onToggle}
+            className="mt-3 flex items-center gap-1.5 font-mono text-[10px] text-[#3d4a5c] hover:text-[#8892a8] transition-colors duration-150 relative z-10 cursor-pointer"
+          >
+            <motion.span
+              animate={{ rotate: isExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="inline-block leading-none"
+            >
+              ▼
+            </motion.span>
+            {isExpanded
+              ? 'hide trades'
+              : `show all trades (${member.tradeCount})`}
+          </button>
+        )}
+      </div>
+
+      {/* Inline trade history — animated open/close */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            key="history"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: EASE_OUT_EXPO }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.065)' }}>
+              {/* Horizontal scroll wrapper for mobile */}
+              <div className="overflow-x-auto no-scrollbar">
+                <div className="px-4 pt-3 pb-4" style={{ minWidth: '400px' }}>
+                  {/* Header row */}
+                  <div
+                    className="grid gap-1 pb-2 mb-1 font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em]"
+                    style={{
+                      gridTemplateColumns: '78px 58px 38px 64px 64px 1fr',
+                      borderBottom: '1px solid rgba(255,255,255,0.065)',
+                    }}
+                  >
+                    <span>DATE</span>
+                    <span>TYPE</span>
+                    <span className="text-right">SH</span>
+                    <span className="text-right">ENTRY</span>
+                    <span className="text-right">EXIT</span>
+                    <span className="text-right">NET EUR</span>
+                  </div>
+
+                  {/* Trade rows — staggered */}
+                  {trades.map((trade, j) => (
+                    <motion.div
+                      key={j}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: j * 0.015, duration: 0.18, ease: 'easeOut' }}
+                      className="grid gap-1 py-1.5 font-mono text-[11px] pl-2"
+                      style={{
+                        gridTemplateColumns: '78px 58px 38px 64px 64px 1fr',
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        borderLeft: `2px solid ${trade.net_eur >= 0 ? '#34d399' : '#f87171'}`,
+                      }}
+                    >
+                      <span className="text-[#3d4a5c]">{trade.sell_date}</span>
+                      <span className="text-[#5b9cf6]">{trade.type}</span>
+                      <span className="text-[#8892a8] text-right">{trade.shares}</span>
+                      <span className="text-[#8892a8] text-right">${trade.buy_price}</span>
+                      <span className="text-[#8892a8] text-right">${trade.sell_price}</span>
+                      <span
+                        className="text-right font-medium"
+                        style={{ color: trade.net_eur >= 0 ? '#34d399' : '#f87171' }}
+                      >
+                        {fmtEUR(trade.net_eur)}
+                      </span>
+                    </motion.div>
+                  ))}
+
+                  {/* Summary footer */}
+                  <div
+                    className="flex justify-between mt-3 pt-3"
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.065)' }}
+                  >
+                    <span className="font-mono text-[9px] text-[#3d4a5c]">
+                      {member.tradeCount} trades · {member.winRate}% win rate
+                    </span>
+                    <span
+                      className="font-mono text-[11px] font-medium"
+                      style={{ color: member.totalNetEur >= 0 ? '#34d399' : '#f87171' }}
+                    >
+                      {fmtEUR(member.totalNetEur)} total
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+// ─── LedgerPage ───────────────────────────────────────────────────────────────
 export default function LedgerPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,22 +372,37 @@ export default function LedgerPage() {
   }, [])
 
   if (loading) return (
-    <div style={pageStyle}>
-      <p style={labelStyle}>LEDGER</p>
-      <p style={{ color: '#4a5270', fontFamily: 'monospace', fontSize: '13px' }}>Loading...</p>
+    <div className="min-h-screen px-4 pt-6 pb-24 max-w-[480px] mx-auto">
+      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-6">LEDGER</p>
+      <div className="space-y-3">
+        <div
+          className="h-44 rounded-xl animate-pulse"
+          style={{ background: 'rgba(255,255,255,0.028)' }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          {[0, 1, 2, 3].map(i => (
+            <div
+              key={i}
+              className="h-28 rounded-xl animate-pulse"
+              style={{ background: 'rgba(255,255,255,0.028)', animationDelay: `${i * 80}ms` }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   )
 
   if (error) return (
-    <div style={pageStyle}>
-      <p style={labelStyle}>LEDGER</p>
-      <p style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: '13px' }}>{error}</p>
+    <div className="min-h-screen px-4 pt-6 pb-24 max-w-[480px] mx-auto">
+      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-6">LEDGER</p>
+      <p className="font-mono text-xs text-[#f87171]">{error}</p>
     </div>
   )
 
   const members = data?.members ?? []
   const fundStats = data?.fundStats ?? {}
 
+  // ── Leaderboard — computed client-side (same logic as before) ──────────────
   const leaderboard = members.length > 0 ? {
     mostProfitable: (() => {
       const top = Math.max(...members.map(m => m.totalNetEur))
@@ -97,59 +430,127 @@ export default function LedgerPage() {
     })(),
   } : null
 
-  return (
-    <div style={pageStyle}>
-      <p style={labelStyle}>LEDGER</p>
+  const totalIsPositive = (fundStats.totalNetEur ?? 0) >= 0
 
-      {/* Fund Overview */}
-      <div style={overviewCard}>
-        <div style={overviewLabel}>FUND OVERVIEW</div>
-        <div style={overviewGrid}>
-          <div style={overviewStat}>
-            <div style={overviewStatLabel}>TOTAL NET</div>
-            <div style={{ ...overviewStatValue, color: (fundStats.totalNetEur ?? 0) >= 0 ? '#22c55e' : '#ef4444' }}>
-              {fmtEUR(fundStats.totalNetEur ?? 0)}
+  return (
+    <div className="min-h-screen pt-6 pb-24 max-w-[480px] mx-auto">
+
+      {/* ── Page label ── */}
+      <p className="font-mono text-[10px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-5 px-4">
+        LEDGER
+      </p>
+
+      {/* ── Fund Hero ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
+        className="mx-4 mb-5 rounded-xl relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, rgba(91,156,246,${totalIsPositive ? '0.07' : '0.02'}) 0%, rgba(8,9,16,1) 55%)`,
+          border: '1px solid rgba(255,255,255,0.065)',
+        }}
+      >
+        <div className="p-5">
+          {/* Label */}
+          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-5">
+            FUND OVERVIEW
+          </div>
+
+          {/* Hero counter — largest text on the page */}
+          <div className="mb-5">
+            <div className="font-mono text-[9px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-2">
+              TOTAL NET P&amp;L
+            </div>
+            <div
+              className="font-mono text-[44px] font-medium leading-none tabular-nums"
+              style={{ color: totalIsPositive ? '#34d399' : '#f87171' }}
+            >
+              <CountedEUR value={fundStats.totalNetEur ?? 0} delay={200} duration={1400} />
             </div>
           </div>
-          <div style={overviewStat}>
-            <div style={overviewStatLabel}>TOTAL TRADES</div>
-            <div style={overviewStatValue}>{fundStats.totalTrades ?? 0}</div>
+
+          {/* 3-stat grid */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div
+              className="rounded-lg p-3"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
+                TRADES
+              </div>
+              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
+                <CountedInt value={fundStats.totalTrades ?? 0} delay={320} duration={800} />
+              </div>
+            </div>
+            <div
+              className="rounded-lg p-3"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
+                WIN RATE
+              </div>
+              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
+                {fundStats.fundWinRate != null
+                  ? <CountedPct value={fundStats.fundWinRate} delay={370} duration={900} />
+                  : '—'}
+              </div>
+            </div>
+            <div
+              className="rounded-lg p-3"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              <div className="font-mono text-[8px] text-[#3d4a5c] uppercase tracking-[0.1em] mb-1.5">
+                OPEN POS
+              </div>
+              <div className="font-mono text-[18px] font-medium text-[#eef2ff]">
+                <CountedInt value={fundStats.totalOpenPositions ?? 0} delay={420} duration={600} />
+              </div>
+            </div>
           </div>
-          <div style={overviewStat}>
-            <div style={overviewStatLabel}>FUND WIN RATE</div>
-            <div style={overviewStatValue}>{fundStats.fundWinRate !== null && fundStats.fundWinRate !== undefined ? `${fundStats.fundWinRate}%` : '—'}</div>
-          </div>
-          <div style={overviewStat}>
-            <div style={overviewStatLabel}>OPEN POSITIONS</div>
-            <div style={overviewStatValue}>{fundStats.totalOpenPositions ?? 0}</div>
-          </div>
+
+          {/* Best trade ever banner */}
+          {fundStats.bestTradeEver && (
+            <div
+              className="rounded-lg px-3 py-2.5 flex items-center flex-wrap gap-1"
+              style={{
+                background: 'rgba(251,191,36,0.06)',
+                border: '1px solid rgba(251,191,36,0.16)',
+              }}
+            >
+              <span className="font-mono text-[9px] text-[#fbbf24] tracking-[0.12em]">
+                ★ BEST TRADE EVER
+              </span>
+              <span className="font-mono text-[12px] text-[#eef2ff] ml-2">
+                {fundStats.bestTradeEver.memberName} — {fmtEUR(fundStats.bestTradeEver.net_eur)}
+              </span>
+              <span className="font-mono text-[10px] text-[#8892a8] ml-1">
+                {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.buy_price} → ${fundStats.bestTradeEver.sell_price}
+              </span>
+            </div>
+          )}
         </div>
+      </motion.div>
 
-        {fundStats.bestTradeEver && (
-          <div style={bestTradeBanner}>
-            <span style={{ color: '#f59e0b', fontSize: '10px', fontFamily: 'monospace', letterSpacing: '0.1em' }}>★ BEST TRADE EVER</span>
-            <span style={{ color: '#e8eaf6', fontSize: '13px', marginLeft: '10px' }}>
-              {fundStats.bestTradeEver.memberName} — {fmtEUR(fundStats.bestTradeEver.net_eur)}
-            </span>
-            <span style={{ color: '#4a5270', fontSize: '11px', marginLeft: '8px' }}>
-              {fundStats.bestTradeEver.shares}sh @ ${fundStats.bestTradeEver.buy_price} → ${fundStats.bestTradeEver.sell_price}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Leaderboard */}
+      {/* ── Leaderboard ── */}
       {leaderboard && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={sectionHeader}>LEADERBOARD</div>
-          <div style={leaderboardGrid}>
+        <div className="px-4 mb-5">
+          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-3">
+            LEADERBOARD
+          </div>
 
+          <motion.div
+            variants={leaderContainer}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 gap-2"
+          >
             <LeaderCard
-              title='MOST PROFITABLE'
-              icon='💰'
+              title="MOST PROFITABLE"
+              icon="💰"
               winners={leaderboard.mostProfitable.map(m => m.name)}
               value={fmtEUR(leaderboard.mostProfitable[0]?.totalNetEur)}
-              valueColor='#22c55e'
+              valueColor={leaderboard.mostProfitable[0]?.totalNetEur >= 0 ? '#34d399' : '#f87171'}
               runners={[...members]
                 .sort((a, b) => b.totalNetEur - a.totalNetEur)
                 .filter(m => !leaderboard.mostProfitable.find(w => w.userId === m.userId))
@@ -158,11 +559,19 @@ export default function LedgerPage() {
             />
 
             <LeaderCard
-              title='BEST WIN RATE'
-              icon='🎯'
-              winners={leaderboard.bestWinRate.length > 0 ? leaderboard.bestWinRate.map(m => m.name) : ['min 3 trades']}
-              value={leaderboard.bestWinRate.length > 0 ? `${leaderboard.bestWinRate[0].winRate}%` : '—'}
-              valueColor='#7b8cde'
+              title="BEST WIN RATE"
+              icon="🎯"
+              winners={
+                leaderboard.bestWinRate.length > 0
+                  ? leaderboard.bestWinRate.map(m => m.name)
+                  : ['min 3 trades']
+              }
+              value={
+                leaderboard.bestWinRate.length > 0
+                  ? `${leaderboard.bestWinRate[0].winRate}%`
+                  : '—'
+              }
+              valueColor="#5b9cf6"
               runners={[...members]
                 .filter(m => m.tradeCount >= 3)
                 .sort((a, b) => b.winRate - a.winRate)
@@ -172,11 +581,19 @@ export default function LedgerPage() {
             />
 
             <LeaderCard
-              title='BEST SINGLE TRADE'
-              icon='⚡'
-              winners={leaderboard.bestSingleTrade.length > 0 ? leaderboard.bestSingleTrade.map(m => m.name) : ['—']}
-              value={leaderboard.bestSingleTrade.length > 0 ? fmtEUR(leaderboard.bestSingleTrade[0].bestTrade.net_eur) : '—'}
-              valueColor='#f59e0b'
+              title="BEST SINGLE TRADE"
+              icon="⚡"
+              winners={
+                leaderboard.bestSingleTrade.length > 0
+                  ? leaderboard.bestSingleTrade.map(m => m.name)
+                  : ['—']
+              }
+              value={
+                leaderboard.bestSingleTrade.length > 0
+                  ? fmtEUR(leaderboard.bestSingleTrade[0].bestTrade.net_eur)
+                  : '—'
+              }
+              valueColor="#fbbf24"
               runners={[...members]
                 .filter(m => m.bestTrade)
                 .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)
@@ -186,11 +603,11 @@ export default function LedgerPage() {
             />
 
             <LeaderCard
-              title='MOST ACTIVE'
-              icon='🔥'
+              title="MOST ACTIVE"
+              icon="🔥"
               winners={leaderboard.mostActive.map(m => m.name)}
               value={`${leaderboard.mostActive[0]?.tradeCount} trades`}
-              valueColor='#e8eaf6'
+              valueColor="#eef2ff"
               runners={[...members]
                 .sort((a, b) => b.tradeCount - a.tradeCount)
                 .filter(m => !leaderboard.mostActive.find(w => w.userId === m.userId))
@@ -198,158 +615,57 @@ export default function LedgerPage() {
                 .map(m => ({ name: m.name, value: `${m.tradeCount} trades` }))}
             />
 
+            {/* BEST THIS MONTH — full width */}
             <LeaderCard
-              title='BEST THIS MONTH'
-              icon='📅'
+              className="col-span-2"
+              title="BEST THIS MONTH"
+              icon="📅"
               winners={leaderboard.bestThisMonth.map(m => m.name)}
               value={fmtEUR(leaderboard.bestThisMonth[0]?.thisMonthNet)}
-              valueColor={leaderboard.bestThisMonth[0]?.thisMonthNet >= 0 ? '#22c55e' : '#ef4444'}
-              style={{ gridColumn: 'span 2' }}
+              valueColor={
+                leaderboard.bestThisMonth[0]?.thisMonthNet >= 0 ? '#34d399' : '#f87171'
+              }
               runners={[...members]
                 .sort((a, b) => b.thisMonthNet - a.thisMonthNet)
                 .filter(m => !leaderboard.bestThisMonth.find(w => w.userId === m.userId))
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.thisMonthNet) }))}
             />
-
-          </div>
+          </motion.div>
         </div>
       )}
 
-      {/* Member cards */}
-      {members.map((member, i) => (
-        <div key={member.userId} style={memberCard}>
-          {/* Header row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={rankBadge}>#{i + 1}</div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#e8eaf6', fontSize: '14px', fontWeight: 500 }}>{member.name}</div>
-                  {member.winStreak >= 2 && (
-                    <span style={streakBadge}>🔥 {member.winStreak} streak</span>
-                  )}
-                  {leaderboard?.bestThisMonth?.some(m => m.userId === member.userId) && member.thisMonthNet > 0 && (
-                    <span style={winningBadge}>👑 winning</span>
-                  )}
-                </div>
-                <div style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>
-                  {member.tradeCount} trades · {member.winRate !== null ? `${member.winRate}% win rate` : 'no trades yet'}
-                </div>
-                <div style={{ color: member.thisMonthNet >= 0 ? '#22c55e' : '#ef4444', fontSize: '10px', fontFamily: 'monospace' }}>
-                  {member.thisMonthNet >= 0 ? '+' : ''}{fmtEUR(member.thisMonthNet)} this month
-                </div>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444', fontSize: '16px', fontWeight: 500, fontFamily: 'monospace' }}>
-                {fmtEUR(member.totalNetEur)}
-              </div>
-              <div style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>total net</div>
-            </div>
+      {/* ── Member cards ── */}
+      <div className="px-4">
+        {members.length > 0 && (
+          <div className="font-mono text-[9px] text-[#3d4a5c] tracking-[0.15em] uppercase mb-3">
+            MEMBERS
           </div>
+        )}
 
-          {/* Open positions */}
-          {member.openPositions.length > 0 && (
-            <div style={{ marginBottom: '10px' }}>
-              <div style={sectionLabel}>OPEN NOW</div>
-              {member.openPositions.map((pos, j) => (
-                <div key={j} style={positionRow}>
-                  <span style={{ color: '#7b8cde', fontSize: '11px', fontFamily: 'monospace' }}>{pos.type}</span>
-                  <span style={{ color: '#c8cce8', fontSize: '11px' }}>{pos.shares} shares @ ${pos.entryPrice}</span>
-                  <span style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>
-                    {Math.floor((Date.now() - new Date(pos.entryDate)) / 86400000)}d held
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+        <motion.div
+          variants={memberContainer}
+          initial="hidden"
+          animate="show"
+        >
+          {members.map((member, i) => (
+            <MemberCard
+              key={member.userId}
+              member={member}
+              rank={i + 1}
+              leaderboard={leaderboard}
+              isExpanded={expanded === member.userId}
+              onToggle={() =>
+                setExpanded(expanded === member.userId ? null : member.userId)
+              }
+            />
+          ))}
+        </motion.div>
 
-          {/* Trade history toggle */}
-          {member.tradeCount > 0 && (
-            <div style={{ marginTop: '8px' }}>
-              <button
-                onClick={() => setExpanded(expanded === member.userId ? null : member.userId)}
-                style={toggleButton}
-              >
-                {expanded === member.userId ? '▲ hide trades' : `▼ show all trades (${member.tradeCount})`}
-              </button>
-
-              {expanded === member.userId && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={tradeHistoryHeader}>
-                    <span>DATE</span>
-                    <span>TYPE</span>
-                    <span>SHARES</span>
-                    <span>ENTRY</span>
-                    <span>EXIT</span>
-                    <span>NET EUR</span>
-                  </div>
-
-                  {(member.allTrades ?? member.recentTrades)
-                    .map((trade, j) => (
-                      <div key={j} style={{
-                        ...tradeHistoryRow,
-                        borderLeft: `2px solid ${trade.net_eur >= 0 ? '#22c55e' : '#ef4444'}`,
-                      }}>
-                        <span style={{ color: '#4a5270' }}>{trade.sell_date}</span>
-                        <span style={{ color: '#7b8cde' }}>{trade.type}</span>
-                        <span style={{ color: '#c8cce8' }}>{trade.shares}</span>
-                        <span style={{ color: '#c8cce8' }}>${trade.buy_price}</span>
-                        <span style={{ color: '#c8cce8' }}>${trade.sell_price}</span>
-                        <span style={{ color: trade.net_eur >= 0 ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
-                          {fmtEUR(trade.net_eur)}
-                        </span>
-                      </div>
-                    ))
-                  }
-
-                  <div style={tradeSummaryRow}>
-                    <span style={{ color: '#4a5270', fontSize: '10px', fontFamily: 'monospace' }}>
-                      {member.tradeCount} trades · {member.winRate}% win rate
-                    </span>
-                    <span style={{ color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444', fontSize: '12px', fontFamily: 'monospace', fontWeight: 500 }}>
-                      {fmtEUR(member.totalNetEur)} total
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {members.length === 0 && (
-        <p style={{ color: '#4a5270', fontFamily: 'monospace', fontSize: '13px' }}>No members yet.</p>
-      )}
+        {members.length === 0 && (
+          <p className="font-mono text-xs text-[#3d4a5c]">No members yet.</p>
+        )}
+      </div>
     </div>
   )
 }
-
-// Styles
-const pageStyle = { minHeight: '100vh', background: '#080910', color: '#e8eaf6', padding: '24px 16px 96px', maxWidth: '480px', margin: '0 auto' }
-const labelStyle = { fontFamily: 'monospace', fontSize: '11px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '20px' }
-const memberCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '14px', marginBottom: '10px' }
-const rankBadge = { width: '24px', height: '24px', borderRadius: '50%', background: '#1a1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', fontSize: '11px', color: '#4a5270' }
-const sectionLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }
-const positionRow = { display: 'flex', gap: '10px', alignItems: 'center', padding: '4px 0', borderBottom: '0.5px solid #12151f' }
-const toggleButton = { background: 'none', border: 'none', color: '#4a5270', fontFamily: 'monospace', fontSize: '10px', cursor: 'pointer', padding: '4px 0', letterSpacing: '0.05em' }
-const tradeRow = { display: 'flex', gap: '10px', alignItems: 'center', padding: '4px 0', borderBottom: '0.5px solid #12151f' }
-const overviewCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '16px', marginBottom: '16px' }
-const overviewLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '14px' }
-const overviewGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }
-const overviewStat = { background: '#080910', borderRadius: '6px', padding: '10px' }
-const overviewStatLabel = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }
-const overviewStatValue = { fontFamily: 'monospace', fontSize: '20px', fontWeight: 500, color: '#e8eaf6' }
-const bestTradeBanner = { background: '#12100a', border: '0.5px solid #3a2a0a', borderRadius: '6px', padding: '8px 12px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }
-const sectionHeader = { fontFamily: 'monospace', fontSize: '9px', color: '#4a5270', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '10px' }
-const leaderboardGrid = { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }
-const leaderCard = { background: '#0d1018', border: '0.5px solid #1a1f2e', borderRadius: '8px', padding: '12px' }
-const leaderCardTitle = { fontFamily: 'monospace', fontSize: '8px', color: '#4a5270', letterSpacing: '0.1em', textTransform: 'uppercase' }
-const leaderCardValue = { fontFamily: 'monospace', fontSize: '18px', fontWeight: 500, margin: '6px 0 2px' }
-const leaderCardName = { fontFamily: 'monospace', fontSize: '10px', color: '#7b8cde' }
-const streakBadge = { background: '#1a0e00', border: '0.5px solid #3a2000', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', fontSize: '9px', color: '#f59e0b' }
-const winningBadge = { background: '#0a1a0a', border: '0.5px solid #1a3a1a', borderRadius: '4px', padding: '2px 6px', fontFamily: 'monospace', fontSize: '9px', color: '#22c55e' }
-const tradeHistoryHeader = { display: 'grid', gridTemplateColumns: '80px 60px 60px 70px 70px 1fr', gap: '4px', padding: '6px 8px', fontFamily: 'monospace', fontSize: '8px', color: '#4a5270', letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '0.5px solid #1a1f2e', marginBottom: '4px' }
-const tradeHistoryRow = { display: 'grid', gridTemplateColumns: '80px 60px 60px 70px 70px 1fr', gap: '4px', padding: '6px 8px', fontFamily: 'monospace', fontSize: '11px', borderBottom: '0.5px solid #0d1018', paddingLeft: '10px' }
-const tradeSummaryRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 8px 4px', marginTop: '4px', borderTop: '0.5px solid #1a1f2e' }
