@@ -77,10 +77,56 @@ function DeleteConfirmRow({ colSpan, trade, onConfirm, onCancel, loading }) {
   )
 }
 
+const SortableHeader = ({ col, label, sortCol, sortDir, onSort }) => (
+  <th
+    onClick={() => onSort(col)}
+    style={{
+      fontFamily: 'JetBrains Mono, monospace',
+      fontSize: '10px',
+      color: sortCol === col ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase',
+      padding: '8px 12px',
+      textAlign: 'left',
+      fontWeight: '400',
+      whiteSpace: 'nowrap',
+      cursor: 'pointer',
+      userSelect: 'none',
+      transition: 'color 0.15s ease',
+      borderBottom: '1px solid rgba(255,255,255,0.065)',
+      background: 'rgba(255,255,255,0.018)',
+    }}
+    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+    onMouseLeave={e => e.currentTarget.style.color = sortCol === col ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)'}
+  >
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      {label}
+      <span style={{
+        fontSize: '8px',
+        color: sortCol === col ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)',
+        transition: 'color 0.15s ease',
+      }}>
+        {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+      </span>
+    </span>
+  </th>
+)
+
 export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete }) {
   const [confirmId,   setConfirmId]   = useState(null)
   const [deletingId,  setDeletingId]  = useState(null)
   const [hoveredId,   setHoveredId]   = useState(null)
+  const [sortCol,     setSortCol]     = useState('buy_date')
+  const [sortDir,     setSortDir]     = useState('desc')
+
+  const handleSort = (col) => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(col)
+      setSortDir('desc')
+    }
+  }
 
   async function handleDelete(id) {
     setDeletingId(id)
@@ -88,6 +134,23 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
     setDeletingId(null)
     setConfirmId(null)
   }
+
+  const sortedTrades = [...(trades ?? [])].sort((a, b) => {
+    let aVal, bVal
+    switch (sortCol) {
+      case 'buy_date':   aVal = a.buy_date;      bVal = b.buy_date;      break
+      case 'type':       aVal = a.type;           bVal = b.type;          break
+      case 'shares':     aVal = a.shares;         bVal = b.shares;        break
+      case 'buy_price':  aVal = a.buy_price;      bVal = b.buy_price;     break
+      case 'sell_price': aVal = a.sell_price;     bVal = b.sell_price;    break
+      case 'gross_pnl':  aVal = a.gross_pnl_usd;  bVal = b.gross_pnl_usd; break
+      case 'net_eur':    aVal = a.net_eur;         bVal = b.net_eur;       break
+      default:           aVal = a.buy_date;       bVal = b.buy_date
+    }
+    if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+    if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+    return 0
+  })
 
   if (!trades || trades.length === 0) {
     return (
@@ -110,24 +173,24 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
         <thead>
           <tr>
-            <TH align="left">Dates</TH>
-            <TH align="left">Type</TH>
-            <TH>Shares</TH>
-            <TH>Buy Price</TH>
-            <TH>Sell Price</TH>
+            <SortableHeader col="buy_date"   label="Dates"      sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="type"       label="Type"       sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="shares"     label="Shares"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="buy_price"  label="Buy Price"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+            <SortableHeader col="sell_price" label="Sell Price" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <TH>Days</TH>
-            <TH>Gross P&L</TH>
+            <SortableHeader col="gross_pnl"  label="Gross P&L"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <TH>Tx Fees</TH>
             <TH>Platform</TH>
             <TH align="left">Shared With</TH>
             <TH>Interest</TH>
             <TH>Total Costs</TH>
-            <TH>Net EUR</TH>
+            <SortableHeader col="net_eur"    label="Net EUR"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <TH align="center">Actions</TH>
           </tr>
         </thead>
         <tbody>
-          {trades.map(t => {
+          {sortedTrades.map(t => {
             const sharedFees = calculateSharedPlatformFee(t, platformFeeMap)
             const { adjustedNetEur, adjustedPlatformFee } = recalculateNetWithSharedFees(t, sharedFees)
             const displayNetEur = platformFeeMap ? adjustedNetEur : t.net_eur
