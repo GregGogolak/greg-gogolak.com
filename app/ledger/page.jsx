@@ -32,39 +32,22 @@ function useFadeUp(delay = 0) {
     const el = ref.current
     if (!el) return
     el.style.opacity = '0'
-    el.style.transform = 'translateY(16px)'
-    el.style.transition = `opacity 0.5s ease ${delay}ms, transform 0.5s ease ${delay}ms`
+    el.style.transform = 'translateY(20px)'
     const t = setTimeout(() => {
+      el.style.transition = `opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`
       el.style.opacity = '1'
       el.style.transform = 'translateY(0)'
-    }, 50)
+    }, 150)
     return () => clearTimeout(t)
   }, [delay])
   return ref
 }
 
-// ─── useStaggerChildren ───────────────────────────────────────────────────────
-function useStaggerChildren(active, count) {
-  useEffect(() => {
-    if (!active) return
-    const items = document.querySelectorAll('.stagger-row')
-    items.forEach((el, i) => {
-      el.style.opacity = '0'
-      el.style.transform = 'translateX(-8px)'
-      setTimeout(() => {
-        el.style.opacity = '1'
-        el.style.transform = 'translateX(0)'
-        el.style.transition = 'opacity 0.25s ease, transform 0.25s ease'
-      }, i * 30)
-    })
-  }, [active])
-}
-
 // ─── HeroSection ──────────────────────────────────────────────────────────────
-function HeroSection({ fundStats }) {
+function HeroSection({ fundStats, started }) {
   const ref = useFadeUp(0)
   const totalNetEur = fundStats.totalNetEur ?? 0
-  const animatedTotal = useCountUp(totalNetEur, 1400, 100)
+  const animatedTotal = useCountUp(started ? (totalNetEur ?? 0) : 0, 1400)
 
   return (
     <div
@@ -86,14 +69,17 @@ function HeroSection({ fundStats }) {
       </div>
 
       {/* Hero animated number */}
-      <div style={{
-        fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '42px',
-        fontWeight: '600',
-        color: totalNetEur >= 0 ? '#10b981' : '#f43f5e',
-        lineHeight: 1,
-        marginBottom: '16px',
-      }}>
+      <div
+        className="hero-number"
+        style={{
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '42px',
+          fontWeight: '600',
+          color: totalNetEur >= 0 ? '#10b981' : '#f43f5e',
+          lineHeight: 1,
+          marginBottom: '16px',
+        }}
+      >
         {animatedTotal >= 0 ? '+' : ''}€{Math.abs(animatedTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </div>
 
@@ -153,9 +139,9 @@ function HeroSection({ fundStats }) {
 }
 
 // ─── LeaderCard ───────────────────────────────────────────────────────────────
-function LeaderCard({ title, icon, topColor, rawValue, formatValue, winners, runners, delay = 0 }) {
+function LeaderCard({ title, icon, topColor, rawValue, formatValue, winners, runners, delay = 0, started }) {
   const ref = useFadeUp(delay)
-  const counted = useCountUp(rawValue, 1000)
+  const counted = useCountUp(started ? (rawValue ?? 0) : 0, 1000)
 
   return (
     <div
@@ -248,12 +234,26 @@ function LeaderCard({ title, icon, topColor, rawValue, formatValue, winners, run
 // ─── MemberCard ───────────────────────────────────────────────────────────────
 function MemberCard({ member, rank, leaderboard, isExpanded, onToggle, delay = 0 }) {
   const ref = useFadeUp(delay)
+  const tradeListRef = useRef(null)
   const trades = member.allTrades ?? member.recentTrades
   const isWinning =
     leaderboard?.bestThisMonth?.some(m => m.userId === member.userId) &&
     member.thisMonthNet > 0
 
-  useStaggerChildren(isExpanded, trades?.length ?? 0)
+  useEffect(() => {
+    if (isExpanded && tradeListRef.current) {
+      const rows = tradeListRef.current.querySelectorAll('.stagger-row')
+      rows.forEach((el, i) => {
+        el.style.opacity = '0'
+        el.style.transform = 'translateX(-10px)'
+        setTimeout(() => {
+          el.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+          el.style.opacity = '1'
+          el.style.transform = 'translateX(0)'
+        }, i * 35)
+      })
+    }
+  }, [isExpanded])
 
   return (
     <div
@@ -382,11 +382,15 @@ function MemberCard({ member, rank, leaderboard, isExpanded, onToggle, delay = 0
 
       {/* Trade history — max-height expand */}
       {member.tradeCount > 0 && (
-        <div style={{
-          overflow: 'hidden',
-          maxHeight: isExpanded ? '2000px' : '0',
-          transition: 'max-height 0.4s ease',
-        }}>
+        <div
+          ref={tradeListRef}
+          style={{
+            overflow: 'hidden',
+            maxHeight: isExpanded ? '3000px' : '0',
+            transition: 'max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            marginTop: isExpanded ? '10px' : '0',
+          }}
+        >
           <div style={{ borderTop: '0.5px solid #27272a', marginTop: '10px', paddingTop: '10px' }}>
 
             {/* Table header */}
@@ -473,6 +477,7 @@ export default function LedgerPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
     fetch('/api/ledger')
@@ -480,6 +485,12 @@ export default function LedgerPage() {
       .then(d => { setData(d); setLoading(false) })
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
+
+  useEffect(() => {
+    if (data && !started) {
+      setTimeout(() => setStarted(true), 100)
+    }
+  }, [data])
 
   const pageStyle = {
     minHeight: '100vh',
@@ -564,13 +575,18 @@ export default function LedgerPage() {
         }
         .member-card { transition: border-color 0.2s ease; }
         .member-card:hover { border-color: #3f3f46 !important; }
+        @keyframes heroPulse {
+          0%, 100% { text-shadow: 0 0 0px transparent; }
+          50% { text-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+        }
+        .hero-number { animation: heroPulse 3s ease-in-out infinite; animation-delay: 1.5s; }
       `}</style>
 
       {/* Page title */}
       <div style={titleStyle}>Ledger</div>
 
       {/* ── Section A: Hero ── */}
-      <HeroSection fundStats={fundStats} />
+      <HeroSection fundStats={fundStats} started={started} />
 
       {/* ── Section B: Leaderboard ── */}
       {leaderboard && (
@@ -600,6 +616,7 @@ export default function LedgerPage() {
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.totalNetEur) }))}
               delay={0}
+              started={started}
             />
 
             <LeaderCard
@@ -622,6 +639,7 @@ export default function LedgerPage() {
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: `${m.winRate}%` }))}
               delay={80}
+              started={started}
             />
 
             <LeaderCard
@@ -644,6 +662,7 @@ export default function LedgerPage() {
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.bestTrade.net_eur) }))}
               delay={160}
+              started={started}
             />
 
             <LeaderCard
@@ -659,6 +678,7 @@ export default function LedgerPage() {
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: `${m.tradeCount} trades` }))}
               delay={240}
+              started={started}
             />
 
             <LeaderCard
@@ -674,6 +694,7 @@ export default function LedgerPage() {
                 .slice(0, 4)
                 .map(m => ({ name: m.name, value: fmtEUR(m.thisMonthNet) }))}
               delay={320}
+              started={started}
             />
           </div>
         </>
