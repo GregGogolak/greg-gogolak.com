@@ -206,7 +206,7 @@ export default function Dashboard() {
       <main style={{ position: 'relative', zIndex: 1 }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)',
           gap: '16px',
           padding: '16px 24px 80px',
           maxWidth: '1400px',
@@ -216,7 +216,7 @@ export default function Dashboard() {
           className="dashboard-grid"
         >
           {/* ── COL 1 ── price + thesis ──────────────────────────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
             <LivePriceBubble
               livePrice={livePrice}
               prevClose={priceData?.prevClose ?? null}
@@ -228,7 +228,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── COL 2 ── macro + catalysts + positions ───────────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
             <MacroPanel data={macroData} loading={macroLoading && !macroData} />
             <CatalystBar
               iranStatus={iranStatus}
@@ -244,7 +244,7 @@ export default function Dashboard() {
           </div>
 
           {/* ── COL 3 ── thesis + signals + checklist + news ────────── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
             <ThesisStatus
               status={thesis.status}
               triggers={thesis.triggers}
@@ -280,12 +280,12 @@ export default function Dashboard() {
       <style>{`
         @media (max-width: 1024px) {
           .dashboard-grid {
-            grid-template-columns: 1fr 1fr !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
           }
         }
         @media (max-width: 640px) {
           .dashboard-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
             padding: 12px 16px 80px !important;
           }
         }
