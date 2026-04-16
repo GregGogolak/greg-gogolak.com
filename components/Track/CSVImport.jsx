@@ -46,7 +46,7 @@ const btnPrimary = {
   fontSize: '11px',
   cursor: 'pointer',
   letterSpacing: '0.06em',
-  transition: 'all 0.2s ease',
+  transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
 }
 const btnSecondary = {
   padding: '8px 16px',
@@ -58,7 +58,7 @@ const btnSecondary = {
   fontSize: '11px',
   cursor: 'pointer',
   letterSpacing: '0.06em',
-  transition: 'all 0.2s ease',
+  transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
 }
 
 export default function CSVImport({ onImportComplete }) {
@@ -137,22 +137,30 @@ export default function CSVImport({ onImportComplete }) {
       <span style={eyebrow}>Import CSV</span>
       <div
         style={{
-          border: '1px dashed rgba(255,255,255,0.1)',
+          border: '0.5px solid rgba(255,255,255,0.08)',
           borderRadius: '12px',
           padding: '24px',
           textAlign: 'center',
           cursor: 'pointer',
-          transition: 'all 0.2s ease',
+          transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
         }}
         onClick={() => fileRef.current?.click()}
-        onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'}
-        onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = 'rgba(59,130,246,0.25)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+          e.currentTarget.style.transform = 'translateY(0)'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
       >
         <div style={{ fontSize: '24px', marginBottom: '8px', opacity: 0.4 }}>↑</div>
-        <div style={{ fontFamily: 'Inter', fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>
+        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>
           Drop CSV file or click to browse
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.06em' }}>
           Any format — Claude reads your columns automatically
         </div>
         <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
@@ -167,7 +175,7 @@ export default function CSVImport({ onImportComplete }) {
           marginTop: '14px',
         }}>
           {errors.map((e, i) => (
-            <div key={i} style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(239,68,68,0.6)' }}>{e}</div>
+            <div key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(239,68,68,0.6)' }}>{e}</div>
           ))}
         </div>
       )}
@@ -226,11 +234,11 @@ export default function CSVImport({ onImportComplete }) {
           padding: '12px 14px',
           marginBottom: '14px',
         }}>
-          <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(239,68,68,0.6)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(239,68,68,0.6)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>
             {errors.length} row{errors.length !== 1 ? 's' : ''} skipped
           </div>
           {errors.map((e, i) => (
-            <div key={i} style={{ fontFamily: 'Inter', fontSize: '11px', color: 'rgba(239,68,68,0.6)', marginBottom: '2px' }}>{e}</div>
+            <div key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(239,68,68,0.6)', marginBottom: '2px' }}>{e}</div>
           ))}
         </div>
       )}
@@ -242,7 +250,7 @@ export default function CSVImport({ onImportComplete }) {
               <tr>
                 {['Dates', 'Shares', 'Buy', 'Sell', 'Gross P&L', 'Platform', 'Net EUR'].map(col => (
                   <th key={col} style={{
-                    fontFamily: 'JetBrains Mono',
+                    fontFamily: 'JetBrains Mono, monospace',
                     fontSize: '9px',
                     color: 'rgba(255,255,255,0.25)',
                     letterSpacing: '0.1em',
@@ -258,25 +266,25 @@ export default function CSVImport({ onImportComplete }) {
             <tbody>
               {parsedTrades.map((t, i) => (
                 <tr key={i} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
                     {t.buy_date}{t.buy_date !== t.sell_date ? ` → ${t.sell_date}` : ''}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
                     {t.shares.toLocaleString()}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
                     ${t.buy_price}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
                     ${t.sell_price}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '12px', fontWeight: '500', color: t.gross_pnl_usd >= 0 ? '#22c55e' : '#ef4444' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', fontWeight: '500', color: t.gross_pnl_usd >= 0 ? '#22c55e' : '#ef4444' }}>
                     {t.gross_pnl_usd >= 0 ? '+' : ''}${t.gross_pnl_usd.toFixed(0)}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: t.platform_fees_usd === 0 ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.4)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
                     {t.platform_fees_usd === 0 ? 'FREE' : `$${t.platform_fees_usd.toFixed(0)}`}
                   </td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '12px', fontWeight: '500', color: t.net_eur >= 0 ? '#22c55e' : '#ef4444' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', fontWeight: '500', color: t.net_eur >= 0 ? '#22c55e' : '#ef4444' }}>
                     {t.net_eur >= 0 ? '+' : ''}€{t.net_eur.toFixed(2)}
                   </td>
                 </tr>
@@ -295,8 +303,8 @@ export default function CSVImport({ onImportComplete }) {
           }}
           onClick={confirmImport}
           disabled={importing || parsedTrades.length === 0}
-          onMouseEnter={e => { if (!importing) { e.currentTarget.style.background = 'rgba(59,130,246,0.2)'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)'; e.currentTarget.style.transform = 'translateY(0)' }}
+          onMouseEnter={e => { if (!importing) { e.currentTarget.style.background = 'rgba(59,130,246,0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)' }}}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.12)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
         >
           {importing ? 'Importing...' : `Confirm Import (${parsedTrades.length} trade${parsedTrades.length !== 1 ? 's' : ''})`}
         </button>
@@ -309,7 +317,7 @@ export default function CSVImport({ onImportComplete }) {
   if (step === 'done') return (
     <div style={cardStyle}>
       <span style={eyebrow}>Import Complete</span>
-      <div style={{ fontFamily: 'Inter', fontSize: '14px', color: '#22c55e', marginBottom: '12px' }}>
+      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#22c55e', marginBottom: '12px' }}>
         {parsedTrades.length} trade{parsedTrades.length !== 1 ? 's' : ''} imported successfully
       </div>
       <button style={btnSecondary} onClick={reset}>Import Another File</button>

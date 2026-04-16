@@ -136,7 +136,7 @@ export default function TrackPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#080910',
+      background: '#0d0d14',
       padding: '28px 24px',
       maxWidth: '1400px',
       margin: '-68px auto 0',
@@ -151,9 +151,10 @@ export default function TrackPage() {
       }}>
         <div>
           <div style={{
+            fontFamily: 'JetBrains Mono, monospace',
             fontSize: '11px',
-            fontWeight: 500,
-            color: '#3d4a5c',
+            fontWeight: 400,
+            color: 'rgba(255,255,255,0.25)',
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
             marginBottom: '4px',
@@ -177,15 +178,15 @@ export default function TrackPage() {
             onClick={() => setShowImport(v => !v)}
             style={{
               padding: '9px 16px',
-              borderRadius: '10px',
+              borderRadius: '9999px',
               background: showImport ? 'rgba(59,130,246,0.12)' : 'transparent',
-              border: `1px solid ${showImport ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.1)'}`,
+              border: `0.5px solid ${showImport ? 'rgba(59,130,246,0.28)' : 'rgba(255,255,255,0.1)'}`,
               color: showImport ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.35)',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px',
               cursor: 'pointer',
               letterSpacing: '0.06em',
-              transition: 'all 0.2s ease',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
           >
             {showImport ? 'Hide Import' : 'Import CSV'}
@@ -196,14 +197,14 @@ export default function TrackPage() {
             style={{
               padding: '8px 14px',
               borderRadius: '9999px',
-              background: showAddPosition ? 'rgba(34,197,94,0.12)' : 'transparent',
-              border: `0.5px solid ${showAddPosition ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
-              color: showAddPosition ? 'rgba(34,197,94,0.8)' : 'rgba(255,255,255,0.35)',
+              background: showAddPosition ? 'rgba(59,130,246,0.12)' : 'transparent',
+              border: `0.5px solid ${showAddPosition ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              color: showAddPosition ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.35)',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px',
               cursor: 'pointer',
               letterSpacing: '0.06em',
-              transition: 'all 0.2s ease',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
           >
             {showAddPosition ? 'Cancel' : '+ Open Position'}
@@ -216,23 +217,28 @@ export default function TrackPage() {
               alignItems: 'center',
               gap: '6px',
               padding: '9px 18px',
-              borderRadius: '10px',
+              borderRadius: '9999px',
+              fontFamily: 'JetBrains Mono, monospace',
               fontSize: '12px',
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: 'pointer',
-              background: 'rgba(91,156,246,0.13)',
-              border: '1px solid rgba(91,156,246,0.28)',
-              color: '#7aabf8',
-              letterSpacing: '0.02em',
-              transition: 'all 0.15s',
+              background: 'rgba(59,130,246,0.13)',
+              border: '0.5px solid rgba(59,130,246,0.28)',
+              color: 'rgba(59,130,246,0.9)',
+              letterSpacing: '0.06em',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(91,156,246,0.2)'
-              e.currentTarget.style.borderColor = 'rgba(91,156,246,0.4)'
+              e.currentTarget.style.background = 'rgba(59,130,246,0.22)'
+              e.currentTarget.style.borderColor = 'rgba(59,130,246,0.4)'
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(91,156,246,0.13)'
-              e.currentTarget.style.borderColor = 'rgba(91,156,246,0.28)'
+              e.currentTarget.style.background = 'rgba(59,130,246,0.13)'
+              e.currentTarget.style.borderColor = 'rgba(59,130,246,0.28)'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'none'
             }}
           >
             <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
@@ -245,16 +251,16 @@ export default function TrackPage() {
       {showAddPosition && (
         <div style={{
           background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
-          border: '0.5px solid rgba(34,197,94,0.15)',
+          border: '0.5px solid rgba(255,255,255,0.08)',
           borderRadius: '18px',
           padding: '20px 24px',
           marginBottom: '16px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(34,197,94,0.06)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}>
           <span style={{
             fontFamily: 'JetBrains Mono, monospace',
             fontSize: '9px',
-            color: 'rgba(34,197,94,0.5)',
+            color: 'rgba(255,255,255,0.25)',
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
             display: 'block',
@@ -385,14 +391,14 @@ export default function TrackPage() {
             style={{
               padding: '9px 20px',
               borderRadius: '9999px',
-              background: newPosition.entryPrice && newPosition.shares ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
-              border: `0.5px solid ${newPosition.entryPrice && newPosition.shares ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.06)'}`,
-              color: newPosition.entryPrice && newPosition.shares ? '#22c55e' : 'rgba(255,255,255,0.2)',
+              background: newPosition.entryPrice && newPosition.shares ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)',
+              border: `0.5px solid ${newPosition.entryPrice && newPosition.shares ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              color: newPosition.entryPrice && newPosition.shares ? 'rgba(59,130,246,0.9)' : 'rgba(255,255,255,0.2)',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px',
               cursor: newPosition.entryPrice && newPosition.shares ? 'pointer' : 'not-allowed',
               letterSpacing: '0.06em',
-              transition: 'all 0.2s ease',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
           >
             {addingPosition ? 'Adding...' : 'Add Position'}
@@ -410,10 +416,11 @@ export default function TrackPage() {
           }}>
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{
-                background: 'rgba(255,255,255,0.018)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '14px',
+                background: '#13131e',
+                border: '0.5px solid rgba(255,255,255,0.07)',
+                borderRadius: '18px',
                 height: '80px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
                 animation: 'pulse 1.5s ease-in-out infinite',
               }} />
             ))}
@@ -516,10 +523,10 @@ export default function TrackPage() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   gap: '16px',
-                  transition: 'opacity 0.15s ease',
+                  transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -534,9 +541,9 @@ export default function TrackPage() {
                       fontSize: '9px',
                       padding: '2px 7px',
                       borderRadius: '9999px',
-                      background: pos.type === 'SCALP' ? 'rgba(59,130,246,0.1)' : 'rgba(99,102,241,0.1)',
-                      border: `0.5px solid ${pos.type === 'SCALP' ? 'rgba(59,130,246,0.25)' : 'rgba(99,102,241,0.25)'}`,
-                      color: pos.type === 'SCALP' ? 'rgba(59,130,246,0.8)' : 'rgba(99,102,241,0.8)',
+                      background: 'rgba(59,130,246,0.1)',
+                      border: '0.5px solid rgba(59,130,246,0.25)',
+                      color: 'rgba(59,130,246,0.8)',
                       letterSpacing: '0.06em',
                     }}>{pos.type ?? 'CONVICTION'}</span>
                   </div>
@@ -628,17 +635,19 @@ export default function TrackPage() {
                     cursor: 'pointer',
                     letterSpacing: '0.1em',
                     flexShrink: 0,
-                    transition: 'all 0.2s ease',
+                    transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'
                     e.currentTarget.style.color = 'rgba(239,68,68,0.7)'
                     e.currentTarget.style.background = 'rgba(239,68,68,0.06)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
                     e.currentTarget.style.color = 'rgba(255,255,255,0.3)'
                     e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
                   CLOSE
@@ -646,12 +655,12 @@ export default function TrackPage() {
               </div>
               {closingId === pos.id && (
                 <div style={{
-                  background: 'rgba(0,0,0,0.2)',
-                  border: '0.5px solid rgba(255,255,255,0.06)',
+                  background: '#0d0d18',
+                  border: '0.5px solid rgba(255,255,255,0.07)',
                   borderRadius: '12px',
                   padding: '16px',
                   marginTop: '8px',
-                  backdropFilter: 'blur(8px)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '10px',
@@ -759,14 +768,14 @@ export default function TrackPage() {
                         flex: 1,
                         padding: '8px',
                         borderRadius: '9999px',
-                        background: exitPrice && exitDate ? 'rgba(34,197,94,0.1)' : 'transparent',
-                        border: `0.5px solid ${exitPrice && exitDate ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.06)'}`,
-                        color: exitPrice && exitDate ? '#22c55e' : 'rgba(255,255,255,0.2)',
+                        background: exitPrice && exitDate ? 'rgba(59,130,246,0.1)' : 'transparent',
+                        border: `0.5px solid ${exitPrice && exitDate ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                        color: exitPrice && exitDate ? 'rgba(59,130,246,0.9)' : 'rgba(255,255,255,0.2)',
                         fontFamily: 'JetBrains Mono, monospace',
                         fontSize: '11px',
                         cursor: exitPrice && exitDate ? 'pointer' : 'not-allowed',
                         letterSpacing: '0.06em',
-                        transition: 'all 0.2s ease',
+                        transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
                       }}
                     >
                       {closeLoading ? 'CLOSING...' : 'CONFIRM CLOSE'}
@@ -913,7 +922,7 @@ export default function TrackPage() {
                   whiteSpace: 'nowrap',
                   alignSelf: 'flex-end',
                   marginBottom: '1px',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
                 }}
               >
                 {addingPayout ? 'Adding...' : '+ Add'}
@@ -964,7 +973,7 @@ export default function TrackPage() {
                         fontFamily: 'JetBrains Mono, monospace',
                         fontSize: '13px',
                         fontWeight: '500',
-                        color: '#22c55e',
+                        color: '#f0f0f8',
                         textAlign: 'right',
                       }}>
                         €{payout.amount.toFixed(2)}
@@ -986,11 +995,11 @@ export default function TrackPage() {
                             color: 'rgba(255,255,255,0.2)',
                             fontSize: '14px',
                             padding: '2px 6px',
-                            borderRadius: '4px',
-                            transition: 'color 0.15s ease',
+                            borderRadius: '9999px',
+                            transition: 'color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
                           }}
-                          onMouseEnter={e => e.currentTarget.style.color = 'rgba(239,68,68,0.7)'}
-                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(239,68,68,0.7)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.2)'; e.currentTarget.style.transform = 'translateY(0)' }}
                         >
                           ×
                         </button>
@@ -1026,7 +1035,7 @@ export default function TrackPage() {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '28px',
                 fontWeight: '600',
-                color: '#22c55e',
+                color: '#f0f0f8',
                 letterSpacing: '-1px',
               }}>€{totalPayouts.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             </div>
@@ -1063,9 +1072,10 @@ export default function TrackPage() {
 
       {/* Trade log */}
       <div style={{
+        fontFamily: 'JetBrains Mono, monospace',
         fontSize: '11px',
-        fontWeight: 500,
-        color: '#3d4a5c',
+        fontWeight: 400,
+        color: 'rgba(255,255,255,0.25)',
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
         marginBottom: '12px',
@@ -1076,9 +1086,10 @@ export default function TrackPage() {
       {loading ? (
         <div style={{
           height: '200px',
-          background: 'rgba(255,255,255,0.018)',
-          border: '1px solid rgba(255,255,255,0.05)',
-          borderRadius: '14px',
+          background: '#13131e',
+          border: '0.5px solid rgba(255,255,255,0.07)',
+          borderRadius: '18px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
           animation: 'pulse 1.5s ease-in-out infinite',
         }} />
       ) : (

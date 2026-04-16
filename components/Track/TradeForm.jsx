@@ -7,19 +7,20 @@ const FIELD_STYLE = {
   width: '100%',
   background: 'rgba(255,255,255,0.05)',
   border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '8px',
+  borderRadius: '10px',
   padding: '9px 12px',
   color: '#eef2ff',
   fontSize: '13px',
   outline: 'none',
-  fontFamily: "'Inter Tight', sans-serif",
+  fontFamily: 'JetBrains Mono, monospace',
   boxSizing: 'border-box',
 }
 
 const LABEL_STYLE = {
+  fontFamily: 'JetBrains Mono, monospace',
   fontSize: '10px',
-  fontWeight: 500,
-  color: '#4a5568',
+  fontWeight: 400,
+  color: 'rgba(255,255,255,0.3)',
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
   marginBottom: '6px',
@@ -136,7 +137,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
 
   if (!open) return null
 
-  const netColor = preview ? (preview.net_eur >= 0 ? '#34d399' : '#f87171') : '#3d4a5c'
+  const netColor = preview ? (preview.net_eur >= 0 ? '#22c55e' : '#ef4444') : 'rgba(255,255,255,0.2)'
 
   return (
     <>
@@ -160,25 +161,42 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: '18px',
         padding: '28px',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#eef2ff' }}>
+            <div style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '16px',
+              fontWeight: 600,
+              color: '#eef2ff',
+            }}>
               {editTrade ? 'Edit Trade' : 'Add Trade'}
             </div>
-            <div style={{ fontSize: '11px', color: '#3d4a5c', marginTop: '2px' }}>NVDA · USD</div>
+            <div style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              color: 'rgba(255,255,255,0.25)',
+              marginTop: '2px',
+            }}>NVDA · USD</div>
           </div>
           <button
             onClick={onClose}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#4a5568', fontSize: '18px', padding: '4px',
-              borderRadius: '6px', lineHeight: 1,
+              color: 'rgba(255,255,255,0.3)', fontSize: '18px', padding: '4px',
+              borderRadius: '9999px', lineHeight: 1,
+              transition: 'color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
-            onMouseEnter={e => e.target.style.color = '#8892a8'}
-            onMouseLeave={e => e.target.style.color = '#4a5568'}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = 'rgba(255,255,255,0.7)'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'rgba(255,255,255,0.3)'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
           >
             ✕
           </button>
@@ -258,20 +276,26 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
           <div style={{
             padding: '14px 16px',
             borderRadius: '10px',
-            background: preview ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.015)',
-            border: `1px solid ${preview ? netColor + '30' : 'rgba(255,255,255,0.06)'}`,
+            background: 'rgba(0,0,0,0.2)',
+            border: `0.5px solid ${preview ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)'}`,
             marginBottom: '16px',
-            transition: 'border-color 0.2s',
+            transition: 'border-color 200ms cubic-bezier(0.16,1,0.3,1)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: '10px', color: '#3d4a5c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}>
                 Net EUR Preview
               </span>
               <span style={{
-                fontFamily: "'Inter Tight', sans-serif",
+                fontFamily: 'JetBrains Mono, monospace',
                 fontSize: '22px',
-                fontWeight: 700,
-                color: preview ? netColor : '#3d4a5c',
+                fontWeight: 600,
+                color: preview ? netColor : 'rgba(255,255,255,0.15)',
                 letterSpacing: '-0.01em',
               }}>
                 {preview ? fmtEUR(preview.net_eur) : '—'}
@@ -280,7 +304,9 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
             {preview && (
               <div style={{
                 display: 'flex', gap: '16px', marginTop: '8px',
-                fontSize: '10px', color: '#4a5568',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '10px',
+                color: 'rgba(255,255,255,0.3)',
               }}>
                 <span>Gross: ${preview.gross_pnl_usd.toFixed(0)}</span>
                 <span>Fees: ${preview.total_costs_usd.toFixed(0)}</span>
@@ -293,10 +319,11 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
           {error && (
             <div style={{
               padding: '10px 14px',
-              background: 'rgba(248,113,113,0.08)',
-              border: '1px solid rgba(248,113,113,0.2)',
-              borderRadius: '8px',
-              color: '#f87171',
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '10px',
+              color: '#ef4444',
+              fontFamily: 'JetBrains Mono, monospace',
               fontSize: '12px',
               marginBottom: '14px',
             }}>
@@ -308,10 +335,11 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
           {confirmed && (
             <div style={{
               padding: '10px 14px',
-              background: 'rgba(52,211,153,0.08)',
-              border: '1px solid rgba(52,211,153,0.2)',
-              borderRadius: '8px',
-              color: '#34d399',
+              background: 'rgba(34,197,94,0.08)',
+              border: '1px solid rgba(34,197,94,0.2)',
+              borderRadius: '10px',
+              color: '#22c55e',
+              fontFamily: 'JetBrains Mono, monospace',
               fontSize: '12px',
               marginBottom: '14px',
               fontWeight: 500,
@@ -327,15 +355,28 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
             style={{
               width: '100%',
               padding: '11px',
-              borderRadius: '10px',
+              borderRadius: '9999px',
+              fontFamily: 'JetBrains Mono, monospace',
               fontSize: '13px',
               fontWeight: 600,
               cursor: loading || confirmed ? 'default' : 'pointer',
-              background: 'rgba(91,156,246,0.15)',
-              border: '1px solid rgba(91,156,246,0.3)',
-              color: '#7aabf8',
+              background: 'rgba(59,130,246,0.15)',
+              border: '1px solid rgba(59,130,246,0.3)',
+              color: 'rgba(59,130,246,0.9)',
               opacity: loading || confirmed ? 0.6 : 1,
-              transition: 'opacity 0.15s',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}
+            onMouseEnter={e => {
+              if (!loading && !confirmed) {
+                e.currentTarget.style.background = 'rgba(59,130,246,0.22)'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(59,130,246,0.15)'
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = 'none'
             }}
           >
             {loading ? 'Saving…' : editTrade ? 'Update Trade' : 'Add Trade'}

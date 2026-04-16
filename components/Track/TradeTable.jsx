@@ -5,16 +5,17 @@ import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/
 
 const TH = ({ children, align = 'right' }) => (
   <th style={{
+    fontFamily: 'JetBrains Mono, monospace',
     padding: '8px 14px',
     fontSize: '10px',
-    fontWeight: 500,
-    color: '#3d4a5c',
+    fontWeight: 400,
+    color: 'rgba(255,255,255,0.3)',
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
     textAlign: align,
     whiteSpace: 'nowrap',
-    borderBottom: '1px solid rgba(255,255,255,0.065)',
-    background: 'rgba(255,255,255,0.018)',
+    borderBottom: '0.5px solid rgba(255,255,255,0.065)',
+    background: 'rgba(255,255,255,0.03)',
   }}>
     {children}
   </th>
@@ -26,8 +27,8 @@ const TD = ({ children, style }) => (
     fontSize: '12px',
     color: '#eef2ff',
     whiteSpace: 'nowrap',
-    borderBottom: '1px solid rgba(255,255,255,0.04)',
-    fontFamily: "'Inter Tight', sans-serif",
+    borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+    fontFamily: 'JetBrains Mono, monospace',
     textAlign: 'right',
     ...style,
   }}>
@@ -40,21 +41,29 @@ function DeleteConfirmRow({ colSpan, trade, onConfirm, onCancel, loading }) {
     <tr>
       <td colSpan={colSpan} style={{
         padding: '10px 14px',
-        background: 'rgba(248,113,113,0.06)',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
-        borderTop: '1px solid rgba(248,113,113,0.2)',
+        background: 'rgba(239,68,68,0.06)',
+        borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+        borderTop: '0.5px solid rgba(239,68,68,0.2)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: '12px', color: '#f87171' }}>
+          <span style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '12px',
+            color: '#ef4444',
+          }}>
             Delete this trade? This cannot be undone.
           </span>
           <button
             onClick={onCancel}
             style={{
-              padding: '4px 12px', borderRadius: '6px', fontSize: '11px',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#8892a8', cursor: 'pointer',
+              padding: '4px 12px', borderRadius: '9999px', fontSize: '11px',
+              fontFamily: 'JetBrains Mono, monospace',
+              background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' }}
           >
             Cancel
           </button>
@@ -62,11 +71,15 @@ function DeleteConfirmRow({ colSpan, trade, onConfirm, onCancel, loading }) {
             onClick={() => onConfirm(trade.id)}
             disabled={loading}
             style={{
-              padding: '4px 12px', borderRadius: '6px', fontSize: '11px',
-              background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)',
-              color: '#f87171', cursor: loading ? 'default' : 'pointer',
+              padding: '4px 12px', borderRadius: '9999px', fontSize: '11px',
+              fontFamily: 'JetBrains Mono, monospace',
+              background: 'rgba(239,68,68,0.15)', border: '0.5px solid rgba(239,68,68,0.3)',
+              color: '#ef4444', cursor: loading ? 'default' : 'pointer',
               opacity: loading ? 0.5 : 1,
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
             }}
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'rgba(239,68,68,0.22)' }}}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'rgba(239,68,68,0.15)' }}
           >
             {loading ? 'Deleting…' : 'Delete'}
           </button>
@@ -91,9 +104,9 @@ const SortableHeader = ({ col, label, sortCol, sortDir, onSort }) => (
       whiteSpace: 'nowrap',
       cursor: 'pointer',
       userSelect: 'none',
-      transition: 'color 0.15s ease',
-      borderBottom: '1px solid rgba(255,255,255,0.065)',
-      background: 'rgba(255,255,255,0.018)',
+      transition: 'color 200ms cubic-bezier(0.16,1,0.3,1)',
+      borderBottom: '0.5px solid rgba(255,255,255,0.065)',
+      background: 'rgba(255,255,255,0.03)',
     }}
     onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
     onMouseLeave={e => e.currentTarget.style.color = sortCol === col ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)'}
@@ -103,7 +116,7 @@ const SortableHeader = ({ col, label, sortCol, sortDir, onSort }) => (
       <span style={{
         fontSize: '8px',
         color: sortCol === col ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.15)',
-        transition: 'color 0.15s ease',
+        transition: 'color 200ms cubic-bezier(0.16,1,0.3,1)',
       }}>
         {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
       </span>
@@ -156,11 +169,13 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
       <div style={{
         padding: '40px 20px',
         textAlign: 'center',
-        color: '#3d4a5c',
+        fontFamily: 'JetBrains Mono, monospace',
+        color: 'rgba(255,255,255,0.25)',
         fontSize: '13px',
-        background: 'rgba(255,255,255,0.018)',
-        border: '1px solid rgba(255,255,255,0.065)',
-        borderRadius: '14px',
+        background: '#13131e',
+        border: '0.5px solid rgba(255,255,255,0.07)',
+        borderRadius: '18px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
       }}>
         No trades yet. Add your first trade above.
       </div>
@@ -168,7 +183,13 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
   }
 
   return (
-    <div style={{ overflowX: 'auto', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.065)' }}>
+    <div style={{
+      overflowX: 'auto',
+      borderRadius: '18px',
+      border: '0.5px solid rgba(255,255,255,0.07)',
+      background: '#13131e',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
+    }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
         <thead>
           <tr>
@@ -201,11 +222,17 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
             return (
             <React.Fragment key={t.id}>
               <tr
-                onMouseEnter={() => setHoveredId(t.id)}
-                onMouseLeave={() => setHoveredId(null)}
+                onMouseEnter={e => {
+                  setHoveredId(t.id)
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={e => {
+                  setHoveredId(null)
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
                 style={{
                   background: hoveredId === t.id ? 'rgba(255,255,255,0.025)' : 'transparent',
-                  transition: 'background 0.15s ease',
+                  transition: 'background 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
                 }}
               >
                 {/* Buy Date */}
@@ -215,7 +242,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                   fontSize: '11px',
                   color: 'rgba(255,255,255,0.5)',
                   whiteSpace: 'nowrap',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  borderBottom: '0.5px solid rgba(255,255,255,0.04)',
                 }}>
                   {t.buy_date}
                 </td>
@@ -229,7 +256,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                     ? 'rgba(255,255,255,0.25)'
                     : 'rgba(255,255,255,0.5)',
                   whiteSpace: 'nowrap',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  borderBottom: '0.5px solid rgba(255,255,255,0.04)',
                 }}>
                   {t.sell_date === t.buy_date ? 'same day' : t.sell_date}
                 </td>
@@ -257,12 +284,12 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                 </TD>
 
                 {/* Platform Fees */}
-                <TD style={{ color: feeIsShared ? '#22c55e' : '#4a5568' }}>
+                <TD style={{ color: feeIsShared ? 'rgba(255,255,255,0.6)' : '#4a5568' }}>
                   {platformFeeMap ? (
                     <div>
                       <div>${adjustedPlatformFee.toFixed(0)}</div>
                       {feeIsShared && (
-                        <div style={{ fontSize: '9px', color: 'rgba(34,197,94,0.5)', marginTop: '1px' }}>
+                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '1px' }}>
                           was ${t.platform_fees_usd?.toFixed(0) ?? (t.buy_date !== t.sell_date ? '192' : '96')}
                         </div>
                       )}
@@ -281,7 +308,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                           <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>BUY</span>
                           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                             {sharedFees.buyDaySharedWith.map((name, i) => (
-                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)', color: 'rgba(34,197,94,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(59,130,246,0.08)', border: '0.5px solid rgba(59,130,246,0.2)', color: 'rgba(59,130,246,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
                             ))}
                           </div>
                         </div>
@@ -291,7 +318,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                           <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>SELL</span>
                           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                             {sharedFees.sellDaySharedWith.map((name, i) => (
-                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)', color: 'rgba(34,197,94,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
+                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(59,130,246,0.08)', border: '0.5px solid rgba(59,130,246,0.2)', color: 'rgba(59,130,246,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
                             ))}
                           </div>
                         </div>
@@ -318,7 +345,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                 {/* Net EUR — hero column */}
                 <TD style={{
                   color: pnlColor(displayNetEur),
-                  fontWeight: 700,
+                  fontWeight: 600,
                   fontSize: '13px',
                 }}>
                   {fmtEUR(displayNetEur)}
@@ -332,11 +359,12 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                       title="Edit trade"
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        color: '#4a5568', fontSize: '14px', padding: '2px 4px',
-                        borderRadius: '4px', transition: 'color 0.15s',
+                        color: '#4a5568', fontSize: '14px', padding: '2px 6px',
+                        borderRadius: '9999px',
+                        transition: 'color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
                       }}
-                      onMouseEnter={e => e.target.style.color = '#8892a8'}
-                      onMouseLeave={e => e.target.style.color = '#4a5568'}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.transform = 'translateY(0)' }}
                     >
                       ✎
                     </button>
@@ -345,12 +373,13 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                       title="Delete trade"
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        color: confirmId === t.id ? '#f87171' : '#4a5568',
-                        fontSize: '14px', padding: '2px 4px',
-                        borderRadius: '4px', transition: 'color 0.15s',
+                        color: confirmId === t.id ? '#ef4444' : '#4a5568',
+                        fontSize: '14px', padding: '2px 6px',
+                        borderRadius: '9999px',
+                        transition: 'color 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
                       }}
-                      onMouseEnter={e => e.target.style.color = '#f87171'}
-                      onMouseLeave={e => e.target.style.color = confirmId === t.id ? '#f87171' : '#4a5568'}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = confirmId === t.id ? '#ef4444' : '#4a5568'; e.currentTarget.style.transform = 'translateY(0)' }}
                     >
                       ✕
                     </button>
