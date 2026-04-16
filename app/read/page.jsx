@@ -148,7 +148,7 @@ export default function ReadPage() {
       overflow: 'hidden',
       background: '#08080f',
       fontFamily: 'Inter, sans-serif',
-      paddingTop: '68px',
+      paddingTop: '56px',
     }}>
 
       {/* ── Left Sidebar ── */}
@@ -162,7 +162,7 @@ export default function ReadPage() {
           flexDirection: 'column',
           gap: '16px',
           overflowY: 'auto',
-          height: '100%',
+          height: 'calc(100vh - 56px)',
         }}
       >
         {/* Inner card */}
@@ -175,8 +175,8 @@ export default function ReadPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
+          height: '100%',
           flex: 1,
-          overflowY: 'auto',
           minHeight: 0,
         }}>
 
