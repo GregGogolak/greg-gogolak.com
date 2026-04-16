@@ -1,7 +1,5 @@
 const FINNHUB  = 'https://finnhub.io/api/v1'
-const OIL_BASE = 'https://api.oilpriceapi.com/v1'
 const FH_KEY   = process.env.FINNHUB_API_KEY
-const OIL_KEY  = process.env.OIL_PRICE_API_KEY
 
 // Separate caches per data source
 let cache       = { data: null, ts: 0 }
@@ -22,10 +20,9 @@ async function fetchQQQ() {
 }
 
 /**
- * Brent crude via OilPriceAPI latest endpoint.
- * The historical /prices endpoint returns empty on the free tier.
- * The latest endpoint includes changes.24h with pctChange and previous_price.
- * twoSessionPct not available from this tier — returns null.
+ * Brent crude via Yahoo Finance (BZ=F futures contract).
+ * OilPriceAPI free tier exhausted — Yahoo has no key requirement.
+ * Same pattern as fetchVix() already in use.
  * Cached 5 min — oil moves fast.
  */
 async function fetchBrent() {
@@ -33,31 +30,32 @@ async function fetchBrent() {
 
   try {
     const res  = await fetch(
-      `${OIL_BASE}/prices/latest?by_code=BRENT_USD`,
+      'https://query1.finance.yahoo.com/v8/finance/chart/BZ%3DF?interval=1d&range=5d',
       {
         cache: 'no-store',
-        headers: { 'Authorization': 'Token ' + OIL_KEY, 'Content-Type': 'application/json' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; nvda-jarvis/1.0)' },
       }
     )
-    const json = await res.json()
-    if (json?.status !== 'success') return null
-    const d = json?.data
-    if (!d?.price) return null
+    const json   = await res.json()
+    const result = json?.chart?.result?.[0]
+    if (!result) return null
 
-    const today     = parseFloat(d.price)
-    const h24       = d.changes?.['24h']
-    const yesterday = h24?.previous_price ? parseFloat(h24.previous_price) : null
-    const pctChange = h24?.percent        ? parseFloat(h24.percent)        : null
+    const meta      = result.meta
+    const price     = meta.regularMarketPrice
+    const prevClose = meta.previousClose ?? meta.chartPreviousClose
+    if (!price) return null
 
-    const result = {
-      price:         today,
-      prevPrice:     yesterday,
+    const pctChange = prevClose ? ((price - prevClose) / prevClose) * 100 : null
+
+    const brent = {
+      price,
+      prevPrice:     prevClose ?? null,
       pctChange,
-      twoSessionPct: null, // not available on free tier
+      twoSessionPct: null,
     }
 
-    brentCache = { data: result, ts: Date.now() }
-    return result
+    brentCache = { data: brent, ts: Date.now() }
+    return brent
   } catch {
     return null
   }

@@ -125,11 +125,12 @@ async function fetchDaily() {
 
 async function fetchRSI() {
   try {
-    const rsiUrl = `${FINNHUB}/indicator?symbol=NVDA&resolution=15&indicator=rsi&timeperiod=14&token=${FH_KEY}`
+    const rsiUrl = `${TD}/rsi?symbol=NVDA&interval=15min&time_period=14&apikey=${TD_KEY}`
     const res    = await fetch(rsiUrl, { cache: 'no-store' })
     const json   = await res.json()
-    const values = json?.rsi ?? []
-    return values.length > 0 ? values[values.length - 1] : null
+    if (json?.status === 'error') return null
+    const first = json?.values?.[0]
+    return first?.rsi ? parseFloat(first.rsi) : null
   } catch {
     return null
   }
