@@ -98,7 +98,7 @@ const STYLES = `
   right: 8px;
   font-size: 140px;
   font-weight: 800;
-  color: rgba(0,0,0,0.06);
+  color: rgba(0,0,0,0.07);
   line-height: 1;
   pointer-events: none;
   user-select: none;
@@ -201,18 +201,8 @@ function PodCard({ member, rank, started }) {
   const isFirst = rank === 1
   const avatarSize = isFirst ? 64 : 48
   const cardMinH = isFirst ? 230 : 185
-  const baseH = isFirst ? 48 : 32
   const delay = rank === 1 ? 200 : rank === 2 ? 400 : 600
   const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 1200, delay)
-
-  const baseGrad =
-    rank === 1 ? 'linear-gradient(180deg, #c8a870 0%, #a08050 100%)' :
-    rank === 2 ? 'linear-gradient(180deg, #b0b8c8 0%, #8090a8 100%)' :
-                 'linear-gradient(180deg, #c8956a 0%, #a07048 100%)'
-
-  const roleColor =
-    rank === 1 ? '#6b4a35' :
-    rank === 2 ? '#607890' : '#8a6048'
 
   const statFontSize = isFirst ? 18 : 13
 
@@ -226,62 +216,82 @@ function PodCard({ member, rank, started }) {
         }
       </div>
 
-      {/* Holographic card */}
-      <div
-        className={`pod-card-tilt holo-${rank}`}
-        style={{ width: '100%', minHeight: cardMinH, padding: 'clamp(12px,2.5vw,28px) clamp(10px,2vw,24px)' }}
-      >
-        <div className="pod-ghost">{rank}</div>
+      {/* Card + Platform */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
+        {/* Holographic card */}
+        <div
+          className={`pod-card-tilt holo-${rank}`}
+          style={{ width: '100%', minHeight: cardMinH, padding: 'clamp(12px,2.5vw,28px) clamp(10px,2vw,24px)', borderRadius: '20px 20px 0 0', position: 'relative', zIndex: 1 }}
+        >
+          <div className="pod-ghost">{rank}</div>
 
-        <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          {member ? (
-            <>
-              <div style={{
-                fontFamily: 'Geist, sans-serif', fontSize: 16, fontWeight: 600,
-                color: '#1a0f0a', marginBottom: 3,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {member.name}
-              </div>
-              <div style={{
-                fontFamily: 'Geist, sans-serif', fontSize: 11, fontWeight: 400,
-                color: roleColor, marginBottom: 16, textTransform: 'capitalize',
-              }}>
-                {member.role || 'Trader'}
-              </div>
+          <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            {member ? (
+              <>
+                <div style={{
+                  fontFamily: 'Geist, sans-serif', fontSize: 16, fontWeight: 600,
+                  color: '#1a0f0a', marginBottom: 3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {member.name}
+                </div>
+                <div style={{
+                  fontFamily: 'Geist, sans-serif', fontSize: 11, fontWeight: 400,
+                  color: '#5a4535', marginBottom: 16, textTransform: 'capitalize',
+                }}>
+                  {member.role || 'Trader'}
+                </div>
 
-              {/* Stats row */}
-              <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2, letterSpacing: '-0.5px' }}>
-                    {fmtSigned(netVal)}
+                {/* Stats row */}
+                <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
+                      <span style={{ color: '#3a2a1a' }}>{netVal < 0 ? '-€' : '+€'}</span>
+                      <span style={{ color: '#1a0f0a' }}>{Math.abs(netVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>P&L</div>
                   </div>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 4, letterSpacing: '0.04em' }}>P&L</div>
-                </div>
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
-                    {member.winRate != null ? `${member.winRate}%` : '—'}
+                  <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
+                      {member.winRate != null ? `${member.winRate}%` : '—'}
+                    </div>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>WIN</div>
                   </div>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 4, letterSpacing: '0.04em' }}>WIN</div>
-                </div>
-                <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
-                    {member.tradeCount}
+                  <div style={{ width: 1, background: 'rgba(0,0,0,0.1)', margin: '0 6px' }} />
+                  <div style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: '#1a0f0a', lineHeight: 1.2 }}>
+                      {member.tradeCount}
+                    </div>
+                    <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#7a5a45', marginTop: 4, letterSpacing: '0.04em' }}>TRADES</div>
                   </div>
-                  <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 4, letterSpacing: '0.04em' }}>TRADES</div>
                 </div>
-              </div>
-            </>
-          ) : (
-            <div style={{ color: 'rgba(0,0,0,0.15)', fontFamily: 'Geist Mono', fontSize: 13, textAlign: 'center', paddingBottom: 8 }}>—</div>
-          )}
+              </>
+            ) : (
+              <div style={{ color: 'rgba(0,0,0,0.15)', fontFamily: 'Geist Mono', fontSize: 13, textAlign: 'center', paddingBottom: 8 }}>—</div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Platform base */}
-      <div style={{ width: '100%', height: baseH, background: baseGrad, borderRadius: '0 0 12px 12px' }} />
+        {/* Platform base */}
+        <div style={{
+          width: '100%',
+          height: rank === 1 ? '44px' : '30px',
+          marginTop: '-4px',
+          borderRadius: '0 0 14px 14px',
+          background: rank === 1
+            ? 'linear-gradient(180deg, #b8983a 0%, #8a6e28 60%, #6a5218 100%)'
+            : rank === 2
+            ? 'linear-gradient(180deg, #9aa8b8 0%, #7a8898 60%, #5a6878 100%)'
+            : 'linear-gradient(180deg, #b87848 0%, #8a5830 60%, #6a3c18 100%)',
+          boxShadow: rank === 1
+            ? '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)'
+            : '0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+          position: 'relative',
+          zIndex: 0,
+          flexShrink: 0,
+        }} />
+      </div>
     </div>
   )
 }
