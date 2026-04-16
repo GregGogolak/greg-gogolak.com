@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNVDALive } from '@/context/NVDALiveContext'
 import { calculateEstimatedPnL } from '@/lib/calculations'
+import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
 import SummaryCards from '@/components/Track/SummaryCards'
 import TradeTable   from '@/components/Track/TradeTable'
 import TradeForm    from '@/components/Track/TradeForm'
@@ -15,6 +16,7 @@ export default function TrackPage() {
   const [editTrade,     setEditTrade]     = useState(null)
   const [openPositions, setOpenPositions] = useState([])
   const [includeOpen,   setIncludeOpen]   = useState(false)
+  const [platformFeeMap, setPlatformFeeMap] = useState(null)
   const [closingId,     setClosingId]     = useState(null)
   const [exitPrice,     setExitPrice]     = useState('')
   const [exitDate,      setExitDate]      = useState(new Date().toISOString().split('T')[0])
@@ -45,6 +47,14 @@ export default function TrackPage() {
   useEffect(() => {
     fetchTrades()
     fetchPositions()
+    const fetchPlatformFees = async () => {
+      try {
+        const res = await fetch('/api/platform-fees')
+        const data = await res.json()
+        setPlatformFeeMap(data.dateMap ?? null)
+      } catch {}
+    }
+    fetchPlatformFees()
   }, [fetchTrades, fetchPositions])
 
   function openAdd() {
@@ -84,6 +94,14 @@ export default function TrackPage() {
     })
     setTrades(prev => prev.filter(t => t.id !== id))
   }
+
+  // Recalculate net sum using shared platform fees (visual only, stored data unchanged)
+  const adjustedNetSum = trades.reduce((sum, trade) => {
+    if (!platformFeeMap) return sum + (trade.net_eur ?? 0)
+    const sharedFees = calculateSharedPlatformFee(trade, platformFeeMap)
+    const { adjustedNetEur } = recalculateNetWithSharedFees(trade, sharedFees)
+    return sum + adjustedNetEur
+  }, 0)
 
   // Compute estimated values for each open position
   const openEstimates = openPositions.map(p => ({
@@ -188,6 +206,7 @@ export default function TrackPage() {
             trades={trades}
             openNetEur={includeOpen ? openEstimatedNetTotal : undefined}
             openCount={includeOpen ? openPositions.length : undefined}
+            adjustedNetEur={platformFeeMap ? adjustedNetSum : undefined}
           />
         )}
       </div>
@@ -567,6 +586,7 @@ export default function TrackPage() {
       ) : (
         <TradeTable
           trades={trades}
+          platformFeeMap={platformFeeMap}
           onEdit={openEdit}
           onDelete={handleDelete}
         />

@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import StatusBadge from '@/components/UI/StatusBadge'
 import { fmtUSD, fmtEUR, pnlColor } from '@/lib/format'
+import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
 
 const TH = ({ children, align = 'right' }) => (
   <th style={{
@@ -76,7 +77,7 @@ function DeleteConfirmRow({ colSpan, trade, onConfirm, onCancel, loading }) {
   )
 }
 
-export default function TradeTable({ trades, onEdit, onDelete }) {
+export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete }) {
   const [confirmId,   setConfirmId]   = useState(null)
   const [deletingId,  setDeletingId]  = useState(null)
   const [hoveredId,   setHoveredId]   = useState(null)
@@ -106,7 +107,7 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
 
   return (
     <div style={{ overflowX: 'auto', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.065)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '960px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
         <thead>
           <tr>
             <TH align="left">Dates</TH>
@@ -118,6 +119,7 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
             <TH>Gross P&L</TH>
             <TH>Tx Fees</TH>
             <TH>Platform</TH>
+            <TH align="left">Shared With</TH>
             <TH>Interest</TH>
             <TH>Total Costs</TH>
             <TH>Net EUR</TH>
@@ -125,7 +127,13 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
           </tr>
         </thead>
         <tbody>
-          {trades.map(t => (
+          {trades.map(t => {
+            const sharedFees = calculateSharedPlatformFee(t, platformFeeMap)
+            const { adjustedNetEur, adjustedPlatformFee } = recalculateNetWithSharedFees(t, sharedFees)
+            const displayNetEur = platformFeeMap ? adjustedNetEur : t.net_eur
+            const feeIsShared = platformFeeMap && (sharedFees.buyUsers > 1 || sharedFees.sellUsers > 1)
+
+            return (
             <React.Fragment key={t.id}>
               <tr
                 onMouseEnter={() => setHoveredId(t.id)}
@@ -171,8 +179,52 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
                 </TD>
 
                 {/* Platform Fees */}
-                <TD style={{ color: '#4a5568' }}>
-                  {t.platform_fee_days}d × $96
+                <TD style={{ color: feeIsShared ? '#22c55e' : '#4a5568' }}>
+                  {platformFeeMap ? (
+                    <div>
+                      <div>${adjustedPlatformFee.toFixed(0)}</div>
+                      {feeIsShared && (
+                        <div style={{ fontSize: '9px', color: 'rgba(34,197,94,0.5)', marginTop: '1px' }}>
+                          was ${t.platform_fees_usd?.toFixed(0) ?? (t.buy_date !== t.sell_date ? '192' : '96')}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    `${t.platform_fee_days}d × $96`
+                  )}
+                </TD>
+
+                {/* Shared With */}
+                <TD style={{ textAlign: 'left', padding: '10px 12px', maxWidth: '160px' }}>
+                  {platformFeeMap ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {sharedFees.buyDaySharedWith.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>BUY</span>
+                          <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                            {sharedFees.buyDaySharedWith.map((name, i) => (
+                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)', color: 'rgba(34,197,94,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {sharedFees.sellDaySharedWith.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '8px', color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em' }}>SELL</span>
+                          <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                            {sharedFees.sellDaySharedWith.map((name, i) => (
+                              <span key={i} style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', padding: '1px 6px', borderRadius: '9999px', background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)', color: 'rgba(34,197,94,0.7)', whiteSpace: 'nowrap' }}>{name}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {sharedFees.buyDaySharedWith.length === 0 && sharedFees.sellDaySharedWith.length === 0 && (
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(255,255,255,0.15)' }}>—</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(255,255,255,0.15)' }}>Loading...</span>
+                  )}
                 </TD>
 
                 {/* Interest */}
@@ -187,11 +239,11 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
 
                 {/* Net EUR — hero column */}
                 <TD style={{
-                  color: pnlColor(t.net_eur),
+                  color: pnlColor(displayNetEur),
                   fontWeight: 700,
                   fontSize: '13px',
                 }}>
-                  {fmtEUR(t.net_eur)}
+                  {fmtEUR(displayNetEur)}
                 </TD>
 
                 {/* Actions */}
@@ -230,7 +282,7 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
 
               {confirmId === t.id && (
                 <DeleteConfirmRow
-                  colSpan={13}
+                  colSpan={14}
                   trade={t}
                   onConfirm={handleDelete}
                   onCancel={() => setConfirmId(null)}
@@ -238,7 +290,8 @@ export default function TradeTable({ trades, onEdit, onDelete }) {
                 />
               )}
             </React.Fragment>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

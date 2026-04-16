@@ -47,7 +47,11 @@ function Card({ label, value, valueColor, sub }) {
   )
 }
 
-export default function SummaryCards({ trades }) {
+// openNetEur: total estimated net EUR of open positions (optional)
+// openCount:  number of open positions (optional)
+// When both are provided and openCount > 0, Net Profit and Total Trades
+// reflect the combined value. Win rate is always closed trades only.
+export default function SummaryCards({ trades, openNetEur, openCount, adjustedNetEur }) {
   const count    = trades?.length ?? 0
   const hasData  = count > 0
 
@@ -63,11 +67,17 @@ export default function SummaryCards({ trades }) {
   const wins     = hasData ? trades.filter(t => t.net_eur > 0).length             : 0
   const winRate  = hasData ? Math.round((wins / count) * 100)                      : null
 
+  const showOpen       = openCount > 0 && openNetEur != null
+  const baseNetSum     = adjustedNetEur != null ? adjustedNetEur : netSum
+  const displayNetSum  = showOpen ? (baseNetSum ?? 0) + openNetEur : baseNetSum
+  const displayCount   = showOpen ? count + openCount : count
+  const showShared     = adjustedNetEur != null
+
   return (
     <>
       <style>{GRID_STYLE}</style>
       <div className="summary-grid">
-        <Card label="Total Trades"  value={hasData ? count : '—'} />
+        <Card label="Total Trades"  value={hasData || showOpen ? displayCount : '—'} />
         <Card label="Gross P&L"     value={fmtUSD(grossSum)}  valueColor={pnlColor(grossSum)} />
         <Card
           label="Total Fees"
@@ -75,7 +85,18 @@ export default function SummaryCards({ trades }) {
           valueColor="#8892a8"
           sub={hasData ? `Tx: ${fmtUSD(txSum)} | Plat: ${fmtUSD(platSum)} | Int: ${fmtUSD(intSum)}` : null}
         />
-        <Card label="Net Profit"    value={fmtEUR(netSum)}    valueColor={pnlColor(netSum)} />
+        <Card
+          label="Net Profit"
+          value={fmtEUR(displayNetSum)}
+          valueColor={pnlColor(displayNetSum)}
+          sub={
+            showOpen
+              ? 'incl. open est.'
+              : showShared
+              ? <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(34,197,94,0.5)', letterSpacing: '0.08em' }}>fees shared</span>
+              : null
+          }
+        />
         <Card label="Avg Per Trade" value={fmtEUR(avgNet)}    valueColor={pnlColor(avgNet)} />
         <Card label="Best Trade"    value={fmtEUR(bestNet)}   valueColor="#34d399" />
         <Card label="Worst Trade"   value={fmtEUR(worstNet)}  valueColor={pnlColor(worstNet)} />
@@ -83,6 +104,7 @@ export default function SummaryCards({ trades }) {
           label="Win Rate"
           value={winRate != null ? `${winRate}%` : '—'}
           valueColor={winRate != null ? (winRate >= 50 ? '#34d399' : '#f87171') : '#8892a8'}
+          sub={showOpen ? 'closed trades only' : null}
         />
       </div>
     </>
