@@ -4,12 +4,12 @@ import { calculateTrade } from '@/lib/tradeCalculations'
 
 // Column name aliases — maps various broker export formats to our standard fields
 const COLUMN_ALIASES = {
-  buy_date:   ['buy date', 'purchase date', 'open date', 'entry date', 'date bought', 'buy_date', 'open', 'date'],
+  buy_date:   ['buy date', 'purchase date', 'open date', 'entry date', 'date bought', 'date purchased', 'buy_date', 'open', 'date'],
   sell_date:  ['sell date', 'close date', 'exit date', 'date sold', 'sell_date', 'close', 'sold date'],
-  buy_price:  ['buy price', 'purchase price', 'entry price', 'open price', 'avg buy', 'buy_price', 'price bought', 'cost'],
-  sell_price: ['sell price', 'exit price', 'close price', 'avg sell', 'sell_price', 'price sold', 'proceeds'],
+  buy_price:  ['buy price', 'purchase price', 'entry price', 'open price', 'avg buy', 'buy_price', 'price bought', 'bought price', 'bought', 'cost'],
+  sell_price: ['sell price', 'exit price', 'close price', 'avg sell', 'sell_price', 'price sold', 'sold price', 'sold', 'proceeds'],
   shares:     ['shares', 'quantity', 'qty', 'units', 'amount', 'size', 'contracts', 'volume'],
-  type:       ['type', 'trade type', 'strategy', 'style'],
+  type:       ['type', 'trade type', 'strategy', 'style', 'stock', 'instrument'],
 }
 
 function normalise(str) {
@@ -27,15 +27,30 @@ function detectColumn(headers, field) {
 
 function parseDate(raw) {
   if (!raw) return null
-  const cleaned = raw.trim()
-  // Try YYYY-MM-DD first
+  let cleaned = raw.trim().replace(/^"|"$/g, '')
+
+  // Strip weekday prefix like 'Friday ', 'Monday ', etc.
+  cleaned = cleaned.replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+/i, '').trim()
+
+  // YYYY-MM-DD — already correct
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned
-  // Try DD/MM/YYYY
-  const dmy = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`
-  // Try MM/DD/YYYY (ambiguous with above — only reached if dmy didn't match)
-  const mdy = cleaned.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
-  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`
+
+  // DD/MM/YYYY or D/MM/YYYY — four digit year
+  const dmy4 = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (dmy4) return `${dmy4[3]}-${dmy4[2].padStart(2,'0')}-${dmy4[1].padStart(2,'0')}`
+
+  // DD/MM/YY or D/MM/YY — two digit year, assume 2000s
+  const dmy2 = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/)
+  if (dmy2) return `20${dmy2[3]}-${dmy2[2].padStart(2,'0')}-${dmy2[1].padStart(2,'0')}`
+
+  // DD-MM-YYYY
+  const dmyd = cleaned.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+  if (dmyd) return `${dmyd[3]}-${dmyd[2].padStart(2,'0')}-${dmyd[1].padStart(2,'0')}`
+
+  // MM/DD/YYYY — US format fallback
+  const mdy4 = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (mdy4) return `${mdy4[3]}-${mdy4[1].padStart(2,'0')}-${mdy4[2].padStart(2,'0')}`
+
   return null
 }
 
@@ -147,10 +162,11 @@ export default function CSVImport({ onImportComplete }) {
       const rowNum = i + 2 // 1-indexed, skip header
       const buy_date  = parseDate(row[columnMap.buy_date])
       const sell_date = parseDate(row[columnMap.sell_date])
-      const buy_price  = parseFloat(row[columnMap.buy_price])
-      const sell_price = parseFloat(row[columnMap.sell_price])
-      const shares     = parseFloat(row[columnMap.shares])
-      const type = row[columnMap.type]?.toUpperCase() === 'SCALP' ? 'SCALP' : 'CONVICTION'
+      const buy_price  = parseFloat(String(row[columnMap.buy_price]  ?? '').replace(/^"|"$/g, '').replace(/,/g, ''))
+      const sell_price = parseFloat(String(row[columnMap.sell_price] ?? '').replace(/^"|"$/g, '').replace(/,/g, ''))
+      const shares     = parseFloat(String(row[columnMap.shares]     ?? '').replace(/,/g, '').replace(/^"|"$/g, ''))
+      const typeRaw = (row[columnMap.type] ?? '').toLowerCase().trim()
+      const type = typeRaw.includes('scalp') ? 'SCALP' : typeRaw.includes('conviction') ? 'CONVICTION' : 'SCALP'
 
       if (!buy_date)                          { errs.push(`Row ${rowNum}: cannot parse buy date "${row[columnMap.buy_date]}"`) ; return }
       if (!sell_date)                         { errs.push(`Row ${rowNum}: cannot parse sell date "${row[columnMap.sell_date]}"`) ; return }
