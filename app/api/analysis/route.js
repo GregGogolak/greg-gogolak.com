@@ -160,8 +160,22 @@ Respond only in the JSON format specified.`,
     "highImpact": ["<headline>"],
     "alreadyPriced": ["<headline>"],
     "ignore": "<count of noise articles ignored>"
-  }
+  },
+  "positionCommentary": [
+    {
+      "entry": "<entry price as number>",
+      "shares": "<share count as number>",
+      "recommendation": "HOLD|EXIT|ADD",
+      "reasoning": "<one to two sentences — specific to this read>"
+    }
+  ]
 }
+
+positionCommentary rules:
+- Return one entry per open position. If no open positions, return [].
+- HOLD: thesis intact and position is not in immediate danger
+- EXIT: thesis broken or AT RISK and position is underwater or interest is eroding significantly
+- ADD: strong setup exists and this position is already profitable with room to scale
 
 BRIEF:
 ${brief}

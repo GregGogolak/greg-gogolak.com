@@ -25,6 +25,21 @@ export function NVDALiveContextProvider({ children }) {
   const reconnectTimer = useRef(null)
   const staleTimer     = useRef(null)
 
+  // REST fallback — populate livePrice immediately on mount so components
+  // never start with null. WebSocket ticks will override this once connected.
+  useEffect(() => {
+    const fetchFallback = async () => {
+      try {
+        const res  = await fetch('/api/price')
+        const data = await res.json()
+        if (data?.price && !livePrice) {
+          setLivePrice(parseFloat(data.price))
+        }
+      } catch {}
+    }
+    fetchFallback()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   function connect() {
     // Don't open a second connection if one is already live
     if (wsRef.current?.readyState === WebSocket.OPEN) return

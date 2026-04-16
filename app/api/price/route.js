@@ -12,11 +12,13 @@ let sma200Cache       = { data: null, ts: 0 }
 let sma50Cache        = { data: null, ts: 0 }
 let dailyCache        = { data: null, ts: 0 }
 let marketStatusCache = { data: null, ts: 0 }
+let rsiCache          = { data: null, ts: 0 }
 
 const QUOTE_TTL         = 55_000         // 55 seconds — live price
 const MARKET_STATUS_TTL = 3_600_000      // 1 hour
 const SMA_TTL           = 6 * 3600_000   // 6 hours — SMAs change slowly
 const DAILY_TTL         = 6 * 3600_000   // 6 hours — 100-day window
+const RSI_TTL           = 5 * 60_000     // 5 minutes — 15min RSI changes on candle close
 const SMA_TTL_S         = 6 * 3600       // Redis TTL in seconds
 const DAILY_TTL_S       = 6 * 3600
 
@@ -124,13 +126,18 @@ async function fetchDaily() {
 }
 
 async function fetchRSI() {
+  // L1: in-memory — 5 min matches the 15-min candle interval
+  if (rsiCache.data !== null && Date.now() - rsiCache.ts < RSI_TTL) return rsiCache.data
+
   try {
     const rsiUrl = `${TD}/rsi?symbol=NVDA&interval=15min&time_period=14&apikey=${TD_KEY}`
     const res    = await fetch(rsiUrl, { cache: 'no-store' })
     const json   = await res.json()
     if (json?.status === 'error') return null
     const first = json?.values?.[0]
-    return first?.rsi ? parseFloat(first.rsi) : null
+    const val   = first?.rsi ? parseFloat(first.rsi) : null
+    if (val !== null) rsiCache = { data: val, ts: Date.now() }
+    return val
   } catch {
     return null
   }

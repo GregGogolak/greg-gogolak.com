@@ -1,6 +1,7 @@
 import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
 import { getUserId } from '@/lib/auth'
+import { calculateTrade } from '@/lib/tradeCalculations'
 
 // Iran status is shared across all users — not namespaced
 const IRAN_KEY = 'iran:status'
@@ -83,6 +84,63 @@ export async function POST(req) {
     }
   } catch (err) {
     console.error('[/api/positions POST]', err)
+    return Response.json({ error: err.message }, { status: 500 })
+  }
+}
+
+// ── DELETE — close a position and create a closed trade record ─────────────
+export async function DELETE(request) {
+  try {
+    const userId = await getUserId()
+    const POSITIONS_KEY = `positions:${userId}`
+    const TRADES_KEY    = `trades:${userId}`
+
+    const { positionId, exitPrice, exitDate } = await request.json()
+    if (!positionId || !exitPrice || !exitDate) {
+      return Response.json({ error: 'positionId, exitPrice, and exitDate are required' }, { status: 400 })
+    }
+
+    const redis = getRedis()
+
+    // Positions are stored as a flat array
+    const positions = safeParse(await redis.get(POSITIONS_KEY), [])
+    const position  = positions.find(p => p.id === positionId)
+    if (!position) return Response.json({ error: 'Position not found' }, { status: 404 })
+
+    // Calculate final P&L with real exit numbers
+    const result = calculateTrade({
+      buy_price:  position.entryPrice,
+      sell_price: parseFloat(exitPrice),
+      shares:     position.shares,
+      buy_date:   position.entryDate,
+      sell_date:  exitDate,
+    })
+
+    // Build the closed trade record
+    const closedTrade = {
+      id:         crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      ticker:     'NVDA',
+      type:       position.type ?? 'CONVICTION',
+      buy_date:   position.entryDate,
+      sell_date:  exitDate,
+      buy_price:  position.entryPrice,
+      sell_price: parseFloat(exitPrice),
+      shares:     position.shares,
+      ...result,
+    }
+
+    // Prepend to trades list
+    const trades = safeParse(await redis.get(TRADES_KEY), [])
+    await redis.set(TRADES_KEY, JSON.stringify([closedTrade, ...trades]))
+
+    // Remove from open positions
+    const updatedPositions = positions.filter(p => p.id !== positionId)
+    await redis.set(POSITIONS_KEY, JSON.stringify(updatedPositions))
+
+    return Response.json({ success: true, trade: closedTrade })
+  } catch (err) {
+    console.error('[/api/positions DELETE]', err)
     return Response.json({ error: err.message }, { status: 500 })
   }
 }

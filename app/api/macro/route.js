@@ -1,22 +1,50 @@
+import { getRedis } from '@/lib/redis'
+import { safeParse } from '@/lib/safeParse'
+
 const FINNHUB  = 'https://finnhub.io/api/v1'
 const FH_KEY   = process.env.FINNHUB_API_KEY
 
-// Separate caches per data source
-let cache       = { data: null, ts: 0 }
+// L1: in-memory caches per data source
+let cache       = { data: null, ts: 0 }  // combined response cache
+let qqqCache    = { data: null, ts: 0 }
 let brentCache  = { data: null, ts: 0 }
 let vixCache    = { data: null, ts: 0 }
 
-const MACRO_TTL = 5  * 60_000  // 5 min  — QQQ quote, cheap Finnhub call
-const BRENT_TTL = 5  * 60_000  // 5 min  — OilPriceAPI, oil moves fast
-const VIX_TTL   = 10 * 60_000  // 10 min — Twelve Data VIX quote
+const MACRO_TTL   = 5  * 60_000  // 5 min  — QQQ quote, cheap Finnhub call
+const BRENT_TTL   = 5  * 60_000  // 5 min  — Brent crude, oil moves fast
+const VIX_TTL     = 10 * 60_000  // 10 min — VIX
+const MACRO_TTL_S = 5  * 60      // Redis TTL in seconds
+const BRENT_TTL_S = 5  * 60
+const VIX_TTL_S   = 10 * 60
 
 /**
  * QQQ via Finnhub (works on free tier)
  */
 async function fetchQQQ() {
+  // L1: in-memory
+  if (Date.now() - qqqCache.ts < MACRO_TTL && qqqCache.data) return qqqCache.data
+
+  // L2: Redis
+  const redis = getRedis()
+  if (redis) {
+    try {
+      const parsed = safeParse(await redis.get('macro:qqq'))
+      if (parsed && Date.now() - parsed.ts < MACRO_TTL) {
+        qqqCache = { data: parsed.data, ts: Date.now() }
+        return parsed.data
+      }
+    } catch {}
+  }
+
   const res  = await fetch(`${FINNHUB}/quote?symbol=QQQ&token=${FH_KEY}`, { cache: 'no-store' })
   const data = await res.json()
-  return data?.c ? data : null
+  if (!data?.c) return null
+
+  if (redis) {
+    try { await redis.set('macro:qqq', JSON.stringify({ data, ts: Date.now() }), { ex: MACRO_TTL_S }) } catch {}
+  }
+  qqqCache = { data, ts: Date.now() }
+  return data
 }
 
 /**
@@ -26,7 +54,20 @@ async function fetchQQQ() {
  * Cached 5 min — oil moves fast.
  */
 async function fetchBrent() {
+  // L1: in-memory
   if (Date.now() - brentCache.ts < BRENT_TTL && brentCache.data) return brentCache.data
+
+  // L2: Redis
+  const redis = getRedis()
+  if (redis) {
+    try {
+      const parsed = safeParse(await redis.get('macro:brent'))
+      if (parsed && Date.now() - parsed.ts < BRENT_TTL) {
+        brentCache = { data: parsed.data, ts: Date.now() }
+        return parsed.data
+      }
+    } catch {}
+  }
 
   try {
     const res  = await fetch(
@@ -54,6 +95,9 @@ async function fetchBrent() {
       twoSessionPct: null,
     }
 
+    if (redis) {
+      try { await redis.set('macro:brent', JSON.stringify({ data: brent, ts: Date.now() }), { ex: BRENT_TTL_S }) } catch {}
+    }
     brentCache = { data: brent, ts: Date.now() }
     return brent
   } catch {
@@ -68,7 +112,20 @@ async function fetchBrent() {
  * 10-minute cache.
  */
 async function fetchVix() {
+  // L1: in-memory
   if (Date.now() - vixCache.ts < VIX_TTL && vixCache.data) return vixCache.data
+
+  // L2: Redis
+  const redis = getRedis()
+  if (redis) {
+    try {
+      const parsed = safeParse(await redis.get('macro:vix'))
+      if (parsed && Date.now() - parsed.ts < VIX_TTL) {
+        vixCache = { data: parsed.data, ts: Date.now() }
+        return parsed.data
+      }
+    } catch {}
+  }
 
   try {
     const res  = await fetch(
@@ -93,6 +150,9 @@ async function fetchVix() {
       source:    'yahoo',
     }
 
+    if (redis) {
+      try { await redis.set('macro:vix', JSON.stringify({ data: vix, ts: Date.now() }), { ex: VIX_TTL_S }) } catch {}
+    }
     vixCache = { data: vix, ts: Date.now() }
     return vix
   } catch {

@@ -1,15 +1,15 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useNVDAData }     from '@/hooks/useNVDAData'
-import { useMacroData }    from '@/hooks/useMacroData'
-import { useNews }         from '@/hooks/useNews'
+import { useNVDAData } from '@/hooks/useNVDAData'
+import { useMacroData } from '@/hooks/useMacroData'
+import { useNews } from '@/hooks/useNews'
 import { useFundamentals } from '@/hooks/useFundamentals'
-import { useAlerts }       from '@/hooks/useAlerts'
-import { useNVDALive }     from '@/context/NVDALiveContext'
+import { useAlerts } from '@/hooks/useAlerts'
+import { useNVDALive } from '@/context/NVDALiveContext'
 import { getThesisStatus } from '@/lib/thesisEngine'
 import { getMarketSession } from '@/lib/sessionUtils'
 
-import ThesisStatus  from '@/components/Dashboard/ThesisStatus'
+import ThesisStatus from '@/components/Dashboard/ThesisStatus'
 import PositionPanel from '@/components/Dashboard/PositionPanel'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -39,12 +39,12 @@ const EYE = {
 }
 
 function cardIn(e) {
-  e.currentTarget.style.border    = '0.5px solid rgba(255,255,255,0.12)'
+  e.currentTarget.style.border = '0.5px solid rgba(255,255,255,0.12)'
   e.currentTarget.style.transform = 'translateY(-2px)'
   e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
 }
 function cardOut(e) {
-  e.currentTarget.style.border    = '0.5px solid rgba(255,255,255,0.07)'
+  e.currentTarget.style.border = '0.5px solid rgba(255,255,255,0.07)'
   e.currentTarget.style.transform = 'translateY(0)'
   e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)'
 }
@@ -52,7 +52,7 @@ function cardOut(e) {
 // ── Helpers ────────────────────────────────────────────────────────────────
 function timeAgo(unixSeconds) {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds
-  if (diff < 60)   return `${diff}s ago`
+  if (diff < 60) return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
   return `${Math.floor(diff / 86400)}d ago`
@@ -60,10 +60,10 @@ function timeAgo(unixSeconds) {
 
 function sessionInfo(session) {
   switch (session) {
-    case 'open':       return { label: 'LIVE',        badgeLabel: 'MARKET OPEN',  isLive: true,  colour: '#22c55e' }
-    case 'premarket':  return { label: 'PRE-MARKET',  badgeLabel: 'PRE-MARKET',   isLive: false, colour: '#f59e0b' }
-    case 'afterhours': return { label: 'AFTER HOURS', badgeLabel: 'AFTER HOURS',  isLive: false, colour: '#f59e0b' }
-    default:           return { label: 'CLOSED',      badgeLabel: 'MARKET CLOSED',isLive: false, colour: 'rgba(255,255,255,0.4)' }
+    case 'open': return { label: 'LIVE', badgeLabel: 'MARKET OPEN', isLive: true, colour: '#22c55e' }
+    case 'premarket': return { label: 'PRE-MARKET', badgeLabel: 'PRE-MARKET', isLive: false, colour: '#f59e0b' }
+    case 'afterhours': return { label: 'AFTER HOURS', badgeLabel: 'AFTER HOURS', isLive: false, colour: '#f59e0b' }
+    default: return { label: 'CLOSED', badgeLabel: 'MARKET CLOSED', isLive: false, colour: 'rgba(255,255,255,0.4)' }
   }
 }
 
@@ -108,15 +108,15 @@ function DataRow({ label, value, badge, badgeColour, dimmed, last }) {
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { data: priceData, loading: priceLoading }  = useNVDAData()
-  const { data: macroData }                          = useMacroData()
-  const { articles }                                 = useNews()
-  const { data: fundamentalsData }                   = useFundamentals()
-  const { livePrice, wsConnected }                   = useNVDALive()
+  const { data: priceData, loading: priceLoading } = useNVDAData()
+  const { data: macroData } = useMacroData()
+  const { articles } = useNews()
+  const { data: fundamentalsData } = useFundamentals()
+  const { livePrice, wsConnected } = useNVDALive()
   useAlerts({ externalPriceData: priceData, externalMacroData: macroData })
 
   // Positions + Iran (KV-backed)
-  const [positions,  setPositions]  = useState([])
+  const [positions, setPositions] = useState([])
   const [iranStatus, setIranStatus] = useState('ESCALATING')
 
   // TODO: Replace manual iranStatus with AI-calculated status from news — see DESIGN.md
@@ -128,17 +128,17 @@ export default function Dashboard() {
         setPositions(d.positions || [])
         setIranStatus(d.iranStatus || 'ESCALATING')
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   // Calendar (AI-generated, cached 1h in Redis)
-  const [calendarData,    setCalendarData]    = useState(null)
+  const [calendarData, setCalendarData] = useState(null)
   const [calendarLoading, setCalendarLoading] = useState(false)
 
   const fetchCalendar = useCallback(async (force = false) => {
     setCalendarLoading(true)
     try {
-      const res  = await fetch('/api/calendar', { method: force ? 'POST' : 'GET' })
+      const res = await fetch('/api/calendar', { method: force ? 'POST' : 'GET' })
       const data = await res.json()
       setCalendarData(data)
     } finally {
@@ -150,7 +150,7 @@ export default function Dashboard() {
 
   // Position CRUD
   const handleAddPosition = useCallback(async (pos) => {
-    const res  = await fetch('/api/positions', {
+    const res = await fetch('/api/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'add', payload: pos }),
@@ -160,7 +160,7 @@ export default function Dashboard() {
   }, [])
 
   const handleRemovePosition = useCallback(async (id) => {
-    const res  = await fetch('/api/positions', {
+    const res = await fetch('/api/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'remove', payload: { id } }),
@@ -170,38 +170,38 @@ export default function Dashboard() {
   }, [])
 
   // ── Derived values ─────────────────────────────────────────────────────
-  const displayPrice   = livePrice ?? priceData?.price ?? null
-  const price          = priceData?.price   ?? null
-  const prevClose      = priceData?.prevClose ?? null
-  const pctChange      = priceData?.pctChange ?? null
-  const sma200         = priceData?.sma200  ?? null
-  const sma50          = priceData?.sma50   ?? null
-  const pctFrom200     = priceData?.pctFrom200 ?? null
-  const pctFrom50      = priceData?.pctFrom50  ?? null
-  const vix            = macroData?.vix?.level ?? 0
-  const oilTwo         = macroData?.oil?.twoSessionPct ?? 0
-  const oilPrice       = macroData?.oil?.price ?? null
-  const oilPct         = macroData?.oil?.pctChange ?? null
-  const qqq            = macroData?.qqq?.pctChange ?? 0
-  const rsi            = priceData?.rsi ?? null
-  const analystTarget  = fundamentalsData?.analystTarget ?? null
+  const displayPrice = livePrice ?? priceData?.price ?? null
+  const price = priceData?.price ?? null
+  const prevClose = priceData?.prevClose ?? null
+  const pctChange = priceData?.pctChange ?? null
+  const sma200 = priceData?.sma200 ?? null
+  const sma50 = priceData?.sma50 ?? null
+  const pctFrom200 = priceData?.pctFrom200 ?? null
+  const pctFrom50 = priceData?.pctFrom50 ?? null
+  const vix = macroData?.vix?.level ?? 0
+  const oilTwo = macroData?.oil?.twoSessionPct ?? 0
+  const oilPrice = macroData?.oil?.price ?? null
+  const oilPct = macroData?.oil?.pctChange ?? null
+  const qqq = macroData?.qqq?.pctChange ?? 0
+  const rsi = priceData?.rsi ?? null
+  const analystTarget = fundamentalsData?.analystTarget ?? null
   const analystPctDiff = (analystTarget && price) ? ((analystTarget - price) / price) * 100 : null
 
-  const nowSec         = Date.now() / 1000
+  const nowSec = Date.now() / 1000
   const hasBucketCNews = articles.some(a => a.bucket === 'C' && (nowSec - a.datetime) < 86400)
 
-  const thesis         = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
+  const thesis = getThesisStatus({ price, sma200, oilTwoSessionPct: oilTwo, vix, hasBucketCNews })
 
-  const bucketBNews    = articles.filter(a => a.bucket === 'B')
-  const bucketCNews    = articles.filter(a => a.bucket === 'C')
+  const bucketBNews = articles.filter(a => a.bucket === 'B')
+  const bucketCNews = articles.filter(a => a.bucket === 'C')
 
   // Session
-  const session        = getMarketSession()
-  const sess           = sessionInfo(session)
-  const isLive         = sess.isLive
+  const session = getMarketSession()
+  const sess = sessionInfo(session)
+  const isLive = sess.isLive
 
   // Oil change badge string
-  const oilChange      = oilPct != null ? `${oilPct >= 0 ? '+' : ''}${oilPct.toFixed(2)}%` : null
+  const oilChange = oilPct != null ? `${oilPct >= 0 ? '+' : ''}${oilPct.toFixed(2)}%` : null
 
   return (
     <div style={{
@@ -291,7 +291,7 @@ export default function Dashboard() {
             <ThesisStatus
               status={thesis.status}
               triggers={thesis.triggers}
-              style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: '0 0 14px 14px' }}
+              style={{ background: 'transparent', border: 'none', padding: 0, borderRadius: '0 0 0 0' }}
             />
           </div>
         </div>
@@ -365,17 +365,17 @@ export default function Dashboard() {
             value={rsi ? rsi.toFixed(1) : null}
             badge={
               rsi === null ? 'Loading' :
-              rsi < 30 ? 'OVERSOLD' :
-              rsi < 50 ? 'RECOVERING' :
-              rsi < 70 ? 'NEUTRAL' :
-              'OVERBOUGHT'
+                rsi < 30 ? 'OVERSOLD' :
+                  rsi < 50 ? 'RECOVERING' :
+                    rsi < 70 ? 'NEUTRAL' :
+                      'OVERBOUGHT'
             }
             badgeColour={
               rsi === null ? 'rgba(255,255,255,0.15)' :
-              rsi < 30 ? '#22c55e' :
-              rsi < 50 ? '#f59e0b' :
-              rsi < 70 ? 'rgba(255,255,255,0.4)' :
-              '#ef4444'
+                rsi < 30 ? '#22c55e' :
+                  rsi < 50 ? '#f59e0b' :
+                    rsi < 70 ? 'rgba(255,255,255,0.4)' :
+                      '#ef4444'
             }
             dimmed={rsi === null}
           />
@@ -604,15 +604,14 @@ export default function Dashboard() {
               background: iranStatus === 'WAR'
                 ? 'rgba(239,68,68,0.1)'
                 : iranStatus === 'ESCALATING'
-                ? 'rgba(245,158,11,0.1)'
-                : 'rgba(34,197,94,0.1)',
-              border: `0.5px solid ${
-                iranStatus === 'WAR'
+                  ? 'rgba(245,158,11,0.1)'
+                  : 'rgba(34,197,94,0.1)',
+              border: `0.5px solid ${iranStatus === 'WAR'
                   ? 'rgba(239,68,68,0.3)'
                   : iranStatus === 'ESCALATING'
-                  ? 'rgba(245,158,11,0.3)'
-                  : 'rgba(34,197,94,0.3)'
-              }`,
+                    ? 'rgba(245,158,11,0.3)'
+                    : 'rgba(34,197,94,0.3)'
+                }`,
               color: iranStatus === 'WAR' ? '#ef4444' : iranStatus === 'ESCALATING' ? '#f59e0b' : '#22c55e',
             }}>{iranStatus ?? 'UNKNOWN'}</span>
           </div>
@@ -648,7 +647,7 @@ export default function Dashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 19V5M5 12l7-7 7 7" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 19V5M5 12l7-7 7 7" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <span style={{

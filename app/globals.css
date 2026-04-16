@@ -127,6 +127,22 @@ body::before {
   }
 }
 
+/* ── Read page — mobile layout ── */
+@media (max-width: 640px) {
+  .read-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .read-sidebar {
+    display: none !important;
+  }
+  .read-main {
+    padding: 16px !important;
+  }
+  .read-mobile-btn {
+    display: block !important;
+  }
+}
+
 /* ── Clerk login page overrides ── */
 
 /* Nuclear overflow fix — catches all Clerk classes including internal/generated ones */
