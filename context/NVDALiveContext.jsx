@@ -12,18 +12,21 @@ export function useNVDALive() {
   return useContext(NVDALiveContext)
 }
 
-const BACKOFF_MAX    = 30_000
-const STALE_TIMEOUT  = 30_000 // market hours only
+const BACKOFF_MAX           = 30_000
+const STALE_TIMEOUT         = 30_000 // market hours only
+const MAX_RECONNECT_ATTEMPTS = 5
 
 export function NVDALiveContextProvider({ children }) {
   const [livePrice,   setLivePrice]   = useState(null)
   const [wsConnected, setWsConnected] = useState(false)
   const [lastTick,    setLastTick]    = useState(null)
 
-  const wsRef          = useRef(null)
-  const backoffRef     = useRef(1000)
-  const reconnectTimer = useRef(null)
-  const staleTimer     = useRef(null)
+  const wsRef              = useRef(null)
+  const backoffRef         = useRef(1000)
+  const reconnectTimer     = useRef(null)
+  const staleTimer         = useRef(null)
+  const hasLoggedWsError   = useRef(false)
+  const reconnectAttempts  = useRef(0)
 
   // REST fallback — populate livePrice immediately on mount so components
   // never start with null. WebSocket ticks will override this once connected.
@@ -51,7 +54,8 @@ export function NVDALiveContextProvider({ children }) {
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'subscribe', symbol: 'NVDA' }))
       setWsConnected(true)
-      backoffRef.current = 1000 // reset on successful connection
+      backoffRef.current        = 1000 // reset on successful connection
+      reconnectAttempts.current = 0
     }
 
     ws.onmessage = (event) => {
@@ -73,16 +77,25 @@ export function NVDALiveContextProvider({ children }) {
     }
 
     ws.onerror = () => {
+      if (!hasLoggedWsError.current) {
+        console.warn('Finnhub WebSocket unavailable — using REST fallback for price data')
+        hasLoggedWsError.current = true
+      }
       setWsConnected(false)
     }
 
     ws.onclose = () => {
       setWsConnected(false)
-      // Reconnect with exponential backoff
-      reconnectTimer.current = setTimeout(() => {
-        backoffRef.current = Math.min(backoffRef.current * 2, BACKOFF_MAX)
-        connect()
-      }, backoffRef.current)
+      if (reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts.current++
+        // Reconnect with exponential backoff
+        reconnectTimer.current = setTimeout(() => {
+          backoffRef.current = Math.min(backoffRef.current * 2, BACKOFF_MAX)
+          connect()
+        }, backoffRef.current)
+      } else {
+        console.warn('Finnhub WebSocket max reconnect attempts reached — relying on REST fallback')
+      }
     }
   }
 
