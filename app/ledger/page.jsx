@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fmtEUR } from '@/lib/format'
 import { calculateEstimatedPnL } from '@/lib/calculations'
 import { useNVDALive } from '@/context/NVDALiveContext'
@@ -199,12 +199,12 @@ function Avatar({ name, size = 48 }) {
 }
 
 // ─── PodCard ─────────────────────────────────────────────────────────────────
-function PodCard({ member, rank, started, extraNet = 0 }) {
+function PodCard({ member, rank, started }) {
   const isFirst = rank === 1
   const avatarSize = isFirst ? 64 : 48
   const cardMinH = isFirst ? 230 : 185
   const delay = rank === 1 ? 200 : rank === 2 ? 400 : 600
-  const netVal = useCountUp(started ? ((member?.totalNetEur ?? 0) + extraNet) : 0, 1200, delay)
+  const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 1200, delay)
 
   const statFontSize = isFirst ? 18 : 13
 
@@ -351,12 +351,11 @@ function CatCard({ label, color, rawValue, formatValue, winner, runners, started
 }
 
 // ─── MemberRow ───────────────────────────────────────────────────────────────
-function MemberRow({ member, rank, isExpanded, onToggle, extraNet = 0 }) {
+function MemberRow({ member, rank, isExpanded, onToggle }) {
   const tradeListRef = useRef(null)
   const trades = member.allTrades ?? member.recentTrades ?? []
   const hasTrades = member.tradeCount > 0
   const isFirst = rank === 1
-  const displayNet = (member.totalNetEur ?? 0) + extraNet
 
   useEffect(() => {
     if (!isExpanded || !tradeListRef.current) return
@@ -438,9 +437,9 @@ function MemberRow({ member, rank, isExpanded, onToggle, extraNet = 0 }) {
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{
               fontFamily: 'Geist Mono, monospace', fontSize: 16, fontWeight: 500,
-              color: displayNet >= 0 ? '#16a34a' : '#dc2626',
+              color: member.totalNetEur >= 0 ? '#16a34a' : '#dc2626',
             }}>
-              {fmtEUR(displayNet)}
+              {fmtEUR(member.totalNetEur)}
             </div>
             {hasTrades && (
               <div style={{ fontFamily: 'Geist Mono, monospace', fontSize: 9, color: '#6b4a35', marginTop: 2 }}>
@@ -520,7 +519,6 @@ export default function LedgerPage() {
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(null)
   const [started, setStarted] = useState(false)
-  const [includeLedgerOpen, setIncludeLedgerOpen] = useState(false)
   const { livePrice } = useNVDALive()
 
   useEffect(() => {
@@ -583,15 +581,6 @@ export default function LedgerPage() {
   } : null
 
   const heroVal = useCountUp(started ? (fundStats?.totalNetEur ?? 0) : 0, 1800, 300)
-
-  const memberOpenEstimates = useMemo(() => {
-    if (!includeLedgerOpen || !livePrice || !data?.allOpenPositions) return {}
-    return data.allOpenPositions.reduce((acc, pos) => {
-      const est = calculateEstimatedPnL(pos, livePrice)
-      acc[pos.userId] = (acc[pos.userId] ?? 0) + est.estimatedNetEur
-      return acc
-    }, {})
-  }, [includeLedgerOpen, livePrice, data?.allOpenPositions])
 
   return (
     <div style={{
@@ -698,171 +687,10 @@ export default function LedgerPage() {
             {members.length > 0 && (
               <div className="fade-up" style={{ animationDelay: '80ms', marginBottom: 36 }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-                  <PodCard member={members[1] ?? null} rank={2} started={started} extraNet={memberOpenEstimates[members[1]?.userId] ?? 0} />
-                  <PodCard member={members[0] ?? null} rank={1} started={started} extraNet={memberOpenEstimates[members[0]?.userId] ?? 0} />
-                  <PodCard member={members[2] ?? null} rank={3} started={started} extraNet={memberOpenEstimates[members[2]?.userId] ?? 0} />
+                  <PodCard member={members[1] ?? null} rank={2} started={started} />
+                  <PodCard member={members[0] ?? null} rank={1} started={started} />
+                  <PodCard member={members[2] ?? null} rank={3} started={started} />
                 </div>
-              </div>
-            )}
-
-            {/* ── All open positions ────────────────────────────────── */}
-            {data?.allOpenPositions?.length > 0 && (
-              <div style={{
-                background: '#13131e',
-                border: '0.5px solid rgba(59,130,246,0.12)',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                marginBottom: '16px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59,130,246,0.05)',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '16px',
-                }}>
-                  <span style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: '9px',
-                    color: 'rgba(59,130,246,0.5)',
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                  }}>All Open Positions</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: '9px',
-                      color: 'rgba(255,255,255,0.25)',
-                      letterSpacing: '0.08em',
-                    }}>Include in leaderboard</span>
-                    <div
-                      onClick={() => setIncludeLedgerOpen(v => !v)}
-                      style={{
-                        width: '36px',
-                        height: '20px',
-                        borderRadius: '9999px',
-                        background: includeLedgerOpen
-                          ? 'rgba(59,130,246,0.4)'
-                          : 'rgba(255,255,255,0.08)',
-                        border: `0.5px solid ${includeLedgerOpen
-                          ? 'rgba(59,130,246,0.5)'
-                          : 'rgba(255,255,255,0.1)'}`,
-                        cursor: 'pointer',
-                        position: 'relative',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <div style={{
-                        position: 'absolute',
-                        top: '2px',
-                        left: includeLedgerOpen ? '18px' : '2px',
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: includeLedgerOpen
-                          ? '#3b82f6'
-                          : 'rgba(255,255,255,0.3)',
-                        transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-                      }} />
-                    </div>
-                  </div>
-                </div>
-
-                {data.allOpenPositions.map((pos, i) => {
-                  const estimated = livePrice
-                    ? calculateEstimatedPnL(pos, livePrice)
-                    : null
-                  return (
-                    <div key={pos.id ?? i} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px 0',
-                      borderBottom: i < data.allOpenPositions.length - 1
-                        ? '0.5px solid rgba(255,255,255,0.04)'
-                        : 'none',
-                      gap: '16px',
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          color: 'rgba(255,255,255,0.8)',
-                          marginBottom: '3px',
-                        }}>{pos.memberName}</div>
-                        <div style={{
-                          fontFamily: 'JetBrains Mono, monospace',
-                          fontSize: '10px',
-                          color: 'rgba(255,255,255,0.25)',
-                        }}>
-                          {pos.shares?.toLocaleString()} shares @ ${pos.entryPrice}
-                          {' · '}{pos.entryDate}
-                          {estimated ? ` · ${estimated.daysHeld}d held` : ''}
-                        </div>
-                      </div>
-                      {estimated && (
-                        <div style={{ display: 'flex', gap: '20px', textAlign: 'right' }}>
-                          <div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '9px',
-                              color: 'rgba(255,255,255,0.2)',
-                              letterSpacing: '0.1em',
-                              textTransform: 'uppercase',
-                              marginBottom: '2px',
-                            }}>Est. Gross</div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '13px',
-                              color: estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
-                            }}>
-                              {estimated.estimatedGross >= 0 ? '+' : ''}
-                              ${estimated.estimatedGross.toFixed(0)}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '9px',
-                              color: 'rgba(255,255,255,0.2)',
-                              letterSpacing: '0.1em',
-                              textTransform: 'uppercase',
-                              marginBottom: '2px',
-                            }}>Est. Net EUR</div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '13px',
-                              fontWeight: '500',
-                              color: estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
-                            }}>
-                              {estimated.estimatedNetEur >= 0 ? '+' : ''}
-                              €{estimated.estimatedNetEur.toFixed(0)}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '9px',
-                              color: 'rgba(255,255,255,0.2)',
-                              letterSpacing: '0.1em',
-                              textTransform: 'uppercase',
-                              marginBottom: '2px',
-                            }}>Running Cost</div>
-                            <div style={{
-                              fontFamily: 'JetBrains Mono, monospace',
-                              fontSize: '13px',
-                              color: '#ef4444',
-                            }}>
-                              -${estimated.totalCosts.toFixed(0)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
               </div>
             )}
 
@@ -942,7 +770,6 @@ export default function LedgerPage() {
                     rank={i + 1}
                     isExpanded={expanded === member.userId}
                     onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
-                    extraNet={memberOpenEstimates[member.userId] ?? 0}
                   />
                 ))}
               </div>
@@ -954,6 +781,155 @@ export default function LedgerPage() {
                 fontFamily: 'Geist, sans-serif', fontSize: 14, color: '#8a6a4a',
               }}>
                 No members yet.
+              </div>
+            )}
+
+            {/* ── All open positions ────────────────────────────────── */}
+            {data?.allOpenPositions?.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+                border: '0.5px solid rgba(255,255,255,0.08)',
+                borderRadius: '18px',
+                padding: '20px 24px',
+                marginTop: '24px',
+                boxShadow: `
+                  0 12px 40px rgba(0,0,0,0.5),
+                  0 4px 16px rgba(0,0,0,0.3),
+                  inset 0 1px 0 rgba(255,255,255,0.07)
+                `,
+              }}>
+                <span style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'rgba(59,130,246,0.5)',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  display: 'block',
+                  marginBottom: '16px',
+                }}>All Open Positions</span>
+
+                {data.allOpenPositions.map((pos, i) => {
+                  const estimated = livePrice
+                    ? calculateEstimatedPnL(pos, livePrice)
+                    : null
+                  return (
+                    <div
+                      key={pos.id ?? i}
+                      style={{
+                        padding: '12px 0',
+                        borderBottom: i < data.allOpenPositions.length - 1
+                          ? '0.5px solid rgba(255,255,255,0.04)'
+                          : 'none',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '16px',
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+                      onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: 'rgba(255,255,255,0.85)',
+                          }}>{pos.shares?.toLocaleString()} shares</span>
+                          <span style={{
+                            fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: '9px',
+                            padding: '2px 7px',
+                            borderRadius: '9999px',
+                            background: pos.type === 'SCALP' ? 'rgba(59,130,246,0.1)' : 'rgba(99,102,241,0.1)',
+                            border: `0.5px solid ${pos.type === 'SCALP' ? 'rgba(59,130,246,0.25)' : 'rgba(99,102,241,0.25)'}`,
+                            color: pos.type === 'SCALP' ? 'rgba(59,130,246,0.8)' : 'rgba(99,102,241,0.8)',
+                            letterSpacing: '0.06em',
+                          }}>{pos.type ?? 'CONVICTION'}</span>
+                        </div>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '11px',
+                          color: 'rgba(255,255,255,0.28)',
+                          letterSpacing: '0.02em',
+                        }}>
+                          ${pos.entryPrice} entry · {pos.entryDate} · {estimated?.daysHeld ?? 0}d held
+                        </div>
+                        {pos.memberName && (
+                          <div style={{
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '12px',
+                            color: 'rgba(255,255,255,0.45)',
+                            marginTop: '3px',
+                          }}>{pos.memberName}</div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', flexShrink: 0 }}>
+                        {estimated && (
+                          <>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '8px',
+                                color: 'rgba(255,255,255,0.2)',
+                                letterSpacing: '0.14em',
+                                textTransform: 'uppercase',
+                                marginBottom: '3px',
+                              }}>Est. Gross</div>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                color: estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
+                                letterSpacing: '-0.3px',
+                              }}>
+                                {estimated.estimatedGross >= 0 ? '+' : ''}${Math.round(estimated.estimatedGross).toLocaleString()}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '8px',
+                                color: 'rgba(255,255,255,0.2)',
+                                letterSpacing: '0.14em',
+                                textTransform: 'uppercase',
+                                marginBottom: '3px',
+                              }}>Est. Net</div>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                color: estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
+                                letterSpacing: '-0.3px',
+                              }}>
+                                {estimated.estimatedNetEur >= 0 ? '+' : ''}€{Math.round(estimated.estimatedNetEur).toLocaleString()}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '8px',
+                                color: 'rgba(255,255,255,0.2)',
+                                letterSpacing: '0.14em',
+                                textTransform: 'uppercase',
+                                marginBottom: '3px',
+                              }}>Running Cost</div>
+                              <div style={{
+                                fontFamily: 'JetBrains Mono, monospace',
+                                fontSize: '13px',
+                                color: 'rgba(239,68,68,0.7)',
+                                letterSpacing: '-0.3px',
+                              }}>
+                                -${Math.round(estimated.totalCosts).toLocaleString()}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </>

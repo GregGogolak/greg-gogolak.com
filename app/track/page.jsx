@@ -195,18 +195,22 @@ export default function TrackPage() {
       {/* Open positions section — shown above the closed trades table */}
       {openPositions.length > 0 && (
         <div style={{
-          background: '#13131e',
-          border: '0.5px solid rgba(59,130,246,0.15)',
+          background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+          border: '0.5px solid rgba(255,255,255,0.08)',
           borderRadius: '18px',
           padding: '20px 24px',
           marginBottom: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(59,130,246,0.06)',
+          boxShadow: `
+            0 12px 40px rgba(0,0,0,0.5),
+            0 4px 16px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.07)
+          `,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <span style={{
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '9px',
-              color: 'rgba(59,130,246,0.6)',
+              color: 'rgba(59,130,246,0.5)',
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
             }}>Open Positions</span>
@@ -214,32 +218,34 @@ export default function TrackPage() {
             {/* Include in totals toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '9px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
                 color: 'rgba(255,255,255,0.3)',
-                letterSpacing: '0.08em',
               }}>Include in totals</span>
               <div
                 onClick={() => setIncludeOpen(v => !v)}
                 style={{
-                  width: '36px', height: '20px',
+                  width: '36px',
+                  height: '20px',
                   borderRadius: '9999px',
-                  background: includeOpen ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)',
-                  border: `0.5px solid ${includeOpen ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  background: includeOpen ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.06)',
+                  border: `0.5px solid ${includeOpen ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
                   cursor: 'pointer',
                   position: 'relative',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+                  flexShrink: 0,
                 }}
               >
                 <div style={{
                   position: 'absolute',
-                  top: '2px',
-                  left: includeOpen ? '18px' : '2px',
-                  width: '14px', height: '14px',
+                  top: '3px',
+                  left: includeOpen ? '17px' : '3px',
+                  width: '14px',
+                  height: '14px',
                   borderRadius: '50%',
-                  background: includeOpen ? '#3b82f6' : 'rgba(255,255,255,0.3)',
-                  transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                  background: includeOpen ? '#3b82f6' : 'rgba(255,255,255,0.25)',
+                  transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+                  boxShadow: includeOpen ? '0 0 8px rgba(59,130,246,0.4)' : 'none',
                 }} />
               </div>
             </div>
@@ -247,57 +253,113 @@ export default function TrackPage() {
 
           {openEstimates.map((pos, i) => (
             <div key={pos.id}>
-              <div style={{
-                padding: '12px 0',
-                borderBottom: closingId === pos.id
-                  ? 'none'
-                  : i < openEstimates.length - 1
-                  ? '0.5px solid rgba(255,255,255,0.05)'
-                  : 'none',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '16px',
-              }}>
+              <div
+                style={{
+                  padding: '12px 0',
+                  borderBottom: closingId === pos.id
+                    ? 'none'
+                    : i < openEstimates.length - 1
+                    ? '0.5px solid rgba(255,255,255,0.04)'
+                    : 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '16px',
+                  transition: 'opacity 0.15s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+              >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                      {pos.shares.toLocaleString()} shares
-                    </span>
                     <span style={{
-                      fontFamily: 'JetBrains Mono', fontSize: '10px',
-                      padding: '1px 6px', borderRadius: '4px',
-                      background: 'rgba(59,130,246,0.1)',
-                      color: 'rgba(59,130,246,0.7)',
-                      border: '0.5px solid rgba(59,130,246,0.2)',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'rgba(255,255,255,0.85)',
+                    }}>{pos.shares.toLocaleString()} shares</span>
+                    <span style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '9px',
+                      padding: '2px 7px',
+                      borderRadius: '9999px',
+                      background: pos.type === 'SCALP' ? 'rgba(59,130,246,0.1)' : 'rgba(99,102,241,0.1)',
+                      border: `0.5px solid ${pos.type === 'SCALP' ? 'rgba(59,130,246,0.25)' : 'rgba(99,102,241,0.25)'}`,
+                      color: pos.type === 'SCALP' ? 'rgba(59,130,246,0.8)' : 'rgba(99,102,241,0.8)',
+                      letterSpacing: '0.06em',
                     }}>{pos.type ?? 'CONVICTION'}</span>
                   </div>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
-                    Entry ${pos.entryPrice} · {pos.entryDate} · {pos.estimated?.daysHeld ?? 0}d held
+                  <div style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '11px',
+                    color: 'rgba(255,255,255,0.28)',
+                    letterSpacing: '0.02em',
+                  }}>
+                    ${pos.entryPrice} entry · {pos.entryDate} · {pos.estimated?.daysHeld ?? 0}d held
                   </div>
                 </div>
-                {pos.estimated && (
-                  <div style={{ display: 'flex', gap: '20px', textAlign: 'right', flexShrink: 0 }}>
-                    <div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Gross</div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: pos.estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {pos.estimated.estimatedGross >= 0 ? '+' : ''}${pos.estimated.estimatedGross.toFixed(0)}
+                <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', flexShrink: 0 }}>
+                  {pos.estimated && (
+                    <>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '8px',
+                          color: 'rgba(255,255,255,0.2)',
+                          letterSpacing: '0.14em',
+                          textTransform: 'uppercase',
+                          marginBottom: '3px',
+                        }}>Est. Gross</div>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: pos.estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
+                          letterSpacing: '-0.3px',
+                        }}>
+                          {pos.estimated.estimatedGross >= 0 ? '+' : ''}${Math.round(pos.estimated.estimatedGross).toLocaleString()}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Est. Net</div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', fontWeight: '500', color: pos.estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {pos.estimated.estimatedNetEur >= 0 ? '+' : ''}€{pos.estimated.estimatedNetEur.toFixed(0)}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '8px',
+                          color: 'rgba(255,255,255,0.2)',
+                          letterSpacing: '0.14em',
+                          textTransform: 'uppercase',
+                          marginBottom: '3px',
+                        }}>Est. Net</div>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: pos.estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
+                          letterSpacing: '-0.3px',
+                        }}>
+                          {pos.estimated.estimatedNetEur >= 0 ? '+' : ''}€{Math.round(pos.estimated.estimatedNetEur).toLocaleString()}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>Running Cost</div>
-                      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: '#ef4444' }}>
-                        -${pos.estimated.totalCosts.toFixed(0)}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '8px',
+                          color: 'rgba(255,255,255,0.2)',
+                          letterSpacing: '0.14em',
+                          textTransform: 'uppercase',
+                          marginBottom: '3px',
+                        }}>Running Cost</div>
+                        <div style={{
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontSize: '13px',
+                          color: 'rgba(239,68,68,0.7)',
+                          letterSpacing: '-0.3px',
+                        }}>
+                          -${Math.round(pos.estimated.totalCosts).toLocaleString()}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setClosingId(pos.id)
@@ -305,25 +367,27 @@ export default function TrackPage() {
                     setExitDate(new Date().toISOString().split('T')[0])
                   }}
                   style={{
-                    background: 'rgba(239,68,68,0.08)',
-                    border: '0.5px solid rgba(239,68,68,0.2)',
+                    background: 'transparent',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
                     borderRadius: '9999px',
-                    padding: '4px 10px',
+                    padding: '5px 12px',
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: '9px',
-                    color: 'rgba(239,68,68,0.6)',
+                    color: 'rgba(255,255,255,0.3)',
                     cursor: 'pointer',
-                    letterSpacing: '0.08em',
+                    letterSpacing: '0.1em',
                     flexShrink: 0,
                     transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(239,68,68,0.15)'
-                    e.currentTarget.style.color = 'rgba(239,68,68,0.9)'
+                    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'
+                    e.currentTarget.style.color = 'rgba(239,68,68,0.7)'
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.06)'
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(239,68,68,0.08)'
-                    e.currentTarget.style.color = 'rgba(239,68,68,0.6)'
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.3)'
+                    e.currentTarget.style.background = 'transparent'
                   }}
                 >
                   CLOSE
@@ -331,12 +395,12 @@ export default function TrackPage() {
               </div>
               {closingId === pos.id && (
                 <div style={{
-                  background: '#0d0d18',
-                  border: '0.5px solid rgba(239,68,68,0.15)',
+                  background: 'rgba(0,0,0,0.2)',
+                  border: '0.5px solid rgba(255,255,255,0.06)',
                   borderRadius: '12px',
-                  padding: '14px 16px',
-                  marginTop: '4px',
-                  marginBottom: '8px',
+                  padding: '16px',
+                  marginTop: '8px',
+                  backdropFilter: 'blur(8px)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '10px',
@@ -444,8 +508,8 @@ export default function TrackPage() {
                         flex: 1,
                         padding: '8px',
                         borderRadius: '9999px',
-                        background: exitPrice && exitDate ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
-                        border: `0.5px solid ${exitPrice && exitDate ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                        background: exitPrice && exitDate ? 'rgba(34,197,94,0.1)' : 'transparent',
+                        border: `0.5px solid ${exitPrice && exitDate ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.06)'}`,
                         color: exitPrice && exitDate ? '#22c55e' : 'rgba(255,255,255,0.2)',
                         fontFamily: 'JetBrains Mono, monospace',
                         fontSize: '11px',
@@ -461,9 +525,9 @@ export default function TrackPage() {
                       style={{
                         padding: '8px 14px',
                         borderRadius: '9999px',
-                        background: 'none',
-                        border: '0.5px solid rgba(255,255,255,0.08)',
-                        color: 'rgba(255,255,255,0.3)',
+                        background: 'transparent',
+                        border: '0.5px solid rgba(255,255,255,0.07)',
+                        color: 'rgba(255,255,255,0.25)',
                         fontFamily: 'JetBrains Mono, monospace',
                         fontSize: '11px',
                         cursor: 'pointer',
