@@ -24,6 +24,17 @@ export default function TrackPage() {
   const [exitDate,      setExitDate]      = useState(new Date().toISOString().split('T')[0])
   const [closeLoading,  setCloseLoading]  = useState(false)
 
+  // Open position inline form
+  const [showAddPosition, setShowAddPosition] = useState(false)
+  const [newPosition,     setNewPosition]     = useState({ entryPrice: '', shares: '', entryDate: new Date().toISOString().split('T')[0] })
+  const [addingPosition,  setAddingPosition]  = useState(false)
+
+  // Payouts
+  const [payouts,          setPayouts]          = useState([])
+  const [newPayoutAmount,  setNewPayoutAmount]  = useState('')
+  const [newPayoutDate,    setNewPayoutDate]    = useState('')
+  const [addingPayout,     setAddingPayout]     = useState(false)
+
   const fetchTrades = useCallback(async () => {
     try {
       const res  = await fetch('/api/trades')
@@ -57,6 +68,10 @@ export default function TrackPage() {
       } catch {}
     }
     fetchPlatformFees()
+    fetch('/api/payouts')
+      .then(r => r.json())
+      .then(data => setPayouts(Array.isArray(data) ? data : []))
+      .catch(() => {})
   }, [fetchTrades, fetchPositions])
 
   function openAdd() {
@@ -104,6 +119,9 @@ export default function TrackPage() {
     const { adjustedNetEur } = recalculateNetWithSharedFees(trade, sharedFees)
     return sum + adjustedNetEur
   }, 0)
+
+  const totalPayouts = payouts.reduce((sum, p) => sum + (p.amount ?? 0), 0)
+  const remaining    = adjustedNetSum - totalPayouts
 
   // Compute estimated values for each open position
   const openEstimates = openPositions.map(p => ({
@@ -174,6 +192,24 @@ export default function TrackPage() {
           </button>
 
           <button
+            onClick={() => setShowAddPosition(v => !v)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '9999px',
+              background: showAddPosition ? 'rgba(34,197,94,0.12)' : 'transparent',
+              border: `0.5px solid ${showAddPosition ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              color: showAddPosition ? 'rgba(34,197,94,0.8)' : 'rgba(255,255,255,0.35)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {showAddPosition ? 'Cancel' : '+ Open Position'}
+          </button>
+
+          <button
             onClick={openAdd}
             style={{
               display: 'flex',
@@ -204,6 +240,165 @@ export default function TrackPage() {
           </button>
         </div>
       </div>
+
+      {/* Open position inline form */}
+      {showAddPosition && (
+        <div style={{
+          background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+          border: '0.5px solid rgba(34,197,94,0.15)',
+          borderRadius: '18px',
+          padding: '20px 24px',
+          marginBottom: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(34,197,94,0.06)',
+        }}>
+          <span style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '9px',
+            color: 'rgba(34,197,94,0.5)',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: '16px',
+          }}>New Open Position</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginBottom: '5px',
+              }}>Entry Price (USD)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={newPosition.entryPrice}
+                onChange={e => setNewPosition(p => ({ ...p, entryPrice: e.target.value }))}
+                placeholder="e.g. 185.00"
+                style={{
+                  width: '100%',
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '9px 12px',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginBottom: '5px',
+              }}>Shares</label>
+              <input
+                type="number"
+                step="1"
+                value={newPosition.shares}
+                onChange={e => setNewPosition(p => ({ ...p, shares: e.target.value }))}
+                placeholder="e.g. 1000"
+                style={{
+                  width: '100%',
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '9px 12px',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                marginBottom: '5px',
+              }}>Entry Date</label>
+              <input
+                type="date"
+                value={newPosition.entryDate}
+                onChange={e => setNewPosition(p => ({ ...p, entryDate: e.target.value }))}
+                style={{
+                  width: '100%',
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '0.5px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  padding: '9px 12px',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              if (!newPosition.entryPrice || !newPosition.shares) return
+              setAddingPosition(true)
+              try {
+                const res = await fetch('/api/positions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'add',
+                    payload: {
+                      entryPrice: parseFloat(newPosition.entryPrice),
+                      shares: parseInt(newPosition.shares),
+                      entryDate: newPosition.entryDate,
+                      type: 'SCALP',
+                    },
+                  }),
+                })
+                if (res.ok) {
+                  setShowAddPosition(false)
+                  setNewPosition({ entryPrice: '', shares: '', entryDate: new Date().toISOString().split('T')[0] })
+                  const posRes = await fetch('/api/positions')
+                  const posData = await posRes.json()
+                  setOpenPositions(Array.isArray(posData) ? posData : (posData?.positions ?? []))
+                }
+              } finally {
+                setAddingPosition(false)
+              }
+            }}
+            disabled={!newPosition.entryPrice || !newPosition.shares || addingPosition}
+            style={{
+              padding: '9px 20px',
+              borderRadius: '9999px',
+              background: newPosition.entryPrice && newPosition.shares ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
+              border: `0.5px solid ${newPosition.entryPrice && newPosition.shares ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              color: newPosition.entryPrice && newPosition.shares ? '#22c55e' : 'rgba(255,255,255,0.2)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              cursor: newPosition.entryPrice && newPosition.shares ? 'pointer' : 'not-allowed',
+              letterSpacing: '0.06em',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {addingPosition ? 'Adding...' : 'Add Position'}
+          </button>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={{ marginBottom: '28px' }}>
@@ -636,6 +831,272 @@ export default function TrackPage() {
         onClose={handleClose}
         onSaved={handleSaved}
       />
+
+      {/* PAYOUTS SECTION */}
+      <div style={{ marginTop: '24px' }}>
+        <div style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '9px',
+          color: 'rgba(255,255,255,0.25)',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          marginBottom: '12px',
+        }}>Payouts</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '12px', alignItems: 'start' }}>
+
+          {/* Left — payouts table */}
+          <div style={{
+            background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+            border: '0.5px solid rgba(255,255,255,0.07)',
+            borderRadius: '18px',
+            padding: '20px 24px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+          }}>
+            {/* Add payout form */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'rgba(255,255,255,0.25)',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  marginBottom: '5px',
+                }}>Amount (EUR) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={newPayoutAmount}
+                  onChange={e => setNewPayoutAmount(e.target.value)}
+                  placeholder="e.g. 500.00"
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: 'rgba(255,255,255,0.85)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'rgba(255,255,255,0.25)',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  marginBottom: '5px',
+                }}>Date (optional)</label>
+                <input
+                  type="date"
+                  value={newPayoutDate}
+                  onChange={e => setNewPayoutDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '0.5px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: newPayoutDate ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newPayoutAmount) return
+                  setAddingPayout(true)
+                  try {
+                    const res = await fetch('/api/payouts', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        amount: parseFloat(newPayoutAmount),
+                        date: newPayoutDate || null,
+                      }),
+                    })
+                    if (res.ok) {
+                      const payout = await res.json()
+                      setPayouts(p => [payout, ...p])
+                      setNewPayoutAmount('')
+                      setNewPayoutDate('')
+                    }
+                  } finally {
+                    setAddingPayout(false)
+                  }
+                }}
+                disabled={!newPayoutAmount || addingPayout}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '9999px',
+                  background: newPayoutAmount ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)',
+                  border: `0.5px solid ${newPayoutAmount ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                  color: newPayoutAmount ? 'rgba(59,130,246,0.9)' : 'rgba(255,255,255,0.2)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '11px',
+                  cursor: newPayoutAmount ? 'pointer' : 'not-allowed',
+                  letterSpacing: '0.06em',
+                  whiteSpace: 'nowrap',
+                  alignSelf: 'flex-end',
+                  marginBottom: '1px',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {addingPayout ? 'Adding...' : '+ Add'}
+              </button>
+            </div>
+
+            {/* Payouts list */}
+            {payouts.length === 0 ? (
+              <div style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.2)',
+                padding: '12px 0',
+                textAlign: 'center',
+              }}>No payouts recorded</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Date', 'Amount', ''].map(col => (
+                      <th key={col} style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '9px',
+                        color: 'rgba(255,255,255,0.25)',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        padding: '6px 10px',
+                        textAlign: col === 'Amount' ? 'right' : 'left',
+                        fontWeight: '400',
+                        borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+                      }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.map((payout) => (
+                    <tr key={payout.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{
+                        padding: '10px 10px',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '12px',
+                        color: payout.date ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                      }}>
+                        {payout.date ?? '—'}
+                      </td>
+                      <td style={{
+                        padding: '10px 10px',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        color: '#22c55e',
+                        textAlign: 'right',
+                      }}>
+                        €{payout.amount.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right' }}>
+                        <button
+                          onClick={async () => {
+                            await fetch('/api/payouts', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: payout.id }),
+                            })
+                            setPayouts(p => p.filter(x => x.id !== payout.id))
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'rgba(255,255,255,0.2)',
+                            fontSize: '14px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            transition: 'color 0.15s ease',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.color = 'rgba(239,68,68,0.7)'}
+                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Right — summary card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+            border: '0.5px solid rgba(255,255,255,0.07)',
+            borderRadius: '18px',
+            padding: '20px 24px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}>
+            <div>
+              <div style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.25)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                marginBottom: '6px',
+              }}>Total Payouts</div>
+              <div style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '28px',
+                fontWeight: '600',
+                color: '#22c55e',
+                letterSpacing: '-1px',
+              }}>€{totalPayouts.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            </div>
+
+            <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.06)' }}/>
+
+            <div>
+              <div style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.25)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                marginBottom: '6px',
+              }}>Remaining Balance</div>
+              <div style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '28px',
+                fontWeight: '600',
+                letterSpacing: '-1px',
+                color: remaining >= 0 ? '#f0f0f8' : '#ef4444',
+              }}>€{remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.2)',
+                letterSpacing: '0.06em',
+                marginTop: '4px',
+              }}>net profit minus payouts</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <style>{`
         @keyframes pulse {

@@ -1,6 +1,5 @@
 'use client'
 import React, { useState } from 'react'
-import StatusBadge from '@/components/UI/StatusBadge'
 import { fmtUSD, fmtEUR, pnlColor } from '@/lib/format'
 import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
 
@@ -139,7 +138,6 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
     let aVal, bVal
     switch (sortCol) {
       case 'buy_date':   aVal = a.buy_date;      bVal = b.buy_date;      break
-      case 'type':       aVal = a.type;           bVal = b.type;          break
       case 'shares':     aVal = a.shares;         bVal = b.shares;        break
       case 'buy_price':  aVal = a.buy_price;      bVal = b.buy_price;     break
       case 'sell_price': aVal = a.sell_price;     bVal = b.sell_price;    break
@@ -176,7 +174,6 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
           <tr>
             <SortableHeader col="buy_date"   label="Buy Date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="sell_date"  label="Sell Date"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-            <SortableHeader col="type"       label="Type"       sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="shares"     label="Shares"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="buy_price"  label="Buy Price"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="sell_price" label="Sell Price" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
@@ -236,11 +233,6 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                 }}>
                   {t.sell_date === t.buy_date ? 'same day' : t.sell_date}
                 </td>
-
-                {/* Type */}
-                <TD style={{ textAlign: 'left' }}>
-                  <StatusBadge status={t.type} />
-                </TD>
 
                 {/* Shares */}
                 <TD>{t.shares.toLocaleString()}</TD>
@@ -368,7 +360,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
 
               {confirmId === t.id && (
                 <DeleteConfirmRow
-                  colSpan={15}
+                  colSpan={14}
                   trade={t}
                   onConfirm={handleDelete}
                   onCancel={() => setConfirmId(null)}

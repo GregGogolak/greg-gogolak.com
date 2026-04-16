@@ -240,7 +240,7 @@ export default function CSVImport({ onImportComplete }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
               <tr>
-                {['Dates', 'Type', 'Shares', 'Buy', 'Sell', 'Gross P&L', 'Platform', 'Net EUR'].map(col => (
+                {['Dates', 'Shares', 'Buy', 'Sell', 'Gross P&L', 'Platform', 'Net EUR'].map(col => (
                   <th key={col} style={{
                     fontFamily: 'JetBrains Mono',
                     fontSize: '9px',
@@ -260,17 +260,6 @@ export default function CSVImport({ onImportComplete }) {
                 <tr key={i} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
                   <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
                     {t.buy_date}{t.buy_date !== t.sell_date ? ` → ${t.sell_date}` : ''}
-                  </td>
-                  <td style={{ padding: '8px 10px' }}>
-                    <span style={{
-                      fontFamily: 'JetBrains Mono',
-                      fontSize: '9px',
-                      padding: '2px 6px',
-                      borderRadius: '9999px',
-                      background: t.type === 'SCALP' ? 'rgba(59,130,246,0.1)' : 'rgba(99,102,241,0.1)',
-                      color:      t.type === 'SCALP' ? 'rgba(59,130,246,0.8)' : 'rgba(99,102,241,0.8)',
-                      border: `0.5px solid ${t.type === 'SCALP' ? 'rgba(59,130,246,0.25)' : 'rgba(99,102,241,0.25)'}`,
-                    }}>{t.type}</span>
                   </td>
                   <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
                     {t.shares.toLocaleString()}

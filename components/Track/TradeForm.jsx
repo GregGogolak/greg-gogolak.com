@@ -100,7 +100,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
       buy_price:  parseFloat(form.buy_price),
       sell_price: parseFloat(form.sell_price),
       shares:     parseFloat(form.shares),
-      type:       form.type,
+      type:       'SCALP',
     }
 
     try {
@@ -239,54 +239,19 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Shares + Type row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-            <div>
-              <label style={LABEL_STYLE}>Shares</label>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                placeholder="0"
-                value={form.shares}
-                onChange={e => handleChange('shares', e.target.value)}
-                required
-                style={FIELD_STYLE}
-              />
-            </div>
-            <div>
-              <label style={LABEL_STYLE}>Type</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {['SCALP', 'CONVICTION'].map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => handleChange('type', t)}
-                    style={{
-                      flex: 1,
-                      padding: '9px 6px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      border: form.type === t
-                        ? (t === 'SCALP' ? '1px solid rgba(251,191,36,0.4)' : '1px solid rgba(91,156,246,0.4)')
-                        : '1px solid rgba(255,255,255,0.08)',
-                      background: form.type === t
-                        ? (t === 'SCALP' ? 'rgba(251,191,36,0.12)' : 'rgba(91,156,246,0.12)')
-                        : 'rgba(255,255,255,0.04)',
-                      color: form.type === t
-                        ? (t === 'SCALP' ? '#fbbf24' : '#7aabf8')
-                        : '#4a5568',
-                    }}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Shares row */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={LABEL_STYLE}>Shares</label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              placeholder="0"
+              value={form.shares}
+              onChange={e => handleChange('shares', e.target.value)}
+              required
+              style={FIELD_STYLE}
+            />
           </div>
 
           {/* Live preview */}
