@@ -6,9 +6,12 @@ import { calculateEstimatedPnL } from '@/lib/calculations'
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 const MEMBER_COLORS = [
-  { stroke: 'rgba(59,130,246,0.95)', fill0: 'rgba(59,130,246,0.28)', fill1: 'rgba(59,130,246,0)', dot: 'rgba(59,130,246,1)', glow: 'rgba(59,130,246,0.5)' },
-  { stroke: 'rgba(34,197,94,0.8)', fill0: 'rgba(34,197,94,0.18)', fill1: 'rgba(34,197,94,0)', dot: 'rgba(34,197,94,0.9)', glow: 'rgba(34,197,94,0.4)' },
-  { stroke: 'rgba(245,158,11,0.8)', fill0: 'rgba(245,158,11,0.15)', fill1: 'rgba(245,158,11,0)', dot: 'rgba(245,158,11,0.9)', glow: 'rgba(245,158,11,0.4)' },
+  { stroke: 'rgba(59,130,246,0.95)',  fill0: 'rgba(59,130,246,0.28)',  fill1: 'rgba(59,130,246,0)',  dot: 'rgba(59,130,246,1)',   glow: 'rgba(59,130,246,0.5)'  },
+  { stroke: 'rgba(34,197,94,0.85)',   fill0: 'rgba(34,197,94,0.18)',   fill1: 'rgba(34,197,94,0)',   dot: 'rgba(34,197,94,0.9)',  glow: 'rgba(34,197,94,0.4)'  },
+  { stroke: 'rgba(245,158,11,0.85)',  fill0: 'rgba(245,158,11,0.15)',  fill1: 'rgba(245,158,11,0)',  dot: 'rgba(245,158,11,0.9)', glow: 'rgba(245,158,11,0.4)' },
+  { stroke: 'rgba(168,85,247,0.85)',  fill0: 'rgba(168,85,247,0.15)',  fill1: 'rgba(168,85,247,0)',  dot: 'rgba(168,85,247,0.9)', glow: 'rgba(168,85,247,0.4)' },
+  { stroke: 'rgba(236,72,153,0.85)',  fill0: 'rgba(236,72,153,0.15)',  fill1: 'rgba(236,72,153,0)',  dot: 'rgba(236,72,153,0.9)', glow: 'rgba(236,72,153,0.4)' },
+  { stroke: 'rgba(20,184,166,0.85)',  fill0: 'rgba(20,184,166,0.15)',  fill1: 'rgba(20,184,166,0)',  dot: 'rgba(20,184,166,0.9)', glow: 'rgba(20,184,166,0.4)' },
 ]
 const fmtEuro = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -487,7 +490,14 @@ const EquityCurveSection = ({ members }) => {
         <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(90deg, rgba(255,255,255,0.07), transparent)' }} />
         <div style={{ display: 'flex', gap: '14px' }}>
           {(members ?? []).map((m, i) => {
-            const cols = ['rgba(59,130,246,0.9)', 'rgba(34,197,94,0.8)', 'rgba(245,158,11,0.8)']
+            const cols = [
+              'rgba(59,130,246,0.9)',
+              'rgba(34,197,94,0.85)',
+              'rgba(245,158,11,0.85)',
+              'rgba(168,85,247,0.85)',
+              'rgba(236,72,153,0.85)',
+              'rgba(20,184,166,0.85)',
+            ]
             return (
               <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(255,255,255,0.35)' }}>
                 <div style={{ width: '16px', height: '2px', borderRadius: '1px', background: cols[i] ?? cols[0], boxShadow: `0 0 4px ${cols[i] ?? cols[0]}` }} />
