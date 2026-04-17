@@ -1,521 +1,1031 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { fmtEUR } from '@/lib/format'
-import { calculateEstimatedPnL } from '@/lib/calculations'
+import { useEffect, useRef, useState } from 'react'
 import { useNVDALive } from '@/context/NVDALiveContext'
+import { calculateEstimatedPnL } from '@/lib/calculations'
 
-// ─── easeOutExpo ─────────────────────────────────────────────────────────────
-function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t) }
+// ─── Shared constants ─────────────────────────────────────────────────────────
+const MEMBER_COLORS = [
+  { stroke: 'rgba(59,130,246,0.95)', fill0: 'rgba(59,130,246,0.28)', fill1: 'rgba(59,130,246,0)', dot: 'rgba(59,130,246,1)', glow: 'rgba(59,130,246,0.5)' },
+  { stroke: 'rgba(34,197,94,0.8)', fill0: 'rgba(34,197,94,0.18)', fill1: 'rgba(34,197,94,0)', dot: 'rgba(34,197,94,0.9)', glow: 'rgba(34,197,94,0.4)' },
+  { stroke: 'rgba(245,158,11,0.8)', fill0: 'rgba(245,158,11,0.15)', fill1: 'rgba(245,158,11,0)', dot: 'rgba(245,158,11,0.9)', glow: 'rgba(245,158,11,0.4)' },
+]
 
-// ─── useCountUp ──────────────────────────────────────────────────────────────
-function useCountUp(target, duration = 800, delay = 0) {
-  const [val, setVal] = useState(0)
+// ─── ScanLine ─────────────────────────────────────────────────────────────────
+const ScanLine = () => (
+  <div style={{
+    position: 'fixed',
+    top: 0, left: 0,
+    width: '100%',
+    height: '2px',
+    background: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.06), transparent)',
+    animation: 'scanLine 10s linear infinite',
+    pointerEvents: 'none',
+    zIndex: 999,
+  }} />
+)
+
+// ─── ConstellationBg ─────────────────────────────────────────────────────────
+const ConstellationBg = () => {
+  const canvasRef = useRef(null)
   useEffect(() => {
-    if (!target) { setVal(0); return }
-    const timeout = setTimeout(() => {
-      const start = performance.now()
-      const tick = (now) => {
-        const p = Math.min((now - start) / duration, 1)
-        setVal(target * easeOutExpo(p))
-        if (p < 1) requestAnimationFrame(tick)
-        else setVal(target)
-      }
-      requestAnimationFrame(tick)
-    }, delay)
-    return () => clearTimeout(timeout)
-  }, [target])
-  return val
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    const nodes = Array.from({ length: 55 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: Math.random() * 1.2 + 0.4,
+    }))
+    let id
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      nodes.forEach(n => {
+        n.x += n.vx; n.y += n.vy
+        if (n.x < 0 || n.x > canvas.width) n.vx *= -1
+        if (n.y < 0 || n.y > canvas.height) n.vy *= -1
+      })
+      nodes.forEach((a, i) => {
+        nodes.slice(i + 1).forEach(b => {
+          const d = Math.hypot(a.x - b.x, a.y - b.y)
+          if (d < 110) {
+            ctx.beginPath()
+            ctx.moveTo(a.x, a.y)
+            ctx.lineTo(b.x, b.y)
+            ctx.strokeStyle = `rgba(59,130,246,${0.06 * (1 - d / 110)})`
+            ctx.lineWidth = 0.5
+            ctx.stroke()
+          }
+        })
+      })
+      nodes.forEach(n => {
+        ctx.beginPath()
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(59,130,246,0.2)'
+        ctx.fill()
+      })
+      id = requestAnimationFrame(draw)
+    }
+    draw()
+    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', resize) }
+  }, [])
+  return (
+    <canvas ref={canvasRef} style={{
+      position: 'fixed', top: 0, left: 0,
+      width: '100%', height: '100%',
+      pointerEvents: 'none', zIndex: 0, opacity: 0.5,
+    }} />
+  )
 }
 
-// ─── Initials helper ─────────────────────────────────────────────────────────
-function getInitials(name) {
-  const parts = (name || '').trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return (name || '?').slice(0, 2).toUpperCase()
-}
+// ─── HeroSection ─────────────────────────────────────────────────────────────
+const HeroSection = ({ data }) => {
+  const [displayVal, setDisplayVal] = useState(0)
+  const fundTotal = data?.fundStats?.totalNetEur ?? 0
 
-function fmtSigned(v) {
-  const abs = Math.abs(v)
-  const s = abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return (v < 0 ? '-€' : '+€') + s
-}
+  useEffect(() => {
+    if (!fundTotal) return
+    const duration = 900
+    const start = performance.now()
+    const easeOutExpo = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
+    const frame = (now) => {
+      const p = Math.min((now - start) / duration, 1)
+      setDisplayVal(Math.round(easeOutExpo(p) * fundTotal))
+      if (p < 1) requestAnimationFrame(frame)
+    }
+    requestAnimationFrame(frame)
+  }, [fundTotal])
 
-// ─── Global CSS ──────────────────────────────────────────────────────────────
-const STYLES = `
-*, *::before, *::after { box-sizing: border-box; }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes dotPulse {
-  0%, 100% { opacity: 0.2; transform: scale(0.85); }
-  50%       { opacity: 0.9; transform: scale(1.15); }
-}
-
-.pod-card-tilt {
-  position: relative;
-  overflow: hidden;
-  will-change: transform;
-}
-
-.cat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-@media (max-width: 640px) {
-  .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-.cat-card {
-  background: #13131e;
-  border: 0.5px solid rgba(255,255,255,0.06);
-  border-radius: 14px;
-  padding: 20px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
-  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.cat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: var(--cat-accent, rgba(255,255,255,0.1));
-  opacity: 0.15;
-}
-.cat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.member-card {
-  background: #13131e;
-  border: 0.5px solid rgba(255,255,255,0.06);
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-  transition: border-color 0.2s cubic-bezier(0.16,1,0.3,1);
-}
-.member-card.no-trades { cursor: default; }
-.member-card.rank-1 {
-  border-left: 2px solid rgba(59,130,246,0.3);
-  background: linear-gradient(135deg, #141422 0%, #111120 100%);
-}
-.member-card.is-open {
-  border-radius: 14px 14px 0 0;
-  border-bottom-color: transparent;
-  margin-bottom: 0;
-}
-
-.trade-panel {
-  background: #0d0d18;
-  border: 0.5px solid rgba(255,255,255,0.05);
-  border-top: none;
-  border-radius: 0 0 14px 14px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-
-.fade-up {
-  opacity: 0;
-  animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) forwards;
-}
-`
-
-// ─── Avatar ──────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 48, highlight = false }) {
-  const inits = getInitials(name || '')
   return (
     <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: 'rgba(59,130,246,0.12)',
-      border: '0.5px solid rgba(59,130,246,0.25)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'Inter, sans-serif',
-      fontSize: Math.round(size * 0.34),
-      fontWeight: '500',
-      color: 'rgba(255,255,255,0.8)',
-      boxShadow: highlight
-        ? '0 4px 20px rgba(0,0,0,0.5), 0 0 0 2px rgba(59,130,246,0.2), 0 0 16px rgba(59,130,246,0.15)'
-        : '0 4px 16px rgba(0,0,0,0.4), 0 0 0 2px rgba(59,130,246,0.1)',
-      flexShrink: 0,
-      userSelect: 'none',
+      position: 'relative',
+      padding: '36px 28px 0',
+      zIndex: 2,
+      animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both',
     }}>
-      {inits}
-    </div>
-  )
-}
+      {/* Perspective grid behind hero */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden',
+        backgroundImage: `linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px)`,
+        backgroundSize: '44px 44px',
+        maskImage: 'radial-gradient(ellipse at 50% 60%, black 20%, transparent 75%)',
+      }} />
 
-// ─── PodCard ─────────────────────────────────────────────────────────────────
-function PodCard({ member, rank, started }) {
-  const isFirst = rank === 1
-  const avatarSize = isFirst ? 64 : 48
-  const cardMinH = isFirst ? 230 : 185
-  const delay = rank === 1 ? 200 : rank === 2 ? 400 : 600
-  const netVal = useCountUp(started ? (member?.totalNetEur ?? 0) : 0, 800, delay)
+      {/* Blue radial bloom */}
+      <div style={{
+        position: 'absolute', top: '-60px', left: '50%',
+        transform: 'translateX(-50%)',
+        width: '600px', height: '300px',
+        background: 'radial-gradient(ellipse, rgba(59,130,246,0.07) 0%, transparent 70%)',
+        filter: 'blur(30px)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
 
-  const statFontSize = isFirst ? 18 : 13
-
-  const cardBg = rank === 1
-    ? 'linear-gradient(145deg, #1e1e2e 0%, #16162a 50%, #1a1a2e 100%)'
-    : rank === 2
-    ? 'linear-gradient(145deg, #191927 0%, #141420 100%)'
-    : 'linear-gradient(145deg, #161622 0%, #111119 100%)'
-
-  const cardBorder = rank === 1
-    ? '0.5px solid rgba(255,255,255,0.12)'
-    : rank === 2
-    ? '0.5px solid rgba(255,255,255,0.07)'
-    : '0.5px solid rgba(255,255,255,0.05)'
-
-  const cardShadow = rank === 1
-    ? '0 -8px 40px rgba(59,130,246,0.12), 0 0 0 0.5px rgba(59,130,246,0.15), 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 40px rgba(59,130,246,0.04)'
-    : rank === 2
-    ? '0 16px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)'
-    : '0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
-
-  const ghostColor = rank === 1
-    ? 'rgba(59,130,246,0.08)'
-    : rank === 2
-    ? 'rgba(255,255,255,0.04)'
-    : 'rgba(255,255,255,0.03)'
-
-  return (
-    <div style={{ flex: isFirst ? '1.4' : '1', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
-      {/* Avatar floating above */}
-      <div style={{ marginBottom: -4, position: 'relative', zIndex: 10 }}>
-        {member
-          ? <Avatar name={member.name} size={avatarSize} highlight={isFirst} />
-          : <div style={{
-              width: avatarSize, height: avatarSize, borderRadius: '50%',
-              background: 'rgba(59,130,246,0.05)',
-              border: '0.5px dashed rgba(59,130,246,0.15)',
-            }} />
-        }
-      </div>
-
-      {/* Card + Platform */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
-        {/* Pod card */}
-        <div
-          className="pod-card-tilt"
-          style={{
-            width: '100%', minHeight: cardMinH,
-            padding: 'clamp(12px,2.5vw,28px) clamp(10px,2vw,24px)',
-            borderRadius: '20px 20px 0 0',
-            position: 'relative', zIndex: 1,
-            background: cardBg,
-            border: cardBorder,
-            boxShadow: cardShadow,
-          }}
-        >
-          {/* Ghost watermark */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+      }}>
+        {/* Left — fund total */}
+        <div>
           <div style={{
-            position: 'absolute',
-            bottom: -20, right: 8,
-            fontSize: 120, fontWeight: '600',
-            color: ghostColor,
-            lineHeight: 1,
-            pointerEvents: 'none', userSelect: 'none',
-            fontFamily: 'Inter, sans-serif',
-            letterSpacing: '-8px',
-            zIndex: 0,
-          }}>{rank}</div>
-
-          <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-            {member ? (
-              <>
-                <div style={{
-                  fontFamily: 'Inter, sans-serif', fontSize: 16, fontWeight: 600,
-                  color: 'rgba(255,255,255,0.92)', marginBottom: 3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {member.name}
-                </div>
-                <div style={{
-                  fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 400,
-                  color: 'rgba(255,255,255,0.35)', marginBottom: 16, textTransform: 'capitalize',
-                }}>
-                  {member.role || 'Trader'}
-                </div>
-
-                {/* Stats row */}
-                <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, lineHeight: 1.2, letterSpacing: '-0.5px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>{netVal < 0 ? '-€' : '+€'}</span>
-                      <span style={{ color: netVal >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {Math.abs(netVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>P&L</div>
-                  </div>
-                  <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', margin: '0 6px' }} />
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: 'rgba(255,255,255,0.7)', lineHeight: 1.2 }}>
-                      {member.winRate != null ? `${member.winRate}%` : '—'}
-                    </div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>WIN</div>
-                  </div>
-                  <div style={{ width: 1, background: 'rgba(255,255,255,0.06)', margin: '0 6px' }} />
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: statFontSize, fontWeight: 500, color: 'rgba(255,255,255,0.7)', lineHeight: 1.2 }}>
-                      {member.tradeCount}
-                    </div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: '0.04em' }}>TRADES</div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px' }}>
-                <div style={{
-                  width: '40px', height: '40px', borderRadius: '50%',
-                  border: '0.5px dashed rgba(255,255,255,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.1)' }}>{rank}</span>
-                </div>
-                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: 'rgba(255,255,255,0.15)' }}>Waiting for member</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Platform base */}
-        <div style={{
-          width: '100%',
-          height: rank === 1 ? '44px' : '30px',
-          marginTop: '-4px',
-          borderRadius: '0 0 14px 14px',
-          background: 'linear-gradient(180deg, #0f0f1a 0%, #0a0a12 100%)',
-          border: '0.5px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          position: 'relative',
-          zIndex: 0,
-          flexShrink: 0,
-        }} />
-      </div>
-    </div>
-  )
-}
-
-// ─── CatCard ─────────────────────────────────────────────────────────────────
-function CatCard({ label, color, rawValue, formatValue, winner, runners, started, delay = 0 }) {
-  const counted = useCountUp(started ? (rawValue ?? 0) : 0, 1000, 400 + delay)
-  return (
-    <div className="cat-card" style={{ '--cat-accent': color }}>
-      <div style={{
-        fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fontWeight: 400,
-        color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em',
-        textTransform: 'uppercase', marginBottom: 10,
-      }}>
-        {label}
-      </div>
-      <div style={{
-        fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500,
-        color, lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
-      }}>
-        {formatValue(counted)}
-      </div>
-      <div style={{
-        fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 300,
-        color: 'rgba(255,255,255,0.5)', marginBottom: runners.length > 0 ? 10 : 0,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
-        {winner}
-      </div>
-      {runners.length > 0 && (
-        <>
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {runners.slice(0, 3).map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{
-                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)',
-                  fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
-                  padding: '1px 6px', borderRadius: '9999px', flexShrink: 0,
-                }}>
-                  {i + 2}
-                </span>
-                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {r.name}
-                </span>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
-                  {r.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── MemberRow ───────────────────────────────────────────────────────────────
-function MemberRow({ member, rank, isExpanded, onToggle }) {
-  const tradeListRef = useRef(null)
-  const trades = member.allTrades ?? member.recentTrades ?? []
-  const hasTrades = member.tradeCount > 0
-  const isFirst = rank === 1
-
-  useEffect(() => {
-    if (!isExpanded || !tradeListRef.current) return
-    const rows = tradeListRef.current.querySelectorAll('.trade-row')
-    const timers = []
-    rows.forEach((el, i) => {
-      el.style.opacity = '0'
-      el.style.transform = 'translateX(-8px)'
-      const t = setTimeout(() => {
-        el.style.transition = 'opacity 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1)'
-        el.style.opacity = '1'
-        el.style.transform = 'translateX(0)'
-      }, i * 50)
-      timers.push(t)
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [isExpanded])
-
-  return (
-    <div>
-      <div
-        className={['member-card', isFirst ? 'rank-1' : '', isExpanded ? 'is-open' : '', !hasTrades ? 'no-trades' : ''].filter(Boolean).join(' ')}
-        onClick={hasTrades ? onToggle : undefined}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Rank */}
-          <div style={{
-            fontFamily: 'JetBrains Mono, monospace', fontSize: 18, fontWeight: 600,
-            color: 'rgba(255,255,255,0.2)',
-            width: 32, flexShrink: 0, textAlign: 'right',
+            display: 'flex', alignItems: 'center', gap: '7px',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '9px', color: 'rgba(59,130,246,0.55)',
+            letterSpacing: '0.28em', textTransform: 'uppercase',
+            marginBottom: '8px',
           }}>
-            {rank}
-          </div>
-
-          {/* Avatar */}
-          <Avatar name={member.name} size={40} />
-
-          {/* Info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <span style={{
-                fontFamily: 'Inter, sans-serif', fontSize: 14, fontWeight: 500,
-                color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {member.name}
-              </span>
-              {isFirst && (
-                <span style={{
-                  background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)',
-                  borderRadius: '9999px', padding: '2px 8px',
-                  fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
-                  color: '#22c55e', letterSpacing: '0.1em', flexShrink: 0,
-                }}>
-                  WINNING
-                </span>
-              )}
-              {!isFirst && member.winStreak >= 2 && (
-                <span style={{
-                  background: 'rgba(34,197,94,0.05)', border: '0.5px solid rgba(34,197,94,0.12)',
-                  borderRadius: '9999px', padding: '2px 6px',
-                  fontFamily: 'JetBrains Mono, monospace', fontSize: 9,
-                  color: 'rgba(34,197,94,0.5)', letterSpacing: '0.06em', flexShrink: 0,
-                }}>
-                  {member.winStreak}W
-                </span>
-              )}
-            </div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
-              {member.tradeCount} trades
-              {member.winRate != null ? ` · ${member.winRate}%` : ''}
-              {' · '}
-              <span style={{ color: member.thisMonthNet >= 0 ? 'rgba(34,197,94,0.65)' : 'rgba(239,68,68,0.65)' }}>
-                {member.thisMonthNet >= 0 ? '+' : ''}{fmtEUR(member.thisMonthNet)} mo
-              </span>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <div style={{
-              fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 500,
-              color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444',
+              width: '5px', height: '5px', borderRadius: '50%',
+              background: 'rgba(59,130,246,0.7)',
+              boxShadow: '0 0 6px rgba(59,130,246,0.8)',
+              animation: 'dotPulseLedger 2s ease-in-out infinite',
+            }} />
+            Fund Performance · Live
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+            <span style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '24px', fontWeight: '300',
+              color: 'rgba(255,255,255,0.18)',
+              marginTop: '10px',
+            }}>€</span>
+            <span style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '72px', fontWeight: '800',
+              color: '#ffffff',
+              letterSpacing: '-4px', lineHeight: '1',
+              animation: 'numberFlicker 9s ease-in-out infinite',
             }}>
-              {fmtEUR(member.totalNetEur)}
-            </div>
-            {hasTrades && (
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)', marginTop: 2 }}>
-                {isExpanded ? '▲' : '▼'}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Trade history panel */}
-      {hasTrades && (
-        <div
-          className="trade-panel"
-          ref={tradeListRef}
-          style={{
-            maxHeight: isExpanded ? `${trades.length * 40 + 72}px` : '0',
-            transition: 'max-height 0.5s cubic-bezier(0.16,1,0.3,1)',
-          }}
-        >
-          {/* Column headers */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '80px 56px 48px 62px 62px 1fr',
-            gap: 4, padding: '7px 16px',
-            fontFamily: 'JetBrains Mono, monospace', fontSize: 8,
-            color: 'rgba(255,255,255,0.2)', letterSpacing: '0.08em', textTransform: 'uppercase',
-            borderBottom: '0.5px solid rgba(255,255,255,0.03)',
-          }}>
-            <span>Date</span><span>Type</span><span>Shrs</span>
-            <span>Entry</span><span>Exit</span><span>Net EUR</span>
+              {displayVal.toLocaleString()}
+            </span>
           </div>
 
-          {/* Trade rows */}
-          {trades.map((t, i) => (
-            <div
-              key={i}
-              className="trade-row"
-              style={{
-                display: 'grid', gridTemplateColumns: '80px 56px 48px 62px 62px 1fr',
-                gap: 4, padding: '9px 16px',
-                borderBottom: '0.5px solid rgba(255,255,255,0.03)',
-                borderLeft: `2px solid ${t.net_eur >= 0 ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`,
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
-              }}
-            >
-              <span style={{ color: 'rgba(255,255,255,0.3)' }}>{t.sell_date}</span>
-              <span style={{ color: 'rgba(59,130,246,0.6)' }}>{t.type}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)' }}>{t.shares}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)' }}>${t.buy_price}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)' }}>${t.sell_price}</span>
-              <span style={{ color: t.net_eur >= 0 ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
-                {fmtEUR(t.net_eur)}
-              </span>
-            </div>
-          ))}
-
-          {/* Footer */}
           <div style={{
-            display: 'flex', justifyContent: 'space-between', padding: '8px 16px',
-            fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)',
+            display: 'flex', gap: '12px', marginTop: '10px',
+            alignItems: 'center', flexWrap: 'wrap',
           }}>
-            <span>{member.tradeCount} trades · {member.winRate ?? '—'}% win</span>
-            <span style={{ color: member.totalNetEur >= 0 ? '#22c55e' : '#ef4444' }}>
-              {fmtEUR(member.totalNetEur)}
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px', color: 'rgba(255,255,255,0.22)',
+            }}>
+              {data?.fundStats?.totalTrades ?? 0} trades · {data?.fundStats?.winRate ?? 0}% win rate
+            </span>
+            <span style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '10px', color: '#22c55e',
+              background: 'rgba(34,197,94,0.08)',
+              border: '0.5px solid rgba(34,197,94,0.2)',
+              padding: '2px 9px', borderRadius: '9999px',
+            }}>
+              {data?.fundStats?.totalOpenPositions ?? 0} open positions
             </span>
           </div>
         </div>
-      )}
+
+        {/* Right — mini stat cluster */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'flex-end', gap: '10px',
+          animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '9px', color: 'rgba(255,255,255,0.3)',
+            letterSpacing: '0.1em',
+            background: 'rgba(255,255,255,0.03)',
+            border: '0.5px solid rgba(255,255,255,0.07)',
+            padding: '5px 12px', borderRadius: '9999px',
+          }}>
+            <div style={{
+              width: '5px', height: '5px', borderRadius: '50%',
+              background: '#22c55e',
+              boxShadow: '0 0 6px rgba(34,197,94,0.8)',
+              animation: 'dotPulseLedger 1.5s ease-in-out infinite',
+            }} />
+            Markets Open · NYSE
+          </div>
+
+          {/* Connected stat pills */}
+          <div style={{ display: 'flex', gap: '1px' }}>
+            {[
+              { val: data?.members?.length ?? 0, label: 'Members' },
+              { val: data?.fundStats?.totalTrades ?? 0, label: 'Trades' },
+              { val: `${data?.fundStats?.winRate ?? 0}%`, label: 'Win Rate' },
+            ].map((s, i) => (
+              <div key={i} style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '0.5px solid rgba(255,255,255,0.07)',
+                padding: '9px 16px', textAlign: 'center',
+                borderRadius: i === 0 ? '10px 0 0 10px' : i === 2 ? '0 10px 10px 0' : '0',
+              }}>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '16px', fontWeight: '600',
+                  color: 'rgba(255,255,255,0.7)',
+                }}>{s.val}</div>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '7px', color: 'rgba(255,255,255,0.2)',
+                  letterSpacing: '0.14em', textTransform: 'uppercase',
+                  marginTop: '2px',
+                }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── EquityCurveSection ───────────────────────────────────────────────────────
+const EquityCurveSection = ({ members }) => {
+  const canvasRef = useRef(null)
+  const animRef = useRef(null)
+
+  useEffect(() => {
+    if (!members || !canvasRef.current) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    const DPR = window.devicePixelRatio || 1
+
+    const resize = () => {
+      const w = canvas.parentElement.clientWidth
+      canvas.width = w * DPR
+      canvas.height = 280 * DPR
+      canvas.style.width = w + 'px'
+      canvas.style.height = '280px'
+      ctx.scale(DPR, DPR)
+    }
+    resize()
+
+    // Build unified timeline across all members
+    const allDates = new Set()
+    members.forEach(m => (m.equityCurve ?? []).forEach(p => allDates.add(p.date)))
+    const sortedDates = Array.from(allDates).sort()
+    if (sortedDates.length < 2) return
+
+    // For each member interpolate values across all dates
+    const memberSeries = members.map(m => {
+      const curve = m.equityCurve ?? []
+      const dateMap = {}
+      curve.forEach(p => { dateMap[p.date] = p.value })
+      let lastVal = 0
+      return sortedDates.map(d => {
+        if (dateMap[d] !== undefined) lastVal = dateMap[d]
+        return lastVal
+      })
+    })
+
+    const allValues = memberSeries.flat()
+    const maxVal = Math.max(...allValues, 1) * 1.1
+    const easeOutExpo = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
+
+    const W = canvas.width / DPR
+    const H = canvas.height / DPR
+    const PAD_LEFT = 48, PAD_RIGHT = 16, PAD_TOP = 16, PAD_BOTTOM = 28
+
+    const xScale = (i) => PAD_LEFT + (i / (sortedDates.length - 1)) * (W - PAD_LEFT - PAD_RIGHT)
+    const yScale = (v) => H - PAD_BOTTOM - ((v / maxVal) * (H - PAD_TOP - PAD_BOTTOM))
+
+    let startTime = null
+
+    const draw = (ts) => {
+      if (!startTime) startTime = ts
+      const prog = Math.min(easeOutExpo((ts - startTime) / 2600), 1)
+
+      ctx.clearRect(0, 0, W, H)
+
+      // Horizontal grid lines
+      for (let i = 1; i <= 4; i++) {
+        const v = maxVal * i / 5
+        const y = yScale(v)
+        ctx.beginPath()
+        ctx.moveTo(PAD_LEFT, y); ctx.lineTo(W - PAD_RIGHT, y)
+        ctx.strokeStyle = 'rgba(255,255,255,0.035)'
+        ctx.lineWidth = 0.5
+        ctx.setLineDash([3, 10]); ctx.stroke(); ctx.setLineDash([])
+        ctx.fillStyle = 'rgba(255,255,255,0.1)'
+        ctx.font = '9px Courier New'
+        ctx.textAlign = 'right'
+        ctx.fillText('€' + Math.round(v / 1000) + 'k', PAD_LEFT - 4, y + 3)
+      }
+
+      // Zero line
+      ctx.beginPath()
+      ctx.moveTo(PAD_LEFT, yScale(0)); ctx.lineTo(W - PAD_RIGHT, yScale(0))
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+      ctx.lineWidth = 0.5; ctx.stroke()
+
+      // Date labels
+      const labelCount = Math.min(4, sortedDates.length)
+      for (let i = 0; i < labelCount; i++) {
+        const idx = Math.floor(i * (sortedDates.length - 1) / (labelCount - 1))
+        const x = xScale(idx)
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'
+        ctx.font = '9px Courier New'
+        ctx.textAlign = 'center'
+        ctx.fillText(sortedDates[idx]?.slice(0, 7) ?? '', x, H - 6)
+      }
+
+      const n = Math.max(2, Math.floor(sortedDates.length * prog))
+
+      // Draw members back to front
+      ;[...memberSeries].reverse().forEach((series, ri) => {
+        const ci = memberSeries.length - 1 - ri
+        const col = MEMBER_COLORS[ci] ?? MEMBER_COLORS[0]
+        const slice = series.slice(0, n)
+        if (slice.length < 2) return
+
+        const pts = slice.map((v, i) => ({ x: xScale(i), y: yScale(v) }))
+
+        // Filled area
+        const grad = ctx.createLinearGradient(0, PAD_TOP, 0, H - PAD_BOTTOM)
+        grad.addColorStop(0, col.fill0)
+        grad.addColorStop(1, col.fill1)
+        ctx.beginPath()
+        ctx.moveTo(pts[0].x, pts[0].y)
+        for (let i = 1; i < pts.length - 1; i++) {
+          const mx = (pts[i].x + pts[i + 1].x) / 2
+          const my = (pts[i].y + pts[i + 1].y) / 2
+          ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my)
+        }
+        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y)
+        ctx.lineTo(pts[pts.length - 1].x, yScale(0))
+        ctx.lineTo(pts[0].x, yScale(0))
+        ctx.closePath()
+        ctx.fillStyle = grad; ctx.fill()
+
+        // Stroke line
+        ctx.beginPath()
+        ctx.moveTo(pts[0].x, pts[0].y)
+        for (let i = 1; i < pts.length - 1; i++) {
+          const mx = (pts[i].x + pts[i + 1].x) / 2
+          const my = (pts[i].y + pts[i + 1].y) / 2
+          ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my)
+        }
+        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y)
+        ctx.strokeStyle = col.stroke
+        ctx.lineWidth = ci === 0 ? 2 : 1.5
+        ctx.lineJoin = 'round'; ctx.stroke()
+
+        // Endpoint glow + dot
+        if (prog > 0.9) {
+          const lp = pts[pts.length - 1]
+          const grd = ctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, 18)
+          grd.addColorStop(0, col.glow); grd.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.beginPath(); ctx.arc(lp.x, lp.y, 18, 0, Math.PI * 2)
+          ctx.fillStyle = grd; ctx.fill()
+          ctx.beginPath(); ctx.arc(lp.x, lp.y, 4, 0, Math.PI * 2)
+          ctx.fillStyle = col.dot; ctx.fill()
+          const m = members[ci]
+          if (m) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)'
+            ctx.font = '500 10px Inter'
+            ctx.textAlign = 'right'
+            const initials = `${m.firstName?.[0] ?? m.name?.[0] ?? ''}${m.lastName?.[0] ?? m.name?.[1] ?? ''}`.toUpperCase()
+            ctx.fillText(initials, lp.x - 10, lp.y - 9)
+          }
+        }
+      })
+
+      if (prog < 1) animRef.current = requestAnimationFrame(draw)
+    }
+
+    animRef.current = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(animRef.current)
+  }, [members])
+
+  return (
+    <div style={{
+      padding: '24px 28px 0',
+      position: 'relative', zIndex: 2,
+      animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s both',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '8px', color: 'rgba(255,255,255,0.18)',
+        letterSpacing: '0.22em', textTransform: 'uppercase',
+        marginBottom: '12px',
+      }}>
+        Equity Curves
+        <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(90deg, rgba(255,255,255,0.07), transparent)' }} />
+        <div style={{ display: 'flex', gap: '14px' }}>
+          {(members ?? []).map((m, i) => {
+            const cols = ['rgba(59,130,246,0.9)', 'rgba(34,197,94,0.8)', 'rgba(245,158,11,0.8)']
+            return (
+              <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(255,255,255,0.35)' }}>
+                <div style={{ width: '16px', height: '2px', borderRadius: '1px', background: cols[i] ?? cols[0], boxShadow: `0 0 4px ${cols[i] ?? cols[0]}` }} />
+                {m.name}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{
+        background: 'linear-gradient(180deg, rgba(11,11,22,0.9) 0%, rgba(7,7,14,0.97) 100%)',
+        border: '0.5px solid rgba(255,255,255,0.07)',
+        borderRadius: '20px',
+        padding: '20px 20px 12px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Top shimmer border */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
+          background: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.25), rgba(255,255,255,0.08), rgba(59,130,246,0.25), transparent)',
+        }} />
+        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '280px' }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── MembersSection ───────────────────────────────────────────────────────────
+const MembersSection = ({ members }) => {
+  if (!members) return null
+  const sorted = [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))
+  const maxPnl = sorted[0]?.totalNetEur ?? 1
+
+  const AVATAR_STYLES = [
+    { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)', color: 'rgba(59,130,246,0.95)', glow: 'rgba(59,130,246,0.2)' },
+    { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)', color: 'rgba(34,197,94,0.75)' },
+    { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' },
+  ]
+
+  return (
+    <div style={{
+      padding: '24px 28px 0',
+      position: 'relative', zIndex: 2,
+      animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.25s both',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '8px', color: 'rgba(255,255,255,0.18)',
+        letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '12px',
+      }}>
+        Members
+        <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(90deg, rgba(255,255,255,0.07), transparent)' }} />
+      </div>
+
+      <div style={{ display: 'grid', gap: '10px' }}>
+        {sorted.map((member, i) => {
+          const av = AVATAR_STYLES[i] ?? AVATAR_STYLES[2]
+          const initials = `${member.firstName?.[0] ?? member.name?.[0] ?? ''}${member.lastName?.[0] ?? member.name?.[1] ?? ''}`.toUpperCase()
+          const name = member.name ?? `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim()
+          const pnl = member.totalNetEur ?? 0
+          const winRate = member.winRate ?? 0
+          const trades = member.totalTrades ?? 0
+          const maxDD = member.maxDrawdown ?? 0
+          const bestTrade = member.bestTrade ?? 0
+          const worstTrade = member.worstTrade ?? 0
+          const avgHold = member.avgHoldDays ?? 0
+          const fundShare = maxPnl > 0 ? (pnl / maxPnl) * 100 : 0
+          const isFirst = i === 0
+
+          return (
+            <div
+              key={member.userId}
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(135deg, #111120 0%, #0d0d1a 100%)',
+                border: `0.5px solid ${isFirst ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.07)'}`,
+                borderLeft: isFirst ? '2px solid rgba(59,130,246,0.4)' : undefined,
+                borderRadius: '18px',
+                padding: '18px 20px',
+                overflow: 'hidden',
+                transition: 'all 0.35s cubic-bezier(0.16,1,0.3,1)',
+                animation: isFirst ? 'glowPulse 4s ease-in-out infinite' : undefined,
+                cursor: 'default',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              {/* Top edge highlight */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
+                background: isFirst
+                  ? 'linear-gradient(90deg, transparent, rgba(59,130,246,0.2), rgba(255,255,255,0.08), rgba(59,130,246,0.2), transparent)'
+                  : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)',
+              }} />
+
+              {/* Shimmer sweep on first place */}
+              {isFirst && (
+                <div style={{
+                  position: 'absolute', top: '-50%', left: '-20%',
+                  width: '35px', height: '200%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.025), transparent)',
+                  animation: 'shimmerSweep 7s ease-in-out infinite',
+                  pointerEvents: 'none', zIndex: 1,
+                }} />
+              )}
+
+              {/* Top row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+                <div style={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '32px', fontWeight: '800',
+                  color: isFirst ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.05)',
+                  minWidth: '30px', lineHeight: '1',
+                }}>{i + 1}</div>
+
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '12px', fontWeight: '600', flexShrink: 0,
+                  background: av.bg,
+                  border: `0.5px solid ${av.border}`,
+                  color: av.color,
+                  boxShadow: av.glow ? `0 0 20px ${av.glow}, 0 0 40px ${av.glow}55` : 'none',
+                }}>{initials}</div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.88)',
+                    marginBottom: '3px', flexWrap: 'wrap',
+                  }}>
+                    {name}
+                    {isFirst && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                        padding: '2px 8px', borderRadius: '9999px',
+                        background: 'rgba(34,197,94,0.08)',
+                        border: '0.5px solid rgba(34,197,94,0.2)',
+                        color: '#22c55e',
+                        fontFamily: 'JetBrains Mono, monospace', fontSize: '8px',
+                        letterSpacing: '0.06em',
+                      }}>★ Winning</span>
+                    )}
+                    <span style={{
+                      display: 'inline-flex', padding: '2px 7px', borderRadius: '9999px',
+                      background: 'rgba(59,130,246,0.07)',
+                      border: '0.5px solid rgba(59,130,246,0.18)',
+                      color: 'rgba(59,130,246,0.75)',
+                      fontFamily: 'JetBrains Mono, monospace', fontSize: '8px',
+                      letterSpacing: '0.06em',
+                    }}>{member.role ?? 'Member'}</span>
+                  </div>
+                  <div style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px', color: 'rgba(255,255,255,0.2)',
+                    letterSpacing: '0.06em',
+                  }}>{trades} trades · joined {member.equityCurve?.[0]?.date?.slice(0, 7) ?? '—'}</div>
+                </div>
+
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '22px', fontWeight: '700',
+                    color: pnl >= 0 ? '#22c55e' : '#ef4444',
+                    letterSpacing: '-0.5px',
+                  }}>{pnl >= 0 ? '+' : ''}€{Math.abs(pnl).toLocaleString()}</div>
+                  <div style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px', color: 'rgba(255,255,255,0.2)',
+                    marginTop: '2px',
+                  }}>{(member.thisMonthPnl ?? 0) >= 0 ? '+' : ''}€{Math.abs(member.thisMonthPnl ?? 0).toLocaleString()} this mo.</div>
+                </div>
+              </div>
+
+              {/* Progress bars */}
+              <div style={{ display: 'grid', gap: '6px', marginBottom: '12px' }}>
+                {[
+                  { label: 'Win Rate', value: winRate, color: 'rgba(59,130,246,0.8)', display: `${winRate}%`, delay: `${0.3 + i * 0.1}s` },
+                  { label: 'Fund Share', value: fundShare, color: 'rgba(34,197,94,0.7)', display: `${fundShare.toFixed(1)}%`, delay: `${0.4 + i * 0.1}s` },
+                  { label: 'Max Drawdown', value: Math.abs(maxDD) / Math.max(pnl, 1) * 100, color: 'rgba(239,68,68,0.6)', display: `€${Math.abs(maxDD).toLocaleString()}`, delay: `${0.5 + i * 0.1}s` },
+                ].map(bar => (
+                  <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '8px', color: 'rgba(255,255,255,0.2)',
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      width: '72px', flexShrink: 0,
+                    }}>{bar.label}</div>
+                    <div style={{
+                      flex: 1, height: '3px',
+                      background: 'rgba(255,255,255,0.04)',
+                      borderRadius: '2px', overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%', borderRadius: '2px',
+                        width: `${Math.min(Math.max(bar.value, 0), 100)}%`,
+                        background: bar.color,
+                        transform: 'scaleX(0)', transformOrigin: 'left',
+                        animation: `barGrowLedger 1s cubic-bezier(0.16,1,0.3,1) ${bar.delay} both`,
+                      }} />
+                    </div>
+                    <div style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '9px', color: 'rgba(255,255,255,0.35)',
+                      width: '56px', textAlign: 'right', flexShrink: 0,
+                    }}>{bar.display}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Stat pills */}
+              <div style={{ display: 'flex', gap: '1px' }}>
+                {[
+                  { val: `+€${bestTrade.toLocaleString()}`, label: 'Best Trade', color: '#22c55e' },
+                  { val: `-€${Math.abs(worstTrade).toLocaleString()}`, label: 'Worst Trade', color: '#ef4444' },
+                  { val: `${avgHold}d`, label: 'Avg Hold', color: 'rgba(255,255,255,0.6)' },
+                  { val: `${winRate}%`, label: 'Win Rate', color: 'rgba(59,130,246,0.85)' },
+                  { val: trades, label: 'Trades', color: 'rgba(255,255,255,0.5)' },
+                ].map((s, si) => (
+                  <div key={s.label} style={{
+                    flex: 1,
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '0.5px solid rgba(255,255,255,0.05)',
+                    padding: '8px 4px', textAlign: 'center',
+                    borderRadius: si === 0 ? '8px 0 0 8px' : si === 4 ? '0 8px 8px 0' : '0',
+                  }}>
+                    <div style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '11px', fontWeight: '600', color: s.color,
+                    }}>{s.val}</div>
+                    <div style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '7px', color: 'rgba(255,255,255,0.18)',
+                      letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px',
+                    }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── AwardsSection ────────────────────────────────────────────────────────────
+const AwardsSection = ({ members }) => {
+  if (!members || members.length === 0) return null
+
+  const awards = [
+    {
+      title: 'Most Profitable',
+      accent: 'rgba(34,197,94,0.5)',
+      dotColor: '#22c55e',
+      valColor: '#22c55e',
+      winner: [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))[0],
+      runner: [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))[1],
+      getValue: m => `+€${(m?.totalNetEur ?? 0).toLocaleString()}`,
+      fillWidth: () => 100,
+      runnerVal: m => `+€${(m?.totalNetEur ?? 0).toLocaleString()}`,
+    },
+    {
+      title: 'Best Win Rate',
+      accent: 'rgba(59,130,246,0.5)',
+      dotColor: 'rgba(59,130,246,0.85)',
+      valColor: 'rgba(59,130,246,0.9)',
+      winner: [...members].sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0))[0],
+      runner: [...members].sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0))[1],
+      getValue: m => `${m?.winRate ?? 0}%`,
+      fillWidth: () => Math.max(...members.map(m => m.winRate ?? 0)),
+      runnerVal: m => `${m?.winRate ?? 0}%`,
+    },
+    {
+      title: 'Best Single Trade',
+      accent: 'rgba(255,255,255,0.22)',
+      dotColor: 'rgba(255,255,255,0.4)',
+      valColor: '#f0f0f8',
+      winner: [...members].sort((a, b) => (b.bestTrade ?? 0) - (a.bestTrade ?? 0))[0],
+      runner: [...members].sort((a, b) => (b.bestTrade ?? 0) - (a.bestTrade ?? 0))[1],
+      getValue: m => `+€${(m?.bestTrade ?? 0).toLocaleString()}`,
+      fillWidth: () => 100,
+      runnerVal: m => `+€${(m?.bestTrade ?? 0).toLocaleString()}`,
+    },
+    {
+      title: 'Best This Month',
+      accent: 'rgba(245,158,11,0.5)',
+      dotColor: 'rgba(245,158,11,0.8)',
+      valColor: '#f59e0b',
+      winner: [...members].sort((a, b) => (b.thisMonthPnl ?? 0) - (a.thisMonthPnl ?? 0))[0],
+      runner: [...members].sort((a, b) => (b.thisMonthPnl ?? 0) - (a.thisMonthPnl ?? 0))[1],
+      getValue: m => `+€${(m?.thisMonthPnl ?? 0).toLocaleString()}`,
+      fillWidth: () => 100,
+      runnerVal: m => `+€${(m?.thisMonthPnl ?? 0).toLocaleString()}`,
+    },
+    {
+      title: 'Most Disciplined',
+      accent: 'rgba(239,68,68,0.4)',
+      dotColor: 'rgba(239,68,68,0.7)',
+      valColor: '#ef4444',
+      winner: [...members].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[0],
+      runner: [...members].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[1],
+      getValue: m => `€${Math.abs(m?.maxDrawdown ?? 0).toLocaleString()}`,
+      fillWidth: (ms) => {
+        const vals = ms.map(m => Math.abs(m.maxDrawdown ?? 0))
+        const min = Math.min(...vals), max = Math.max(...vals)
+        const winner = [...ms].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[0]
+        return max > min ? (1 - (Math.abs(winner?.maxDrawdown ?? 0) - min) / (max - min)) * 100 : 50
+      },
+      runnerVal: m => `€${Math.abs(m?.maxDrawdown ?? 0).toLocaleString()}`,
+      subtitle: 'Lowest drawdown',
+    },
+    {
+      title: 'Most Active',
+      accent: 'rgba(139,92,246,0.5)',
+      dotColor: 'rgba(139,92,246,0.8)',
+      valColor: 'rgba(139,92,246,0.9)',
+      winner: [...members].sort((a, b) => (b.totalTrades ?? 0) - (a.totalTrades ?? 0))[0],
+      runner: [...members].sort((a, b) => (b.totalTrades ?? 0) - (a.totalTrades ?? 0))[1],
+      getValue: m => `${m?.totalTrades ?? 0}`,
+      fillWidth: () => 100,
+      runnerVal: m => `${m?.totalTrades ?? 0} trades`,
+      subtitle: 'trades executed',
+    },
+  ]
+
+  return (
+    <div style={{
+      padding: '24px 28px 0',
+      position: 'relative', zIndex: 2,
+      animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.35s both',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '8px', color: 'rgba(255,255,255,0.18)',
+        letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '12px',
+      }}>
+        Awards
+        <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(90deg, rgba(255,255,255,0.07), transparent)' }} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        {awards.map((award, idx) => {
+          const winnerName = award.winner
+            ? (award.winner.name ?? `${award.winner.firstName ?? ''} ${award.winner.lastName ?? ''}`.trim())
+            : '—'
+          const runnerName = award.runner
+            ? (award.runner.name ?? `${award.runner.firstName ?? ''} ${award.runner.lastName ?? ''}`.trim())
+            : '—'
+          const fw = typeof award.fillWidth === 'function' ? award.fillWidth(members) : 100
+
+          return (
+            <div
+              key={award.title}
+              style={{
+                background: 'linear-gradient(135deg, #0f0f1c 0%, #0b0b16 100%)',
+                border: '0.5px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px',
+                padding: '16px 18px',
+                position: 'relative', overflow: 'hidden',
+                transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-3px)'
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.5)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
+                background: 'rgba(255,255,255,0.04)',
+              }} />
+
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '8px', letterSpacing: '0.18em',
+                textTransform: 'uppercase', color: award.accent,
+                marginBottom: '10px',
+              }}>
+                <div style={{
+                  width: '4px', height: '4px', borderRadius: '50%',
+                  background: award.dotColor,
+                }} />
+                {award.title}
+              </div>
+
+              <div style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '22px', fontWeight: '700',
+                letterSpacing: '-0.5px', color: award.valColor,
+                marginBottom: '3px',
+              }}>{award.winner ? award.getValue(award.winner) : '—'}</div>
+
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '10px' }}>
+                {winnerName}
+                {award.subtitle && <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: '10px' }}> · {award.subtitle}</span>}
+              </div>
+
+              <div style={{
+                height: '2px',
+                background: 'rgba(255,255,255,0.04)',
+                borderRadius: '1px', overflow: 'hidden',
+                marginBottom: '8px',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: '1px',
+                  width: `${Math.min(Math.max(fw, 0), 100)}%`,
+                  background: `linear-gradient(90deg, ${award.accent.replace('0.5)', '0.3)')}, ${award.dotColor})`,
+                  transform: 'scaleX(0)', transformOrigin: 'left',
+                  animation: `barGrowLedger 1.2s cubic-bezier(0.16,1,0.3,1) ${0.5 + idx * 0.08}s both`,
+                }} />
+              </div>
+
+              {award.runner && (
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  paddingTop: '8px',
+                  borderTop: '0.5px solid rgba(255,255,255,0.04)',
+                }}>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.22)' }}>{runnerName}</span>
+                  <span style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '11px', color: 'rgba(255,255,255,0.3)',
+                  }}>{award.runnerVal(award.runner)}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── AllOpenPositions ─────────────────────────────────────────────────────────
+const AllOpenPositions = ({ data, livePrice }) => {
+  if (!data?.allOpenPositions?.length) return null
+  return (
+    <div style={{
+      padding: '24px 28px 0',
+      position: 'relative', zIndex: 2,
+      animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.45s both',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '8px', color: 'rgba(255,255,255,0.18)',
+        letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '12px',
+      }}>
+        Open Positions
+        <div style={{ flex: 1, height: '0.5px', background: 'linear-gradient(90deg, rgba(255,255,255,0.07), transparent)' }} />
+      </div>
+
+      <div style={{
+        background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
+        border: '0.5px solid rgba(255,255,255,0.08)',
+        borderRadius: '18px',
+        padding: '20px 24px',
+        boxShadow: `
+          0 12px 40px rgba(0,0,0,0.5),
+          0 4px 16px rgba(0,0,0,0.3),
+          inset 0 1px 0 rgba(255,255,255,0.07)
+        `,
+      }}>
+        {data.allOpenPositions.map((pos, i) => {
+          const estimated = livePrice
+            ? calculateEstimatedPnL(pos, livePrice)
+            : null
+          return (
+            <div
+              key={pos.id ?? i}
+              style={{
+                padding: '12px 0',
+                borderBottom: i < data.allOpenPositions.length - 1
+                  ? '0.5px solid rgba(255,255,255,0.04)'
+                  : 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '16px',
+                transition: 'opacity 0.15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: 'rgba(255,255,255,0.85)',
+                  }}>{pos.shares?.toLocaleString()} shares</span>
+                  <span style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px',
+                    padding: '2px 7px',
+                    borderRadius: '9999px',
+                    background: 'rgba(59,130,246,0.1)',
+                    border: '0.5px solid rgba(59,130,246,0.25)',
+                    color: 'rgba(59,130,246,0.8)',
+                    letterSpacing: '0.06em',
+                  }}>{pos.type ?? 'CONVICTION'}</span>
+                </div>
+                <div style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.28)',
+                  letterSpacing: '0.02em',
+                }}>
+                  ${pos.entryPrice} entry · {pos.entryDate} · {estimated?.daysHeld ?? 0}d held
+                </div>
+                {pos.memberName && (
+                  <div style={{
+                    fontFamily: 'Inter, sans-serif',
+                    fontSize: '12px',
+                    color: 'rgba(255,255,255,0.45)',
+                    marginTop: '3px',
+                  }}>{pos.memberName}</div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', flexShrink: 0 }}>
+                {estimated && (
+                  <>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.2)',
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        marginBottom: '3px',
+                      }}>Est. Gross</div>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
+                        letterSpacing: '-0.3px',
+                      }}>
+                        {estimated.estimatedGross >= 0 ? '+' : ''}${Math.round(estimated.estimatedGross).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.2)',
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        marginBottom: '3px',
+                      }}>Est. Net</div>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
+                        letterSpacing: '-0.3px',
+                      }}>
+                        {estimated.estimatedNetEur >= 0 ? '+' : ''}€{Math.round(estimated.estimatedNetEur).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '8px',
+                        color: 'rgba(255,255,255,0.2)',
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        marginBottom: '3px',
+                      }}>Running Cost</div>
+                      <div style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: '13px',
+                        color: 'rgba(239,68,68,0.7)',
+                        letterSpacing: '-0.3px',
+                      }}>
+                        -${Math.round(estimated.totalCosts).toLocaleString()}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -525,8 +1035,6 @@ export default function LedgerPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [expanded, setExpanded] = useState(null)
-  const [started, setStarted] = useState(false)
   const { livePrice } = useNVDALive()
 
   useEffect(() => {
@@ -536,416 +1044,55 @@ export default function LedgerPage() {
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
 
-  useEffect(() => {
-    if (data) setTimeout(() => setStarted(true), 150)
-  }, [data])
+  if (loading) return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#07070e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <ConstellationBg />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '8px' }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: 'rgba(59,130,246,0.4)',
+            animation: `dotPulseLedger 1.2s ease-in-out ${i * 0.2}s infinite`,
+          }} />
+        ))}
+      </div>
+    </div>
+  )
 
-  // Vanilla-tilt via CDN
-  useEffect(() => {
-    if (!data) return
-    const script = document.createElement('script')
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js'
-    script.onload = () => {
-      if (window.VanillaTilt) {
-        window.VanillaTilt.init(document.querySelectorAll('.pod-card-tilt'), {
-          max: 12,
-          speed: 600,
-          glare: true,
-          'max-glare': 0.2,
-          scale: 1.03,
-          easing: 'cubic-bezier(0.03,0.98,0.52,0.99)',
-        })
-      }
-    }
-    document.body.appendChild(script)
-    return () => { if (document.body.contains(script)) document.body.removeChild(script) }
-  }, [data])
-
-  const members = data?.members ?? []
-  const fundStats = data?.fundStats ?? {}
-
-  // Category leaders
-  const lb = members.length > 0 ? {
-    mostProfitable: (() => {
-      const top = Math.max(...members.map(m => m.totalNetEur))
-      return members.filter(m => m.totalNetEur === top)
-    })(),
-    bestWinRate: (() => {
-      const q = members.filter(m => m.tradeCount >= 3)
-      if (!q.length) return []
-      const top = Math.max(...q.map(m => m.winRate))
-      return q.filter(m => m.winRate === top)
-    })(),
-    bestSingleTrade: (() => {
-      const w = members.filter(m => m.bestTrade)
-      if (!w.length) return []
-      const top = Math.max(...w.map(m => m.bestTrade.net_eur))
-      return w.filter(m => m.bestTrade.net_eur === top)
-    })(),
-    bestThisMonth: (() => {
-      const top = Math.max(...members.map(m => m.thisMonthNet))
-      return members.filter(m => m.thisMonthNet === top)
-    })(),
-  } : null
-
-  const heroVal = useCountUp(started ? (fundStats?.totalNetEur ?? 0) : 0, 900, 300)
+  if (error) return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#07070e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px', color: 'rgba(239,68,68,0.5)',
+      }}>{error}</div>
+    </div>
+  )
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0d0d14',
-      backgroundImage: `
-        radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 80%, rgba(99,40,217,0.06) 0%, transparent 60%)
-      `,
-      marginTop: '-68px',
-      paddingTop: '68px',
+      background: '#07070e',
+      fontFamily: 'Inter, sans-serif',
+      color: '#f0f0f8',
+      paddingBottom: '60px',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <style>{STYLES}</style>
-
-      <div style={{
-        maxWidth: 900,
-        margin: '0 auto',
-        padding: 'clamp(20px,4vw,40px) clamp(16px,3vw,32px)',
-        paddingBottom: 100,
-      }}>
-
-        {/* Loading */}
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, paddingTop: 100 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: 'rgba(59,130,246,0.3)',
-                animation: `dotPulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-              }} />
-            ))}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'rgba(239,68,68,0.5)', paddingTop: 60 }}>
-            {error}
-          </div>
-        )}
-
-        {/* Main content */}
-        {!loading && !error && (
-          <>
-            {/* ── Header ────────────────────────────────────────────── */}
-            <div className="fade-up" style={{ animationDelay: '0ms', marginBottom: 48 }}>
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 9, fontWeight: 400,
-                color: 'rgba(255,255,255,0.25)', letterSpacing: '0.25em', textTransform: 'uppercase',
-                marginBottom: 12,
-              }}>
-                Fund
-              </div>
-
-              {/* Hero total */}
-              <div style={{
-                fontFamily: 'Inter, sans-serif', fontSize: '72px',
-                fontWeight: '600', letterSpacing: '-2px', color: '#f0f0f8',
-                lineHeight: 1, marginBottom: 20,
-              }}>
-                <span style={{
-                  fontSize: '32px', fontWeight: '300', color: 'rgba(255,255,255,0.3)',
-                  fontFamily: 'Inter, sans-serif', verticalAlign: 'top',
-                  marginTop: '8px', display: 'inline-block',
-                }}>€</span>
-                {heroVal < 0 ? '-' : ''}
-                {Math.abs(heroVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-
-              {/* Three inline stats */}
-              <div style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'rgba(255,255,255,0.35)',
-                display: 'flex', alignItems: 'center', gap: 8,
-                flexWrap: 'wrap', marginBottom: 20,
-              }}>
-                <span>{fundStats.totalTrades ?? 0} trades</span>
-                <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                <span>{fundStats.fundWinRate != null ? `${fundStats.fundWinRate}% win rate` : '—'}</span>
-                <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
-                <span>{fundStats.totalOpenPositions ?? 0} open positions</span>
-              </div>
-
-              {/* Best trade strip */}
-              {fundStats.bestTradeEver && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                  background: 'rgba(34,197,94,0.06)', border: '0.5px solid rgba(34,197,94,0.15)',
-                  borderRadius: '9999px', padding: '8px 14px',
-                }}>
-                  <span style={{ color: '#22c55e', fontSize: 14 }}>★</span>
-                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>
-                    {fundStats.bestTradeEver.memberName}
-                  </span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#22c55e' }}>
-                    +€{fundStats.bestTradeEver.net_eur?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  {fundStats.bestTradeEver.buy_price && (
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
-                      ${fundStats.bestTradeEver.buy_price}→${fundStats.bestTradeEver.sell_price}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ── Podium ────────────────────────────────────────────── */}
-            {members.length > 0 && (
-              <div className="fade-up" style={{ animationDelay: '80ms', marginBottom: 36 }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
-                  <PodCard member={members[1] ?? null} rank={2} started={started} />
-                  <PodCard member={members[0] ?? null} rank={1} started={started} />
-                  <PodCard member={members[2] ?? null} rank={3} started={started} />
-                </div>
-              </div>
-            )}
-
-            {/* ── Category strip ────────────────────────────────────── */}
-            {lb && members.length > 0 && (
-              <div className="fade-up" style={{ animationDelay: '160ms', marginBottom: 36 }}>
-                <div className="cat-grid">
-                  <CatCard
-                    label="Most Profitable"
-                    color="#22c55e"
-                    rawValue={lb.mostProfitable[0]?.totalNetEur ?? 0}
-                    formatValue={v => fmtSigned(v)}
-                    winner={lb.mostProfitable.map(m => m.name).join(' · ')}
-                    runners={[...members].sort((a, b) => b.totalNetEur - a.totalNetEur)
-                      .filter(m => !lb.mostProfitable.find(w => w.userId === m.userId))
-                      .slice(0, 3).map(m => ({ name: m.name, value: fmtEUR(m.totalNetEur) }))}
-                    started={started} delay={0}
-                  />
-                  <CatCard
-                    label="Best Win Rate"
-                    color="rgba(59,130,246,0.85)"
-                    rawValue={lb.bestWinRate[0]?.winRate ?? 0}
-                    formatValue={v => lb.bestWinRate.length > 0 ? `${Math.round(v)}%` : '—'}
-                    winner={lb.bestWinRate.length > 0 ? lb.bestWinRate.map(m => m.name).join(' · ') : 'min 3 trades'}
-                    runners={[...members].filter(m => m.tradeCount >= 3)
-                      .sort((a, b) => b.winRate - a.winRate)
-                      .filter(m => !lb.bestWinRate.find(w => w.userId === m.userId))
-                      .slice(0, 3).map(m => ({ name: m.name, value: `${m.winRate}%` }))}
-                    started={started} delay={100}
-                  />
-                  <CatCard
-                    label="Best Single Trade"
-                    color="#22c55e"
-                    rawValue={lb.bestSingleTrade[0]?.bestTrade?.net_eur ?? 0}
-                    formatValue={v => lb.bestSingleTrade.length > 0 ? fmtSigned(v) : '—'}
-                    winner={lb.bestSingleTrade.length > 0 ? lb.bestSingleTrade.map(m => m.name).join(' · ') : '—'}
-                    runners={[...members].filter(m => m.bestTrade)
-                      .sort((a, b) => b.bestTrade.net_eur - a.bestTrade.net_eur)
-                      .filter(m => !lb.bestSingleTrade.find(w => w.userId === m.userId))
-                      .slice(0, 3).map(m => ({ name: m.name, value: fmtEUR(m.bestTrade.net_eur) }))}
-                    started={started} delay={200}
-                  />
-                  <CatCard
-                    label="Best This Month"
-                    color="rgba(255,255,255,0.7)"
-                    rawValue={lb.bestThisMonth[0]?.thisMonthNet ?? 0}
-                    formatValue={v => fmtSigned(v)}
-                    winner={lb.bestThisMonth.map(m => m.name).join(' · ')}
-                    runners={[...members].sort((a, b) => b.thisMonthNet - a.thisMonthNet)
-                      .filter(m => !lb.bestThisMonth.find(w => w.userId === m.userId))
-                      .slice(0, 3).map(m => ({ name: m.name, value: fmtEUR(m.thisMonthNet) }))}
-                    started={started} delay={300}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* ── Members ───────────────────────────────────────────── */}
-            {members.length > 0 && (
-              <div className="fade-up" style={{ animationDelay: '240ms' }}>
-                {/* Section header with fading dividers */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04))' }} />
-                  <div style={{
-                    fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'rgba(255,255,255,0.2)',
-                    letterSpacing: '0.2em', textTransform: 'uppercase',
-                  }}>
-                    Members
-                  </div>
-                  <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.04), transparent)' }} />
-                </div>
-
-                {members.map((member, i) => (
-                  <MemberRow
-                    key={member.userId}
-                    member={member}
-                    rank={i + 1}
-                    isExpanded={expanded === member.userId}
-                    onToggle={() => setExpanded(expanded === member.userId ? null : member.userId)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {members.length === 0 && (
-              <div style={{
-                textAlign: 'center', paddingTop: 80,
-                fontFamily: 'Inter, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.2)',
-              }}>
-                No members yet.
-              </div>
-            )}
-
-            {/* ── All open positions ────────────────────────────────── */}
-            {data?.allOpenPositions?.length > 0 && (
-              <div style={{
-                background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
-                border: '0.5px solid rgba(255,255,255,0.08)',
-                borderRadius: '18px',
-                padding: '20px 24px',
-                marginTop: '24px',
-                boxShadow: `
-                  0 12px 40px rgba(0,0,0,0.5),
-                  0 4px 16px rgba(0,0,0,0.3),
-                  inset 0 1px 0 rgba(255,255,255,0.07)
-                `,
-              }}>
-                <span style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '9px',
-                  color: 'rgba(59,130,246,0.5)',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  display: 'block',
-                  marginBottom: '16px',
-                }}>All Open Positions</span>
-
-                {data.allOpenPositions.map((pos, i) => {
-                  const estimated = livePrice
-                    ? calculateEstimatedPnL(pos, livePrice)
-                    : null
-                  return (
-                    <div
-                      key={pos.id ?? i}
-                      style={{
-                        padding: '12px 0',
-                        borderBottom: i < data.allOpenPositions.length - 1
-                          ? '0.5px solid rgba(255,255,255,0.04)'
-                          : 'none',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '16px',
-                        transition: 'opacity 0.15s ease',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
-                      onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: 'rgba(255,255,255,0.85)',
-                          }}>{pos.shares?.toLocaleString()} shares</span>
-                          <span style={{
-                            fontFamily: 'JetBrains Mono, monospace',
-                            fontSize: '9px',
-                            padding: '2px 7px',
-                            borderRadius: '9999px',
-                            background: 'rgba(59,130,246,0.1)',
-                            border: '0.5px solid rgba(59,130,246,0.25)',
-                            color: 'rgba(59,130,246,0.8)',
-                            letterSpacing: '0.06em',
-                          }}>{pos.type ?? 'CONVICTION'}</span>
-                        </div>
-                        <div style={{
-                          fontFamily: 'JetBrains Mono, monospace',
-                          fontSize: '11px',
-                          color: 'rgba(255,255,255,0.28)',
-                          letterSpacing: '0.02em',
-                        }}>
-                          ${pos.entryPrice} entry · {pos.entryDate} · {estimated?.daysHeld ?? 0}d held
-                        </div>
-                        {pos.memberName && (
-                          <div style={{
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: '12px',
-                            color: 'rgba(255,255,255,0.45)',
-                            marginTop: '3px',
-                          }}>{pos.memberName}</div>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end', flexShrink: 0 }}>
-                        {estimated && (
-                          <>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '8px',
-                                color: 'rgba(255,255,255,0.2)',
-                                letterSpacing: '0.14em',
-                                textTransform: 'uppercase',
-                                marginBottom: '3px',
-                              }}>Est. Gross</div>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: estimated.estimatedGross >= 0 ? '#22c55e' : '#ef4444',
-                                letterSpacing: '-0.3px',
-                              }}>
-                                {estimated.estimatedGross >= 0 ? '+' : ''}${Math.round(estimated.estimatedGross).toLocaleString()}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '8px',
-                                color: 'rgba(255,255,255,0.2)',
-                                letterSpacing: '0.14em',
-                                textTransform: 'uppercase',
-                                marginBottom: '3px',
-                              }}>Est. Net</div>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                color: estimated.estimatedNetEur >= 0 ? '#22c55e' : '#ef4444',
-                                letterSpacing: '-0.3px',
-                              }}>
-                                {estimated.estimatedNetEur >= 0 ? '+' : ''}€{Math.round(estimated.estimatedNetEur).toLocaleString()}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '8px',
-                                color: 'rgba(255,255,255,0.2)',
-                                letterSpacing: '0.14em',
-                                textTransform: 'uppercase',
-                                marginBottom: '3px',
-                              }}>Running Cost</div>
-                              <div style={{
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '13px',
-                                color: 'rgba(239,68,68,0.7)',
-                                letterSpacing: '-0.3px',
-                              }}>
-                                -${Math.round(estimated.totalCosts).toLocaleString()}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <ScanLine />
+      <ConstellationBg />
+      <HeroSection data={data} />
+      <EquityCurveSection members={data?.members} />
+      <MembersSection members={data?.members} />
+      <AwardsSection members={data?.members} />
+      <AllOpenPositions data={data} livePrice={livePrice} />
     </div>
   )
 }

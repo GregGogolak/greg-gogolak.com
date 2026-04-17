@@ -2,6 +2,20 @@ import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 
+function buildEquityCurve(trades) {
+  if (!trades || trades.length === 0) return []
+  const sorted = [...trades].sort((a, b) =>
+    new Date(a.sell_date) - new Date(b.sell_date)
+  )
+  let cumulative = 0
+  const points = [{ date: sorted[0].buy_date, value: 0 }]
+  sorted.forEach(trade => {
+    cumulative += trade.net_eur ?? 0
+    points.push({ date: trade.sell_date, value: Math.round(cumulative) })
+  })
+  return points
+}
+
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -39,14 +53,9 @@ export async function GET() {
           .sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
           .slice(0, 10)
 
-        // Best single trade
-        const bestTrade = trades.length > 0
+        // Full trade objects kept for fundStats.bestTradeEver
+        const bestTradeObj = trades.length > 0
           ? trades.reduce((best, t) => t.net_eur > (best?.net_eur ?? -Infinity) ? t : best, null)
-          : null
-
-        // Worst single trade
-        const worstTrade = trades.length > 0
-          ? trades.reduce((worst, t) => t.net_eur < (worst?.net_eur ?? Infinity) ? t : worst, null)
           : null
 
         // This month net EUR
@@ -57,16 +66,36 @@ export async function GET() {
         })
         const thisMonthNet = thisMonth.reduce((s, t) => s + (t.net_eur ?? 0), 0)
 
-        // Current win streak
-        const sorted = [...trades].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
+        // Current win streak (descending sort)
+        const sortedDesc = [...trades].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date))
         let streak = 0
-        for (const t of sorted) {
+        for (const t of sortedDesc) {
           if (t.net_eur > 0) streak++
           else break
         }
 
+        // Ascending sort for equity curve and drawdown
+        const sortedAsc = [...trades].sort((a, b) => new Date(a.sell_date) - new Date(b.sell_date))
+
+        const maxDrawdown = (() => {
+          let peak = 0, maxDD = 0, cum = 0
+          sortedAsc.forEach(t => {
+            cum += t.net_eur ?? 0
+            if (cum > peak) peak = cum
+            const dd = peak - cum
+            if (dd > maxDD) maxDD = dd
+          })
+          return -Math.round(maxDD)
+        })()
+
+        const avgHoldDays = trades.length > 0
+          ? (trades.reduce((s, t) => s + (t.calendar_days ?? 1), 0) / trades.length).toFixed(1)
+          : 0
+
         return {
           userId: uid,
+          firstName: user.firstName ?? '',
+          lastName: user.lastName ?? '',
           name: (`${user.firstName ?? ''} ${user.lastName ?? ''}`).trim() ||
                 user.username ||
                 user.emailAddresses[0]?.emailAddress?.split('@')[0] ||
@@ -77,12 +106,18 @@ export async function GET() {
           totalNetEur,
           winRate,
           tradeCount: trades.length,
+          totalTrades: trades.length,
           recentTrades,
           allTrades: [...trades].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date)),
-          bestTrade,
-          worstTrade,
+          bestTrade: trades.length > 0 ? Math.round(Math.max(...trades.map(t => t.net_eur ?? 0))) : 0,
+          worstTrade: trades.length > 0 ? Math.round(Math.min(...trades.map(t => t.net_eur ?? 0))) : 0,
+          bestTradeObj,
           thisMonthNet,
+          thisMonthPnl: thisMonthNet,
           winStreak: streak,
+          equityCurve: buildEquityCurve(trades),
+          maxDrawdown,
+          avgHoldDays,
         }
       })
     )
@@ -90,18 +125,20 @@ export async function GET() {
     // Sort by total net EUR descending
     members.sort((a, b) => b.totalNetEur - a.totalNetEur)
 
-    // Fund-level stats (requires full trades, not trimmed recentTrades)
+    // Fund-level stats
+    const allTradesFlat = members.flatMap(m => m.allTrades)
+    const fundWinRateVal = allTradesFlat.length > 0
+      ? Math.round((allTradesFlat.filter(t => t.net_eur > 0).length / allTradesFlat.length) * 100)
+      : null
+
     const fundStats = {
       totalNetEur: members.reduce((s, m) => s + m.totalNetEur, 0),
       totalTrades: members.reduce((s, m) => s + m.tradeCount, 0),
-      fundWinRate: (() => {
-        const allTrades = members.flatMap(m => m.allTrades)
-        const wins = allTrades.filter(t => t.net_eur > 0).length
-        return allTrades.length > 0 ? Math.round((wins / allTrades.length) * 100) : null
-      })(),
+      winRate: fundWinRateVal,
+      fundWinRate: fundWinRateVal,
       bestTradeEver: members.reduce((best, m) => {
-        if (!m.bestTrade) return best
-        if (!best || m.bestTrade.net_eur > best.net_eur) return { ...m.bestTrade, memberName: m.name }
+        if (!m.bestTradeObj) return best
+        if (!best || m.bestTradeObj.net_eur > best.net_eur) return { ...m.bestTradeObj, memberName: m.name }
         return best
       }, null),
       totalOpenPositions: members.reduce((s, m) => s + m.openPositions.length, 0),

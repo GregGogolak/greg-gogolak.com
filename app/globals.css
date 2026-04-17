@@ -57,9 +57,8 @@ body::before {
   50%       { opacity: 0.5; box-shadow: 0 0 0 5px rgba(52,211,153,0); }
 }
 @keyframes scanLine {
-  0%   { left: -100%; }
-  60%  { left: 100%; }
-  100% { left: 100%; }
+  0% { transform: translateY(-2px); }
+  100% { transform: translateY(100vh); }
 }
 @keyframes orbSpin  { to { transform: rotate(360deg); } }
 @keyframes logoPulse {
@@ -73,6 +72,40 @@ body::before {
 @keyframes priceGlow {
   0%,100% { text-shadow: none; }
   50%      { text-shadow: 0 0 40px rgba(91,156,246,0.15); }
+}
+
+/* ── Ledger page animations ── */
+@keyframes shimmerSweep {
+  0% { transform: translateX(-100%) rotate(20deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(500%) rotate(20deg); opacity: 0; }
+}
+@keyframes statPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+@keyframes ledgerFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes numberFlicker {
+  0%,89%,100% { opacity: 1; }
+  90% { opacity: 0.75; }
+  93% { opacity: 1; }
+  96% { opacity: 0.85; }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.07); }
+  50% { box-shadow: 0 0 40px rgba(59,130,246,0.2), inset 0 1px 0 rgba(255,255,255,0.09); }
+}
+@keyframes barGrowLedger {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes dotPulseLedger {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.6; }
 }
 
 /* LivePriceBubble animations */
