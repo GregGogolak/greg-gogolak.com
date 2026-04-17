@@ -219,7 +219,7 @@ export default function NavPill() {
         aria-label="Main navigation"
         style={{
           position:             'fixed',
-          top:                  '12px',
+          top:                  'max(12px, env(safe-area-inset-top))',
           left:                 '50%',
           transform:            'translateX(-50%)',
           width:                'calc(100% - 48px)',

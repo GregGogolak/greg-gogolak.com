@@ -26,10 +26,15 @@
 
 html, body {
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   background: #080910;
   color: #eef2ff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+html {
+  height: -webkit-fill-available;
 }
 
 /* Subtle dot-grid background */
@@ -278,4 +283,11 @@ body::before {
   min-width: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* PWA safe area — padding for home indicator on iPhone */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .page-content {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
 }
