@@ -136,15 +136,15 @@ export default function NavPill() {
     const indicator = indicatorRef.current
     if (indicator) indicator.style.transition = 'none'
 
+    // Double-rAF: first frame commits DOM, second frame measures
     const raf1 = requestAnimationFrame(() => {
-      updateIndicator()
-      const raf2 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        updateIndicator()
         if (indicator) {
           indicator.style.transition =
             'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }
       })
-      return () => cancelAnimationFrame(raf2)
     })
 
     const handleResize = () => updateIndicator()
@@ -153,7 +153,7 @@ export default function NavPill() {
       window.removeEventListener('resize', handleResize)
       cancelAnimationFrame(raf1)
     }
-  }, [navItems.length])
+  }, [navItems.length, activeLabel])
 
   if (pathname === '/login') return null
 

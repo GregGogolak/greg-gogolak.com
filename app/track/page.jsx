@@ -187,6 +187,7 @@ export default function TrackPage() {
       maxWidth: '1400px',
       margin: '-68px auto 0',
       paddingTop: '96px',
+      isolation: 'isolate',
     }}>
       {/* Page header */}
       <div style={{

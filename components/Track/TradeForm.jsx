@@ -153,10 +153,14 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
 
       {/* Modal */}
       <div style={{
-        position: 'fixed', zIndex: 201,
-        top: '50%', left: '50%',
+        position: 'fixed',
+        zIndex: 201,
+        top: '50%',
+        left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 'min(480px, calc(100vw - 32px))',
+        maxHeight: 'calc(100dvh - 48px)',
+        overflowY: 'auto',
         background: 'linear-gradient(180deg, rgba(14,15,26,0.98) 0%, rgba(8,9,16,0.98) 100%)',
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: '18px',
@@ -204,7 +208,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit}>
           {/* Dates row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '12px' }}>
             <div>
               <label style={LABEL_STYLE}>Buy Date</label>
               <input
