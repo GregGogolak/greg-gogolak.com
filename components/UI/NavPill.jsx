@@ -122,8 +122,13 @@ export default function NavPill() {
     if (!container || !item || !indicator) return
     const cRect = container.getBoundingClientRect()
     const iRect = item.getBoundingClientRect()
-    indicator.style.left  = `${iRect.left - cRect.left + container.scrollLeft}px`
-    indicator.style.width = `${iRect.width}px`
+    if (iRect.width === 0) {
+      indicator.style.opacity = '0'
+      return
+    }
+    indicator.style.left    = `${iRect.left - cRect.left + container.scrollLeft}px`
+    indicator.style.width   = `${iRect.width}px`
+    indicator.style.opacity = '1'
   }
 
   // Slide on active section change
@@ -146,7 +151,7 @@ export default function NavPill() {
         updateIndicator()
         if (indicator) {
           indicator.style.transition =
-            'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease'
         }
       })
     })
@@ -289,6 +294,7 @@ export default function NavPill() {
               border:       '0.5px solid rgba(59, 130, 246, 0.25)',
               zIndex:       0,
               pointerEvents:'none',
+              opacity:      0,
             }}
           />
 
