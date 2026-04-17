@@ -122,10 +122,6 @@ export default function NavPill() {
     if (!container || !item || !indicator) return
     const cRect = container.getBoundingClientRect()
     const iRect = item.getBoundingClientRect()
-    if (iRect.width === 0) {
-      indicator.style.opacity = '0'
-      return
-    }
     indicator.style.left    = `${iRect.left - cRect.left + container.scrollLeft}px`
     indicator.style.width   = `${iRect.width}px`
     indicator.style.opacity = '1'
@@ -153,6 +149,7 @@ export default function NavPill() {
           indicator.style.transition =
             'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease'
         }
+        if (indicatorRef.current) indicatorRef.current.style.opacity = '1'
       })
     })
 
