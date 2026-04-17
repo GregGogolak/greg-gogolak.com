@@ -6,7 +6,7 @@ import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/
 const TH = ({ children, align = 'right' }) => (
   <th style={{
     fontFamily: 'JetBrains Mono, monospace',
-    padding: '8px 14px',
+    padding: '8px 10px',
     fontSize: '10px',
     fontWeight: 400,
     color: 'rgba(255,255,255,0.3)',
@@ -23,7 +23,7 @@ const TH = ({ children, align = 'right' }) => (
 
 const TD = ({ children, style }) => (
   <td style={{
-    padding: '10px 14px',
+    padding: '10px 10px',
     fontSize: '12px',
     color: '#eef2ff',
     whiteSpace: 'nowrap',
@@ -190,7 +190,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
       background: '#13131e',
       boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
     }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1080px' }}>
         <thead>
           <tr>
             {selectMode && (
@@ -268,7 +268,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
                 )}
                 {/* Ticker */}
                 <td style={{
-                  padding: '10px 12px',
+                  padding: '10px 8px',
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '10px',
                   letterSpacing: '0.08em',
@@ -281,7 +281,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
 
                 {/* Buy Date */}
                 <td style={{
-                  padding: '10px 12px',
+                  padding: '10px 8px',
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '11px',
                   color: 'rgba(255,255,255,0.5)',
@@ -293,7 +293,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
 
                 {/* Sell Date */}
                 <td style={{
-                  padding: '10px 12px',
+                  padding: '10px 8px',
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: '11px',
                   color: t.sell_date === t.buy_date

@@ -232,7 +232,7 @@ const HeroSection = ({ data }) => {
               boxShadow: '0 0 6px rgba(34,197,94,0.8)',
               animation: 'dotPulseLedger 1.5s ease-in-out infinite',
             }} />
-            NVDA
+            LIVE
           </div>
 
           {/* Connected stat pills */}

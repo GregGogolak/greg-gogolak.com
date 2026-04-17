@@ -248,7 +248,7 @@ export default function CSVImport({ onImportComplete }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
               <tr>
-                {['Dates', 'Shares', 'Buy', 'Sell', 'Gross P&L', 'Platform', 'Net EUR'].map(col => (
+                {['Ticker', 'Dates', 'Shares', 'Buy', 'Sell', 'Gross P&L', 'Platform', 'Net EUR'].map(col => (
                   <th key={col} style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: '9px',
@@ -266,6 +266,9 @@ export default function CSVImport({ onImportComplete }) {
             <tbody>
               {parsedTrades.map((t, i) => (
                 <tr key={i} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', letterSpacing: '0.08em', color: t.ticker === 'NVDA' || !t.ticker ? 'rgba(59,130,246,0.7)' : 'rgba(255,255,255,0.5)' }}>
+                    {t.ticker ?? 'NVDA'}
+                  </td>
                   <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
                     {t.buy_date}{t.buy_date !== t.sell_date ? ` → ${t.sell_date}` : ''}
                   </td>
