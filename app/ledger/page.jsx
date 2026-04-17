@@ -135,6 +135,7 @@ const HeroSection = ({ data }) => {
       <div style={{
         position: 'relative', zIndex: 1,
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        flexWrap: 'wrap', gap: '16px',
       }}>
         {/* Left — fund total */}
         <div>
@@ -164,7 +165,7 @@ const HeroSection = ({ data }) => {
               }}>$</span>
               <span style={{
                 fontFamily: 'Inter, sans-serif',
-                fontSize: '72px', fontWeight: '600',
+                fontSize: 'clamp(40px, 10vw, 72px)', fontWeight: '600',
                 color: '#f0f0f8',
                 letterSpacing: '-2px', lineHeight: '1',
                 animation: 'numberFlicker 9s ease-in-out infinite',
@@ -191,7 +192,7 @@ const HeroSection = ({ data }) => {
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '11px', color: 'rgba(255,255,255,0.22)',
             }}>
-              {data?.fundStats?.totalTrades ?? 0} trades · {data?.fundStats?.winRate ?? 0}% win rate
+              €{fmtEuro(data?.fundStats?.bestTradeEver?.net_eur ?? 0)} best trade · {data?.members?.length ?? 0} members
             </span>
             <span style={{
               fontFamily: 'JetBrains Mono, monospace',
@@ -206,11 +207,13 @@ const HeroSection = ({ data }) => {
         </div>
 
         {/* Right — mini stat cluster */}
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'flex-end', gap: '10px',
-          animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both',
-        }}>
+        <div
+          className="ledger-stat-cluster"
+          style={{
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'flex-end', gap: '10px',
+            animation: 'ledgerFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both',
+          }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             fontFamily: 'JetBrains Mono, monospace',
@@ -230,7 +233,7 @@ const HeroSection = ({ data }) => {
           </div>
 
           {/* Connected stat pills */}
-          <div style={{ display: 'flex', gap: '1px' }}>
+          <div className="ledger-stat-pills" style={{ display: 'flex', gap: '1px' }}>
             {[
               { val: data?.members?.length ?? 0, label: 'Members' },
               { val: data?.fundStats?.totalTrades ?? 0, label: 'Trades' },
@@ -625,25 +628,6 @@ const MembersSection = ({ members }) => {
                     marginBottom: '3px', flexWrap: 'wrap',
                   }}>
                     {name}
-                    {isFirst && (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '3px',
-                        padding: '2px 8px', borderRadius: '9999px',
-                        background: 'rgba(34,197,94,0.08)',
-                        border: '0.5px solid rgba(34,197,94,0.2)',
-                        color: '#22c55e',
-                        fontFamily: 'JetBrains Mono, monospace', fontSize: '8px',
-                        letterSpacing: '0.06em',
-                      }}>★ Winning</span>
-                    )}
-                    <span style={{
-                      display: 'inline-flex', padding: '2px 7px', borderRadius: '9999px',
-                      background: 'rgba(59,130,246,0.07)',
-                      border: '0.5px solid rgba(59,130,246,0.18)',
-                      color: 'rgba(59,130,246,0.75)',
-                      fontFamily: 'JetBrains Mono, monospace', fontSize: '8px',
-                      letterSpacing: '0.06em',
-                    }}>{member.role ?? 'Member'}</span>
                   </div>
                   <div style={{
                     fontFamily: 'JetBrains Mono, monospace',

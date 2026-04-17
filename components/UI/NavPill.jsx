@@ -122,13 +122,17 @@ export default function NavPill() {
     if (!container || !item || !indicator) return
     const cRect = container.getBoundingClientRect()
     const iRect = item.getBoundingClientRect()
-    indicator.style.left  = `${iRect.left - cRect.left}px`
+    indicator.style.left  = `${iRect.left - cRect.left + container.scrollLeft}px`
     indicator.style.width = `${iRect.width}px`
   }
 
   // Slide on active section change
   useEffect(() => {
     updateIndicator()
+    const item = itemRefs.current[activeLabel]
+    if (item && centreRef.current) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    }
   }, [activeLabel])
 
   // Mount: snap to position instantly, then enable transition
@@ -149,11 +153,14 @@ export default function NavPill() {
 
     const handleResize = () => updateIndicator()
     window.addEventListener('resize', handleResize)
+    const centre = centreRef.current
+    if (centre) centre.addEventListener('scroll', updateIndicator)
     return () => {
       window.removeEventListener('resize', handleResize)
+      if (centre) centre.removeEventListener('scroll', updateIndicator)
       cancelAnimationFrame(raf1)
     }
-  }, [navItems.length, activeLabel])
+  }, [navItems.length])
 
   if (pathname === '/login') return null
 
@@ -201,6 +208,7 @@ export default function NavPill() {
           .navpill-item             { font-size: 11px; padding: 6px 10px; }
           .header-identity-text     { display: none; }
           .header-status-cluster    { display: none; }
+          .navpill-centre           { max-width: calc(100vw - 120px); }
         }
 
         /* ── Centre nav scroll ── */
@@ -264,8 +272,6 @@ export default function NavPill() {
             overflowX:                'auto',
             scrollbarWidth:           'none',
             WebkitOverflowScrolling:  'touch',
-            minWidth:                 0,
-            flex:                     1,
           }}
         >
           {/* Sliding indicator — absolutely positioned behind the active label */}

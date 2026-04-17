@@ -252,3 +252,18 @@ body::before {
 .cl-footer {
   display: none !important;
 }
+
+/* ── Ledger hero — mobile layout ── */
+@media (max-width: 639px) {
+  .ledger-stat-cluster {
+    width: 100%;
+  }
+  .ledger-stat-cluster > div:first-child {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .ledger-stat-pills { width: 100%; }
+  .ledger-stat-pills > div { flex: 1; }
+}
