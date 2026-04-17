@@ -5,6 +5,7 @@ import { fmtEUR } from '@/lib/format'
 
 const FIELD_STYLE = {
   width: '100%',
+  minWidth: 0,
   background: 'rgba(255,255,255,0.05)',
   border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: '10px',
@@ -205,7 +206,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit}>
           {/* Dates row */}
-          <div className="trade-form-dates" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          <div className="trade-form-dates" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px', overflow: 'hidden' }}>
             <div>
               <label style={LABEL_STYLE}>Buy Date</label>
               <input

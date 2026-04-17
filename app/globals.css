@@ -273,3 +273,9 @@ body::before {
     grid-template-columns: 1fr !important;
   }
 }
+
+.trade-form-dates input[type="date"] {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
