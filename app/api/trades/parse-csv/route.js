@@ -17,12 +17,15 @@ export async function POST(request) {
       const trimmed = line.trim()
       if (!trimmed) return false
       const cols = trimmed.split(delimiter)
-      // Skip rows where first two columns (dates) are empty
-      if (!cols[0]?.trim() && !cols[1]?.trim()) return false
-      // Skip summary/footer rows that start with non-date text
-      const firstCol = cols[0]?.trim().replace(/^"|"$/g, '')
+      const firstCol = cols[0]?.trim().replace(/^"|"$/g, '') ?? ''
+      const secondCol = cols[1]?.trim().replace(/^"|"$/g, '') ?? ''
+      // Skip rows where both date columns are empty
+      if (!firstCol && !secondCol) return false
+      // Skip rows where first column is non-date text (summary/footer rows)
       if (!firstCol) return false
       if (/^[a-zA-Z]{4,}/.test(firstCol) && !/^\d/.test(firstCol)) return false
+      // Skip rows that look like totals (first col is all semicolons/empty, has large numbers mid-row)
+      if (cols.length > 5 && !firstCol && cols.filter(c => c.trim()).length < 3) return false
       return true
     })
     const cleanedCsv = [headerLine, ...dataLines].join('\n')
@@ -31,7 +34,7 @@ export async function POST(request) {
 
     const message = await client.messages.create({
       model:      'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 8000,
       messages: [{
         role:    'user',
         content: `You are a trade data parser. Parse this CSV and return trades as JSON.
@@ -75,13 +78,27 @@ ${cleanedCsv}`,
       }],
     })
 
-    const text  = message.content[0].text
-    const clean = text.replace(/```json|```/g, '').trim()
+    const text = message.content[0].text
+
+    // Try to extract JSON object even if AI added surrounding text
+    let clean = text.replace(/```json|```/g, '').trim()
+
+    // If still not valid, try to find the JSON object boundaries
+    if (!clean.startsWith('{')) {
+      const start = clean.indexOf('{')
+      const end = clean.lastIndexOf('}')
+      if (start !== -1 && end !== -1) {
+        clean = clean.slice(start, end + 1)
+      }
+    }
 
     let parsed
     try {
       parsed = JSON.parse(clean)
-    } catch {
+    } catch (parseErr) {
+      console.error('[parse-csv] JSON parse failed. Raw response length:', text.length)
+      console.error('[parse-csv] First 500 chars:', text.slice(0, 500))
+      console.error('[parse-csv] Last 500 chars:', text.slice(-500))
       return Response.json({ error: 'AI returned invalid JSON' }, { status: 500 })
     }
 
