@@ -4,12 +4,12 @@ import { calculateTrade } from '@/lib/tradeCalculations'
 import { getUserId } from '@/lib/auth'
 
 function validateInputs({ buy_price, sell_price, shares, buy_date, sell_date, type }) {
-  if (!buy_date || !sell_date || !type) return 'All fields are required'
+  if (!buy_date || !sell_date) return 'All fields are required'
   if (new Date(sell_date) < new Date(buy_date)) return 'sell_date must be >= buy_date'
   if (!Number.isFinite(Number(buy_price))  || Number(buy_price)  <= 0) return 'buy_price must be a positive number'
   if (!Number.isFinite(Number(sell_price)) || Number(sell_price) <= 0) return 'sell_price must be a positive number'
   if (!Number.isFinite(Number(shares))     || Number(shares)     <= 0) return 'shares must be a positive number'
-  if (!['SCALP', 'CONVICTION'].includes(type)) return 'type must be SCALP or CONVICTION'
+  if (type && !['SCALP', 'CONVICTION'].includes(type)) return 'type must be SCALP or CONVICTION'
   return null
 }
 
@@ -39,7 +39,7 @@ export async function POST(req) {
 
     const redis = getRedis()
     const body  = await req.json()
-    const { buy_price, sell_price, shares, buy_date, sell_date, type } = body
+    const { buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP' } = body
 
     const err = validateInputs(body)
     if (err) return Response.json({ error: err }, { status: 400 })
@@ -84,7 +84,7 @@ export async function PUT(req) {
 
     const redis = getRedis()
     const body  = await req.json()
-    const { id, buy_price, sell_price, shares, buy_date, sell_date, type } = body
+    const { id, buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP' } = body
 
     if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
 

@@ -16,18 +16,15 @@ export async function POST(request) {
       max_tokens: 4000,
       messages: [{
         role:    'user',
-        content: `You are a trade data parser. Parse this CSV and return a JSON array of trades.
+        content: `You are a trade data parser. Parse this CSV and return a JSON array of ALL trades found.
 
-Rules:
-- Each row should become one trade object
-- Dates must be converted to YYYY-MM-DD format regardless of input format (handle day name prefixes like "Friday 29/11/2024", two digit years like "24/02/25", any reasonable date format)
-- Numbers must be clean floats (remove commas, currency symbols, quotes)
-- Shares must be a number (remove commas from "1,000" → 1000)
-- type must be either "SCALP" or "CONVICTION" — infer from context, default to "SCALP" if unclear
-- buy_date and sell_date are required — skip rows where you cannot determine either
-- buy_price and sell_price must be positive numbers — skip rows where prices are missing or zero
-- shares must be a positive number — skip rows where shares are missing
-- If sell_date is before buy_date, note it as skipped
+Parsing rules:
+- Dates: convert to YYYY-MM-DD regardless of input format (handle "Friday 29/11/2024", "24/02/25", "02/03/26", any format)
+- Numbers: clean floats — remove commas, currency symbols, quotes ("1,000" → 1000)
+- Shares: positive number (remove commas)
+- buy_price and sell_price: parse as-is — do NOT skip loss trades where sell_price < buy_price, these are valid
+- Do NOT skip rows where buy_price equals sell_price — these are valid zero-profit trades
+- Only skip a row if: dates are completely unparseable, OR prices are missing/zero/negative, OR shares are missing/zero
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
@@ -37,11 +34,10 @@ Return ONLY valid JSON, no markdown, no explanation:
       "sell_date": "YYYY-MM-DD",
       "buy_price": number,
       "sell_price": number,
-      "shares": number,
-      "type": "SCALP" or "CONVICTION"
+      "shares": number
     }
   ],
-  "skipped": ["Row N: reason for skipping"]
+  "skipped": ["Row N: reason (only for genuinely unparseable data)"]
 }
 
 CSV data:
@@ -70,7 +66,7 @@ ${csv}`,
         shares:     t.shares,
         buy_date:   t.buy_date,
         sell_date:  t.sell_date,
-        type:       t.type,
+        type:       'SCALP',
         existingDatesForUser,
       })
 
@@ -81,7 +77,7 @@ ${csv}`,
         id:         crypto.randomUUID(),
         created_at: new Date().toISOString(),
         ticker:     'NVDA',
-        type:       t.type,
+        type:       'SCALP',
         buy_date:   t.buy_date,
         sell_date:  t.sell_date,
         buy_price:  t.buy_price,

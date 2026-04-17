@@ -158,6 +158,62 @@ export default function TrackPage() {
     setDeletedTrades(prev => prev.filter(t => t.id !== id))
   }
 
+  function handleExport() {
+    // ── Closed trades CSV ──────────────────────────────────────────────
+    const tradeHeaders = [
+      'Buy Date', 'Sell Date', 'Days Held',
+      'Shares', 'Buy Price (USD)', 'Sell Price (USD)',
+      'Gross P&L (USD)', 'Tx Fees (USD)', 'Platform Fees (USD)',
+      'Interest (USD)', 'Total Costs (USD)', 'Net EUR'
+    ]
+    const tradeRows = trades.map(t => [
+      t.buy_date ?? '',
+      t.sell_date ?? '',
+      t.calendar_days ?? 0,
+      t.shares ?? 0,
+      t.buy_price ?? 0,
+      t.sell_price ?? 0,
+      (t.gross_pnl_usd ?? 0).toFixed(2),
+      (t.transaction_fees_usd ?? 0).toFixed(2),
+      (t.platform_fees_usd ?? 0).toFixed(2),
+      (t.interest_usd ?? 0).toFixed(2),
+      (t.total_costs_usd ?? 0).toFixed(2),
+      (t.net_eur ?? 0).toFixed(2),
+    ])
+    const tradeCSV = [tradeHeaders, ...tradeRows]
+      .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+
+    const tradeBlob = new Blob([tradeCSV], { type: 'text/csv;charset=utf-8;' })
+    const tradeUrl = URL.createObjectURL(tradeBlob)
+    const tradeLink = document.createElement('a')
+    tradeLink.href = tradeUrl
+    tradeLink.download = `nvda_trades_${new Date().toISOString().slice(0,10)}.csv`
+    tradeLink.click()
+    URL.revokeObjectURL(tradeUrl)
+
+    // ── Open positions CSV ─────────────────────────────────────────────
+    if (openPositions.length > 0) {
+      const posHeaders = ['Entry Date', 'Entry Price (USD)', 'Shares']
+      const posRows = openPositions.map(p => [
+        p.entryDate ?? '',
+        p.entryPrice ?? 0,
+        p.shares ?? 0,
+      ])
+      const posCSV = [posHeaders, ...posRows]
+        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+        .join('\n')
+
+      const posBlob = new Blob([posCSV], { type: 'text/csv;charset=utf-8;' })
+      const posUrl = URL.createObjectURL(posBlob)
+      const posLink = document.createElement('a')
+      posLink.href = posUrl
+      posLink.download = `nvda_open_positions_${new Date().toISOString().slice(0,10)}.csv`
+      posLink.click()
+      URL.revokeObjectURL(posUrl)
+    }
+  }
+
   // Recalculate net sum using shared platform fees (visual only, stored data unchanged)
   const adjustedNetSum = trades.reduce((sum, trade) => {
     if (!platformFeeMap) return sum + (trade.net_eur ?? 0)
@@ -221,6 +277,35 @@ export default function TrackPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={handleExport}
+            disabled={trades.length === 0}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '9999px',
+              background: 'transparent',
+              border: `0.5px solid ${trades.length === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.1)'}`,
+              color: trades.length === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.35)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              cursor: trades.length === 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.06em',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}
+            onMouseEnter={e => {
+              if (trades.length > 0) {
+                e.currentTarget.style.borderColor = 'rgba(34,197,94,0.3)'
+                e.currentTarget.style.color = 'rgba(34,197,94,0.7)'
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = trades.length === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.1)'
+              e.currentTarget.style.color = trades.length === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.35)'
+            }}
+          >
+            Export CSV
+          </button>
+
           <button
             onClick={() => setShowImport(v => !v)}
             style={{
@@ -584,16 +669,6 @@ export default function TrackPage() {
                       fontWeight: '500',
                       color: 'rgba(255,255,255,0.85)',
                     }}>{pos.shares.toLocaleString()} shares</span>
-                    <span style={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: '9px',
-                      padding: '2px 7px',
-                      borderRadius: '9999px',
-                      background: 'rgba(59,130,246,0.1)',
-                      border: '0.5px solid rgba(59,130,246,0.25)',
-                      color: 'rgba(59,130,246,0.8)',
-                      letterSpacing: '0.06em',
-                    }}>{pos.type ?? 'CONVICTION'}</span>
                   </div>
                   <div style={{
                     fontFamily: 'JetBrains Mono, monospace',

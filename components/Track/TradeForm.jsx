@@ -37,7 +37,6 @@ const EMPTY = {
   buy_price:  '',
   sell_price: '',
   shares:     '',
-  type:       'SCALP',
 }
 
 export default function TradeForm({ open, editTrade, onClose, onSaved }) {
@@ -56,7 +55,6 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
         buy_price:  String(editTrade.buy_price),
         sell_price: String(editTrade.sell_price),
         shares:     String(editTrade.shares),
-        type:       editTrade.type,
       })
     } else {
       setForm(EMPTY)
@@ -101,7 +99,6 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
       buy_price:  parseFloat(form.buy_price),
       sell_price: parseFloat(form.sell_price),
       shares:     parseFloat(form.shares),
-      type:       'SCALP',
     }
 
     try {
