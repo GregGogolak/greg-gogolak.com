@@ -190,7 +190,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
       background: '#13131e',
       boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)',
     }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
         <thead>
           <tr>
             {selectMode && (
@@ -208,6 +208,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
                 />
               </th>
             )}
+            <TH align="left">Ticker</TH>
             <SortableHeader col="buy_date"   label="Buy Date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="sell_date"  label="Sell Date"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="shares"     label="Shares"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
@@ -265,6 +266,19 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
                     />
                   </td>
                 )}
+                {/* Ticker */}
+                <td style={{
+                  padding: '10px 12px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '10px',
+                  letterSpacing: '0.08em',
+                  color: t.ticker === 'NVDA' || !t.ticker ? 'rgba(59,130,246,0.7)' : 'rgba(255,255,255,0.5)',
+                  whiteSpace: 'nowrap',
+                  borderBottom: '0.5px solid rgba(255,255,255,0.04)',
+                }}>
+                  {t.ticker ?? 'NVDA'}
+                </td>
+
                 {/* Buy Date */}
                 <td style={{
                   padding: '10px 12px',
@@ -419,7 +433,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
 
               {confirmId === t.id && (
                 <DeleteConfirmRow
-                  colSpan={selectMode ? 15 : 14}
+                  colSpan={selectMode ? 16 : 15}
                   trade={t}
                   onConfirm={handleDelete}
                   onCancel={() => setConfirmId(null)}

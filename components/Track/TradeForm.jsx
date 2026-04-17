@@ -38,6 +38,7 @@ const EMPTY = {
   buy_price:  '',
   sell_price: '',
   shares:     '',
+  ticker:     'NVDA',
 }
 
 export default function TradeForm({ open, editTrade, onClose, onSaved }) {
@@ -56,6 +57,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
         buy_price:  String(editTrade.buy_price),
         sell_price: String(editTrade.sell_price),
         shares:     String(editTrade.shares),
+        ticker:     editTrade.ticker ?? 'NVDA',
       })
     } else {
       setForm(EMPTY)
@@ -100,6 +102,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
       buy_price:  parseFloat(form.buy_price),
       sell_price: parseFloat(form.sell_price),
       shares:     parseFloat(form.shares),
+      ticker:     (form.ticker || 'NVDA').toUpperCase(),
     }
 
     try {
@@ -181,7 +184,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
               fontSize: '11px',
               color: 'rgba(255,255,255,0.25)',
               marginTop: '2px',
-            }}>NVDA · USD</div>
+            }}>{form.ticker || 'NVDA'} · USD</div>
           </div>
           <button
             onClick={onClose}
@@ -259,19 +262,32 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* Shares row */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={LABEL_STYLE}>Shares</label>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              placeholder="0"
-              value={form.shares}
-              onChange={e => handleChange('shares', e.target.value)}
-              required
-              style={FIELD_STYLE}
-            />
+          {/* Ticker + Shares row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', marginBottom: '20px' }}>
+            <div>
+              <label style={LABEL_STYLE}>Ticker</label>
+              <input
+                type="text"
+                placeholder="NVDA"
+                value={form.ticker}
+                onChange={e => handleChange('ticker', e.target.value.toUpperCase())}
+                maxLength={6}
+                style={FIELD_STYLE}
+              />
+            </div>
+            <div>
+              <label style={LABEL_STYLE}>Shares</label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                placeholder="0"
+                value={form.shares}
+                onChange={e => handleChange('shares', e.target.value)}
+                required
+                style={FIELD_STYLE}
+              />
+            </div>
           </div>
 
           {/* Live preview */}

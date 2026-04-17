@@ -39,7 +39,7 @@ export async function POST(req) {
 
     const redis = getRedis()
     const body  = await req.json()
-    const { buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP' } = body
+    const { buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP', ticker = 'NVDA' } = body
 
     const err = validateInputs(body)
     if (err) return Response.json({ error: err }, { status: 400 })
@@ -55,7 +55,7 @@ export async function POST(req) {
     const trade = {
       id:         crypto.randomUUID(),
       created_at: new Date().toISOString(),
-      ticker:     'NVDA',
+      ticker: (ticker ?? 'NVDA').toUpperCase(),
       type,
       buy_date,
       sell_date,
@@ -84,7 +84,7 @@ export async function PUT(req) {
 
     const redis = getRedis()
     const body  = await req.json()
-    const { id, buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP' } = body
+    const { id, buy_price, sell_price, shares, buy_date, sell_date, type = 'SCALP', ticker = 'NVDA' } = body
 
     if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
 
@@ -108,6 +108,7 @@ export async function PUT(req) {
     const updated    = [...existing]
     updated[idx]     = {
       ...existing[idx],
+      ticker: (ticker ?? existing[idx]?.ticker ?? 'NVDA').toUpperCase(),
       type,
       buy_date,
       sell_date,
