@@ -267,3 +267,9 @@ body::before {
   .ledger-stat-pills { width: 100%; }
   .ledger-stat-pills > div { flex: 1; }
 }
+
+@media (max-width: 520px) {
+  .trade-form-dates {
+    grid-template-columns: 1fr !important;
+  }
+}

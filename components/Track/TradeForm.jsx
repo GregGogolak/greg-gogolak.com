@@ -205,7 +205,7 @@ export default function TradeForm({ open, editTrade, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit}>
           {/* Dates row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+          <div className="trade-form-dates" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
               <label style={LABEL_STYLE}>Buy Date</label>
               <input
