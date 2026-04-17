@@ -144,11 +144,11 @@ export default function ReadPage() {
   return (
     <div style={{
       display: 'flex',
-      height: '100vh',
+      height: 'calc(100vh - 68px)',
       overflow: 'hidden',
       background: '#08080f',
       fontFamily: 'Inter, sans-serif',
-      paddingTop: '56px',
+      paddingTop: '0px',
     }}>
 
       {/* ── Left Sidebar ── */}
@@ -157,12 +157,12 @@ export default function ReadPage() {
         style={{
           width: '220px',
           flexShrink: 0,
-          padding: '4px 12px 20px 16px',
+          padding: '0px 12px 20px 16px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
           overflowY: 'auto',
-          height: 'calc(100vh - 56px)',
+          height: 'calc(100vh - 68px)',
         }}
       >
         {/* Inner card */}
@@ -339,7 +339,7 @@ export default function ReadPage() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '4px 24px 40px',
+          padding: '0px 24px 40px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -574,14 +574,6 @@ export default function ReadPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                    <a
-                      href="/trade"
-                      style={{ flex: 1, padding: '11px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#e5e7eb', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontSize: '12px', fontFamily: 'monospace', letterSpacing: '0.05em', textDecoration: 'none', display: 'block', transition: 'background 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-                    >
-                      Trade Checklist
-                    </a>
                     <a
                       href="/track"
                       style={{ flex: 1, padding: '11px 16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: '#e5e7eb', background: 'rgba(255,255,255,0.05)', textAlign: 'center', fontSize: '12px', fontFamily: 'monospace', letterSpacing: '0.05em', textDecoration: 'none', display: 'block', transition: 'background 0.15s' }}

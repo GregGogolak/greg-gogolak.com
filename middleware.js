@@ -8,7 +8,6 @@ const isAdminRoute = createRouteMatcher([
   '/',
   '/read(.*)',
   '/brief(.*)',
-  '/trade(.*)',
   '/alerts(.*)',
 ])
 

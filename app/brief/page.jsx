@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 
 // ── ET time helpers ───────────────────────────────────────────────────────────
 
@@ -251,11 +250,6 @@ function BriefDisplay({ brief }) {
               {brief.positions.reason}
             </p>
           )}
-          {brief.positions?.action === 'ADD' && (
-            <Link href="/trade" style={{ display: 'inline-block', fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.06em', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.07)', padding: '6px 14px', borderRadius: 8, textDecoration: 'none' }}>
-              → Trade Checklist
-            </Link>
-          )}
         </div>
       </div>
 
@@ -406,7 +400,7 @@ export default function BriefPage() {
         onClick={handleRefresh}
         disabled={loading || !duringHours}
         style={{
-          position: 'fixed', top: 16, right: 16, zIndex: 50,
+          position: 'fixed', top: 72, right: 20, zIndex: 50,
           padding: '8px 16px', borderRadius: 10,
           fontSize: 11, fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.06em',
           cursor: (loading || !duringHours) ? 'default' : 'pointer',

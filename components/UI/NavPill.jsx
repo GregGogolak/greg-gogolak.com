@@ -12,12 +12,12 @@ import { getMarketSession } from '@/lib/sessionUtils'
 // ── Nav definitions ────────────────────────────────────────────────────────────
 const adminNav = [
   { href: '/',       label: 'Dashboard' },
+  { href: '/brief',  label: 'Brief'     },
   { href: '/read',   label: 'Read'      },
-  { href: '/trade',  label: 'Trade'     },
+  { href: '/jarvis', label: 'Jarvis'    },
   { href: '/alerts', label: 'Alerts'    },
   { href: '/track',  label: 'Track'     },
   { href: '/ledger', label: 'Ledger'    },
-  { href: '/brief',  label: 'Brief'     },
 ]
 
 const memberNav = [
