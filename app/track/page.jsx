@@ -24,6 +24,8 @@ export default function TrackPage() {
   const [exitDate,      setExitDate]      = useState(new Date().toISOString().split('T')[0])
   const [closeLoading,  setCloseLoading]  = useState(false)
 
+  const [tickerFilter, setTickerFilter] = useState('ALL')
+
   // Select mode + soft-delete bin
   const [selectMode,           setSelectMode]           = useState(false)
   const [selectedIds,          setSelectedIds]          = useState(new Set())
@@ -161,12 +163,13 @@ export default function TrackPage() {
   function handleExport() {
     // ── Closed trades CSV ──────────────────────────────────────────────
     const tradeHeaders = [
-      'Buy Date', 'Sell Date', 'Days Held',
+      'Ticker', 'Buy Date', 'Sell Date', 'Days Held',
       'Shares', 'Buy Price (USD)', 'Sell Price (USD)',
       'Gross P&L (USD)', 'Tx Fees (USD)', 'Platform Fees (USD)',
       'Interest (USD)', 'Total Costs (USD)', 'Net EUR'
     ]
     const tradeRows = trades.map(t => [
+      t.ticker ?? 'NVDA',
       t.buy_date ?? '',
       t.sell_date ?? '',
       t.calendar_days ?? 0,
@@ -221,6 +224,9 @@ export default function TrackPage() {
     const { adjustedNetEur } = recalculateNetWithSharedFees(trade, sharedFees)
     return sum + adjustedNetEur
   }, 0)
+
+  const allTickers = ['ALL', ...Array.from(new Set(trades.map(t => t.ticker ?? 'NVDA'))).sort()]
+  const filteredTrades = tickerFilter === 'ALL' ? trades : trades.filter(t => (t.ticker ?? 'NVDA') === tickerFilter)
 
   const totalPayouts = payouts.reduce((sum, p) => sum + (p.amount ?? 0), 0)
   const remaining    = adjustedNetSum - totalPayouts
@@ -559,11 +565,12 @@ export default function TrackPage() {
           </div>
         ) : (
           <SummaryCards
-            trades={trades}
-            openNetEur={includeOpen ? openEstimatedNetTotal : undefined}
-            openCount={includeOpen ? openPositions.length : undefined}
-            adjustedNetEur={platformFeeMap ? adjustedNetSum : undefined}
-            platformFeeMap={platformFeeMap}
+            trades={tickerFilter === 'ALL' ? trades : filteredTrades}
+            openNetEur={tickerFilter === 'ALL' && includeOpen ? openEstimatedNetTotal : undefined}
+            openCount={tickerFilter === 'ALL' && includeOpen ? openPositions.length : undefined}
+            adjustedNetEur={tickerFilter === 'ALL' && platformFeeMap ? adjustedNetSum : undefined}
+            platformFeeMap={tickerFilter === 'ALL' ? platformFeeMap : null}
+            tickerFilter={tickerFilter}
           />
         )}
       </div>
@@ -1198,16 +1205,42 @@ export default function TrackPage() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: '12px',
       }}>
-        <span style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '11px',
-          fontWeight: 400,
-          color: 'rgba(255,255,255,0.25)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}>
-          Trade Log {!loading && trades.length > 0 && `· ${trades.length} trades`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '11px',
+            fontWeight: 400,
+            color: 'rgba(255,255,255,0.25)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}>
+            Trade Log {!loading && trades.length > 0 && `· ${filteredTrades.length}${tickerFilter !== 'ALL' ? `/${trades.length}` : ''} trades`}
+          </span>
+          {allTickers.length > 2 && (
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {allTickers.map(ticker => (
+                <button
+                  key={ticker}
+                  onClick={() => setTickerFilter(ticker)}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '9999px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px',
+                    letterSpacing: '0.08em',
+                    cursor: 'pointer',
+                    transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+                    background: tickerFilter === ticker ? 'rgba(59,130,246,0.15)' : 'transparent',
+                    border: `0.5px solid ${tickerFilter === ticker ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                    color: tickerFilter === ticker ? 'rgba(59,130,246,0.9)' : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {ticker}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {selectMode && selectedIds.size > 0 && (
             <button onClick={handleBulkSoftDelete} style={{
@@ -1250,7 +1283,7 @@ export default function TrackPage() {
         }} />
       ) : (
         <TradeTable
-          trades={trades}
+          trades={filteredTrades}
           platformFeeMap={platformFeeMap}
           onEdit={openEdit}
           onDelete={handleSoftDelete}

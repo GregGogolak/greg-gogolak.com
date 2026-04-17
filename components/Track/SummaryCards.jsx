@@ -74,7 +74,7 @@ function Card({ label, value, valueColor, sub, valueWeight = 500 }) {
 // openCount:  number of open positions (optional)
 // When both are provided and openCount > 0, Net Profit and Total Trades
 // reflect the combined value. Win rate is always closed trades only.
-export default function SummaryCards({ trades, openNetEur, openCount, adjustedNetEur, platformFeeMap }) {
+export default function SummaryCards({ trades, openNetEur, openCount, adjustedNetEur, platformFeeMap, tickerFilter }) {
   const count    = trades?.length ?? 0
   const hasData  = count > 0
 
@@ -112,12 +112,13 @@ export default function SummaryCards({ trades, openNetEur, openCount, adjustedNe
           value={fmtUSD(grossSum)}
           valueColor={pnlColor(grossSum)}
           valueWeight={600}
+          sub={tickerFilter && tickerFilter !== 'ALL' ? `${tickerFilter} only` : 'all tickers'}
         />
         <Card
           label="Total Fees"
           value={fmtUSD(feesSum)}
           valueColor="rgba(255,255,255,0.6)"
-          sub={hasData ? `Tx: ${fmtUSD(txSum)} | Plat: ${fmtUSD(platSum)} | Int: ${fmtUSD(intSum)}` : null}
+          sub={hasData ? `Tx: ${fmtUSD(txSum)} | Plat: ${fmtUSD(platSum)} | Int: ${fmtUSD(intSum)}${tickerFilter && tickerFilter !== 'ALL' ? ` · ${tickerFilter}` : ''}` : null}
         />
         <Card
           label="Net Profit"
@@ -129,6 +130,8 @@ export default function SummaryCards({ trades, openNetEur, openCount, adjustedNe
               ? 'incl. open est.'
               : showShared
               ? <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(59,130,246,0.6)', letterSpacing: '0.08em' }}>fees shared</span>
+              : tickerFilter && tickerFilter !== 'ALL'
+              ? `${tickerFilter} only`
               : null
           }
         />
