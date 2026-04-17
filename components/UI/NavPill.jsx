@@ -202,6 +202,9 @@ export default function NavPill() {
           .header-identity-text     { display: none; }
           .header-status-cluster    { display: none; }
         }
+
+        /* ── Centre nav scroll ── */
+        .navpill-centre::-webkit-scrollbar { display: none; }
       `}</style>
 
       <nav
@@ -249,14 +252,20 @@ export default function NavPill() {
         {/* ── CENTRE: nav sections + sliding indicator ───────────────────────── */}
         <div
           ref={centreRef}
+          className="navpill-centre"
           style={{
-            display:      'flex',
-            alignItems:   'center',
-            position:     'relative',
-            background:   'rgba(255,255,255,0.03)',
-            borderRadius: '9999px',
-            padding:      '4px 4px',
-            gap:          '2px',
+            display:                  'flex',
+            alignItems:               'center',
+            position:                 'relative',
+            background:               'rgba(255,255,255,0.03)',
+            borderRadius:             '9999px',
+            padding:                  '4px 4px',
+            gap:                      '2px',
+            overflowX:                'auto',
+            scrollbarWidth:           'none',
+            WebkitOverflowScrolling:  'touch',
+            minWidth:                 0,
+            flex:                     1,
           }}
         >
           {/* Sliding indicator — absolutely positioned behind the active label */}
