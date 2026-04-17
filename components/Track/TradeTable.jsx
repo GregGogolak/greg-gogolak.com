@@ -124,7 +124,7 @@ const SortableHeader = ({ col, label, sortCol, sortDir, onSort }) => (
   </th>
 )
 
-export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete }) {
+export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, selectMode = false, selectedIds = new Set(), onToggleSelect, onToggleAll }) {
   const [confirmId,   setConfirmId]   = useState(null)
   const [deletingId,  setDeletingId]  = useState(null)
   const [hoveredId,   setHoveredId]   = useState(null)
@@ -193,6 +193,21 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1120px' }}>
         <thead>
           <tr>
+            {selectMode && (
+              <th style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.03)', borderBottom: '0.5px solid rgba(255,255,255,0.065)' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === sortedTrades.length && sortedTrades.length > 0}
+                  onChange={() => onToggleAll(sortedTrades.map(t => t.id))}
+                  style={{
+                    appearance: 'none', width: 14, height: 14, borderRadius: 3,
+                    border: '0.5px solid rgba(255,255,255,0.2)',
+                    background: selectedIds.size === sortedTrades.length && sortedTrades.length > 0 ? 'rgba(59,130,246,0.4)' : 'transparent',
+                    cursor: 'pointer', display: 'block',
+                  }}
+                />
+              </th>
+            )}
             <SortableHeader col="buy_date"   label="Buy Date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="sell_date"  label="Sell Date"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
             <SortableHeader col="shares"     label="Shares"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
@@ -235,6 +250,21 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
                   transition: 'background 200ms cubic-bezier(0.16,1,0.3,1), transform 200ms cubic-bezier(0.16,1,0.3,1)',
                 }}
               >
+                {selectMode && (
+                  <td style={{ padding: '10px 14px', borderBottom: '0.5px solid rgba(255,255,255,0.04)', verticalAlign: 'middle' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(t.id)}
+                      onChange={() => onToggleSelect(t.id)}
+                      style={{
+                        appearance: 'none', width: 14, height: 14, borderRadius: 3,
+                        border: '0.5px solid rgba(255,255,255,0.2)',
+                        background: selectedIds.has(t.id) ? 'rgba(59,130,246,0.4)' : 'transparent',
+                        cursor: 'pointer', display: 'block',
+                      }}
+                    />
+                  </td>
+                )}
                 {/* Buy Date */}
                 <td style={{
                   padding: '10px 12px',
@@ -389,7 +419,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete })
 
               {confirmId === t.id && (
                 <DeleteConfirmRow
-                  colSpan={14}
+                  colSpan={selectMode ? 15 : 14}
                   trade={t}
                   onConfirm={handleDelete}
                   onCancel={() => setConfirmId(null)}

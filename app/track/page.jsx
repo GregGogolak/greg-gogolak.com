@@ -24,6 +24,14 @@ export default function TrackPage() {
   const [exitDate,      setExitDate]      = useState(new Date().toISOString().split('T')[0])
   const [closeLoading,  setCloseLoading]  = useState(false)
 
+  // Select mode + soft-delete bin
+  const [selectMode,           setSelectMode]           = useState(false)
+  const [selectedIds,          setSelectedIds]          = useState(new Set())
+  const [deletedTrades,        setDeletedTrades]        = useState([])
+  const [deletedOpen,          setDeletedOpen]          = useState(false)
+  const [deletedSelectMode,    setDeletedSelectMode]    = useState(false)
+  const [deletedSelectedIds,   setDeletedSelectedIds]   = useState(new Set())
+
   // Open position inline form
   const [showAddPosition, setShowAddPosition] = useState(false)
   const [newPosition,     setNewPosition]     = useState({ entryPrice: '', shares: '', entryDate: new Date().toISOString().split('T')[0] })
@@ -72,6 +80,10 @@ export default function TrackPage() {
       .then(r => r.json())
       .then(data => setPayouts(Array.isArray(data) ? data : []))
       .catch(() => {})
+    fetch('/api/trades/deleted')
+      .then(r => r.json())
+      .then(data => setDeletedTrades(Array.isArray(data) ? data : []))
+      .catch(() => {})
   }, [fetchTrades, fetchPositions])
 
   function openAdd() {
@@ -103,13 +115,47 @@ export default function TrackPage() {
     }
   }
 
-  async function handleDelete(id) {
-    await fetch('/api/trades', {
-      method:  'DELETE',
+  async function handleSoftDelete(id) {
+    const trade = trades.find(t => t.id === id)
+    if (!trade) return
+    await fetch('/api/trades/deleted', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ id }),
+      body: JSON.stringify({ trade }),
     })
     setTrades(prev => prev.filter(t => t.id !== id))
+    setDeletedTrades(prev => [{ ...trade, deleted_at: new Date().toISOString() }, ...prev])
+  }
+
+  async function handleBulkSoftDelete() {
+    for (const id of selectedIds) {
+      await handleSoftDelete(id)
+    }
+    setSelectedIds(new Set())
+    setSelectMode(false)
+  }
+
+  async function handleRestore(id) {
+    await fetch('/api/trades/deleted', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, permanent: false }),
+    })
+    const trade = deletedTrades.find(t => t.id === id)
+    if (trade) {
+      const { deleted_at, ...original } = trade
+      setTrades(prev => [original, ...prev].sort((a, b) => new Date(b.sell_date) - new Date(a.sell_date)))
+    }
+    setDeletedTrades(prev => prev.filter(t => t.id !== id))
+  }
+
+  async function handlePermanentDeleteFromBin(id) {
+    await fetch('/api/trades/deleted', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, permanent: true }),
+    })
+    setDeletedTrades(prev => prev.filter(t => t.id !== id))
   }
 
   // Recalculate net sum using shared platform fees (visual only, stored data unchanged)
@@ -431,6 +477,7 @@ export default function TrackPage() {
             openNetEur={includeOpen ? openEstimatedNetTotal : undefined}
             openCount={includeOpen ? openPositions.length : undefined}
             adjustedNetEur={platformFeeMap ? adjustedNetSum : undefined}
+            platformFeeMap={platformFeeMap}
           />
         )}
       </div>
@@ -815,10 +862,10 @@ export default function TrackPage() {
           marginBottom: '12px',
         }}>Payouts</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '12px', alignItems: 'start' }}>
+        <div className="payouts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '12px', alignItems: 'start' }}>
 
           {/* Left — payouts table */}
-          <div style={{
+          <div className="payouts-form-card" style={{
             background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
             border: '0.5px solid rgba(255,255,255,0.07)',
             borderRadius: '18px',
@@ -1012,7 +1059,7 @@ export default function TrackPage() {
           </div>
 
           {/* Right — summary card */}
-          <div style={{
+          <div className="payouts-summary-card" style={{
             background: 'linear-gradient(135deg, #14141f 0%, #111119 100%)',
             border: '0.5px solid rgba(255,255,255,0.07)',
             borderRadius: '18px',
@@ -1056,7 +1103,7 @@ export default function TrackPage() {
                 fontSize: '28px',
                 fontWeight: '600',
                 letterSpacing: '-1px',
-                color: remaining >= 0 ? '#f0f0f8' : '#ef4444',
+                color: remaining >= 0 ? '#22c55e' : '#ef4444',
               }}>€{remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div style={{
                 fontFamily: 'JetBrains Mono, monospace',
@@ -1072,15 +1119,48 @@ export default function TrackPage() {
 
       {/* Trade log */}
       <div style={{
-        fontFamily: 'JetBrains Mono, monospace',
-        fontSize: '11px',
-        fontWeight: 400,
-        color: 'rgba(255,255,255,0.25)',
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginBottom: '12px',
       }}>
-        Trade Log {!loading && trades.length > 0 && `· ${trades.length} trades`}
+        <span style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '11px',
+          fontWeight: 400,
+          color: 'rgba(255,255,255,0.25)',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}>
+          Trade Log {!loading && trades.length > 0 && `· ${trades.length} trades`}
+        </span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {selectMode && selectedIds.size > 0 && (
+            <button onClick={handleBulkSoftDelete} style={{
+              padding: '5px 14px', borderRadius: '9999px',
+              background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)',
+              color: 'rgba(239,68,68,0.8)', fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '10px', cursor: 'pointer', letterSpacing: '0.06em',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}>Delete {selectedIds.size} selected</button>
+          )}
+          {selectMode && (
+            <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{
+              padding: '5px 14px', borderRadius: '9999px',
+              background: 'transparent', border: '0.5px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '10px', cursor: 'pointer', letterSpacing: '0.06em',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}>Cancel</button>
+          )}
+          {!selectMode && (
+            <button onClick={() => setSelectMode(true)} style={{
+              padding: '5px 14px', borderRadius: '9999px',
+              background: 'transparent', border: '0.5px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '10px', cursor: 'pointer', letterSpacing: '0.06em',
+              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+            }}>Select</button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -1097,8 +1177,170 @@ export default function TrackPage() {
           trades={trades}
           platformFeeMap={platformFeeMap}
           onEdit={openEdit}
-          onDelete={handleDelete}
+          onDelete={handleSoftDelete}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => setSelectedIds(prev => {
+            const next = new Set(prev)
+            next.has(id) ? next.delete(id) : next.add(id)
+            return next
+          })}
+          onToggleAll={(ids) => setSelectedIds(prev =>
+            prev.size === ids.length ? new Set() : new Set(ids)
+          )}
         />
+      )}
+
+      {/* Recently Deleted */}
+      {deletedTrades.length > 0 && (
+        <div style={{ marginTop: '32px' }}>
+          <div
+            onClick={() => setDeletedOpen(v => !v)}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              cursor: 'pointer', marginBottom: deletedOpen ? '12px' : '0',
+              padding: '4px 0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '9px',
+                color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em', textTransform: 'uppercase',
+              }}>Recently Deleted · {deletedTrades.length}</span>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace', fontSize: '8px',
+                color: 'rgba(239,68,68,0.4)', letterSpacing: '0.1em',
+                background: 'rgba(239,68,68,0.06)', border: '0.5px solid rgba(239,68,68,0.15)',
+                padding: '1px 7px', borderRadius: '9999px',
+              }}>recoverable</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {deletedOpen && deletedSelectMode && deletedSelectedIds.size > 0 && (
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    ;(async () => {
+                      for (const id of deletedSelectedIds) await handlePermanentDeleteFromBin(id)
+                      setDeletedSelectedIds(new Set())
+                      setDeletedSelectMode(false)
+                    })()
+                  }}
+                  style={{
+                    padding: '4px 12px', borderRadius: '9999px',
+                    background: 'rgba(239,68,68,0.1)', border: '0.5px solid rgba(239,68,68,0.25)',
+                    color: 'rgba(239,68,68,0.8)', fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px', cursor: 'pointer', letterSpacing: '0.06em',
+                  }}
+                >Delete {deletedSelectedIds.size} permanently</button>
+              )}
+              {deletedOpen && (
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    if (deletedSelectMode) { setDeletedSelectMode(false); setDeletedSelectedIds(new Set()) }
+                    else setDeletedSelectMode(true)
+                  }}
+                  style={{
+                    padding: '4px 12px', borderRadius: '9999px',
+                    background: 'transparent', border: '0.5px solid rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.25)', fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '9px', cursor: 'pointer', letterSpacing: '0.06em',
+                  }}
+                >{deletedSelectMode ? 'Cancel' : 'Select'}</button>
+              )}
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '10px', userSelect: 'none' }}>
+                {deletedOpen ? '▲' : '▼'}
+              </span>
+            </div>
+          </div>
+
+          {deletedOpen && (
+            <div style={{
+              overflowX: 'auto', borderRadius: '18px',
+              border: '0.5px solid rgba(239,68,68,0.12)',
+              background: '#13131e',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(239,68,68,0.04)',
+            }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+                <thead>
+                  <tr>
+                    {deletedSelectMode && (
+                      <th style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.03)', borderBottom: '0.5px solid rgba(255,255,255,0.065)' }}>
+                        <input
+                          type="checkbox"
+                          checked={deletedSelectedIds.size === deletedTrades.length && deletedTrades.length > 0}
+                          onChange={() => setDeletedSelectedIds(prev =>
+                            prev.size === deletedTrades.length ? new Set() : new Set(deletedTrades.map(t => t.id))
+                          )}
+                          style={{ width: 14, height: 14, cursor: 'pointer' }}
+                        />
+                      </th>
+                    )}
+                    {['Deleted At', 'Buy Date', 'Sell Date', 'Shares', 'Buy Price', 'Sell Price', 'Net EUR', ''].map(col => (
+                      <th key={col} style={{
+                        fontFamily: 'JetBrains Mono, monospace', fontSize: '10px',
+                        color: 'rgba(255,255,255,0.25)', letterSpacing: '0.08em', textTransform: 'uppercase',
+                        padding: '8px 14px', textAlign: col === '' ? 'center' : 'right', fontWeight: '400',
+                        borderBottom: '0.5px solid rgba(255,255,255,0.065)', background: 'rgba(255,255,255,0.03)',
+                      }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {deletedTrades.map((t) => (
+                    <tr key={t.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)' }}>
+                      {deletedSelectMode && (
+                        <td style={{ padding: '10px 14px' }}>
+                          <input
+                            type="checkbox"
+                            checked={deletedSelectedIds.has(t.id)}
+                            onChange={() => setDeletedSelectedIds(prev => {
+                              const next = new Set(prev)
+                              next.has(t.id) ? next.delete(t.id) : next.add(t.id)
+                              return next
+                            })}
+                            style={{ width: 14, height: 14, cursor: 'pointer' }}
+                          />
+                        </td>
+                      )}
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'rgba(239,68,68,0.4)', textAlign: 'right' }}>{t.deleted_at?.slice(0, 10) ?? '—'}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.4)', textAlign: 'right' }}>{t.buy_date}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.4)', textAlign: 'right' }}>{t.sell_date}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t.shares?.toLocaleString()}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>${t.buy_price?.toFixed(2)}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>${t.sell_price?.toFixed(2)}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', fontWeight: '600', color: (t.net_eur ?? 0) >= 0 ? '#22c55e' : '#ef4444', textAlign: 'right' }}>{(t.net_eur ?? 0) >= 0 ? '+' : ''}€{Math.abs(t.net_eur ?? 0).toFixed(2)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => handleRestore(t.id)}
+                            style={{
+                              padding: '3px 10px', borderRadius: '9999px', fontSize: '9px',
+                              fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+                              background: 'rgba(34,197,94,0.08)', border: '0.5px solid rgba(34,197,94,0.2)',
+                              color: 'rgba(34,197,94,0.7)', letterSpacing: '0.06em',
+                              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+                            }}
+                          >Restore</button>
+                          <button
+                            onClick={() => handlePermanentDeleteFromBin(t.id)}
+                            style={{
+                              padding: '3px 10px', borderRadius: '9999px', fontSize: '9px',
+                              fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+                              background: 'rgba(239,68,68,0.08)', border: '0.5px solid rgba(239,68,68,0.2)',
+                              color: 'rgba(239,68,68,0.6)', letterSpacing: '0.06em',
+                              transition: 'all 200ms cubic-bezier(0.16,1,0.3,1)',
+                            }}
+                          >Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Form modal */}
@@ -1116,6 +1358,11 @@ export default function TrackPage() {
         }
         @media (min-width: 900px) {
           .summary-grid { grid-template-columns: repeat(4, 1fr) !important; }
+        }
+        @media (max-width: 899px) {
+          .payouts-grid { grid-template-columns: 1fr !important; }
+          .payouts-summary-card { order: -1; }
+          .payouts-form-card { order: 0; }
         }
       `}</style>
     </div>

@@ -1,5 +1,6 @@
 'use client'
 import { fmtUSD, fmtEUR, pnlColor } from '@/lib/format'
+import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
 
 const GRID_STYLE = `
   .summary-grid {
@@ -73,20 +74,26 @@ function Card({ label, value, valueColor, sub, valueWeight = 500 }) {
 // openCount:  number of open positions (optional)
 // When both are provided and openCount > 0, Net Profit and Total Trades
 // reflect the combined value. Win rate is always closed trades only.
-export default function SummaryCards({ trades, openNetEur, openCount, adjustedNetEur }) {
+export default function SummaryCards({ trades, openNetEur, openCount, adjustedNetEur, platformFeeMap }) {
   const count    = trades?.length ?? 0
   const hasData  = count > 0
+
+  const adjNet = (t) => {
+    if (!platformFeeMap) return t.net_eur
+    const shared = calculateSharedPlatformFee(t, platformFeeMap)
+    return recalculateNetWithSharedFees(t, shared).adjustedNetEur
+  }
 
   const grossSum = hasData ? trades.reduce((s, t) => s + t.gross_pnl_usd, 0)       : null
   const feesSum  = hasData ? trades.reduce((s, t) => s + t.total_costs_usd, 0)     : null
   const txSum    = hasData ? trades.reduce((s, t) => s + t.transaction_fees_usd, 0): null
   const platSum  = hasData ? trades.reduce((s, t) => s + t.platform_fees_usd, 0)   : null
   const intSum   = hasData ? trades.reduce((s, t) => s + t.interest_usd, 0)        : null
-  const netSum   = hasData ? trades.reduce((s, t) => s + t.net_eur, 0)             : null
+  const netSum   = hasData ? trades.reduce((s, t) => s + adjNet(t), 0)             : null
   const avgNet   = hasData ? netSum / count                                         : null
-  const bestNet  = hasData ? Math.max(...trades.map(t => t.net_eur))               : null
-  const worstNet = hasData ? Math.min(...trades.map(t => t.net_eur))               : null
-  const wins     = hasData ? trades.filter(t => t.net_eur > 0).length             : 0
+  const bestNet  = hasData ? Math.max(...trades.map(t => adjNet(t)))               : null
+  const worstNet = hasData ? Math.min(...trades.map(t => adjNet(t)))               : null
+  const wins     = hasData ? trades.filter(t => adjNet(t) > 0).length             : 0
   const winRate  = hasData ? Math.round((wins / count) * 100)                      : null
 
   const showOpen       = openCount > 0 && openNetEur != null

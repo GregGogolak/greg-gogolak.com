@@ -135,20 +135,25 @@ export default function NavPill() {
   useEffect(() => {
     const indicator = indicatorRef.current
     if (indicator) indicator.style.transition = 'none'
-    updateIndicator()
-    const raf = requestAnimationFrame(() => {
-      if (indicator) {
-        indicator.style.transition =
-          'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-      }
+
+    const raf1 = requestAnimationFrame(() => {
+      updateIndicator()
+      const raf2 = requestAnimationFrame(() => {
+        if (indicator) {
+          indicator.style.transition =
+            'left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }
+      })
+      return () => cancelAnimationFrame(raf2)
     })
+
     const handleResize = () => updateIndicator()
     window.addEventListener('resize', handleResize)
     return () => {
       window.removeEventListener('resize', handleResize)
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf1)
     }
-  }, [])
+  }, [navItems.length])
 
   if (pathname === '/login') return null
 
