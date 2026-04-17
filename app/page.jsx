@@ -11,6 +11,7 @@ import { getMarketSession } from '@/lib/sessionUtils'
 
 import ThesisStatus from '@/components/Dashboard/ThesisStatus'
 import PositionPanel from '@/components/Dashboard/PositionPanel'
+import PositionMoves from '@/components/Dashboard/PositionMoves'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const CARD = {
@@ -636,27 +637,21 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Card 2 — Position Moves (placeholder) */}
-        <div style={{ ...CARD, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '160px', gap: '10px' }} onMouseEnter={cardIn} onMouseLeave={cardOut}>
-          <span style={{ ...EYE, marginBottom: 0 }}>Position Moves</span>
-          <div style={{
-            width: '40px', height: '40px',
-            borderRadius: '50%',
-            background: 'rgba(59,130,246,0.08)',
-            border: '0.5px solid rgba(59,130,246,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 19V5M5 12l7-7 7 7" stroke="rgba(59,130,246,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '12px',
-            color: 'rgba(255,255,255,0.2)',
-            textAlign: 'center',
-            lineHeight: '1.5',
-          }}>AI position recommendations<br />coming soon</span>
+        {/* Card 2 — Position Moves */}
+        <div style={CARD} onMouseEnter={cardIn} onMouseLeave={cardOut}>
+          <PositionMoves
+            positions={positions}
+            livePrice={displayPrice}
+            sma200={sma200}
+            sma50={sma50}
+            rsi={rsi}
+            vix={vix}
+            qqq={qqq}
+            oilPct={oilPct}
+            thesis={thesis.status}
+            bucketBCount={bucketBNews.length}
+            bucketCCount={bucketCNews.length}
+          />
         </div>
 
         {/* Card 3 — Jarvis Talk (placeholder) */}
