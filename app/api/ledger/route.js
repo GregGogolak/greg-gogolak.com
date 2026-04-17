@@ -46,6 +46,7 @@ export async function GET() {
 
         // Calculate stats
         const totalNetEur = trades.reduce((sum, t) => sum + (t.net_eur ?? 0), 0)
+        const totalGrossUsd = trades.reduce((sum, t) => sum + (t.gross_pnl_usd ?? 0), 0)
         const winRate = trades.length > 0
           ? Math.round((trades.filter(t => t.net_eur > 0).length / trades.length) * 100)
           : null
@@ -58,12 +59,11 @@ export async function GET() {
           ? trades.reduce((best, t) => t.net_eur > (best?.net_eur ?? -Infinity) ? t : best, null)
           : null
 
-        // This month net EUR
-        const now = new Date()
-        const thisMonth = trades.filter(t => {
-          const d = new Date(t.sell_date)
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-        })
+        // This month net EUR — string prefix avoids timezone ambiguity with Date parsing
+        const thisMonthPrefix = new Date().toISOString().slice(0, 7) // "YYYY-MM"
+        const thisMonth = trades.filter(t =>
+          typeof t.sell_date === 'string' && t.sell_date.startsWith(thisMonthPrefix)
+        )
         const thisMonthNet = thisMonth.reduce((s, t) => s + (t.net_eur ?? 0), 0)
 
         // Current win streak (descending sort)
@@ -92,6 +92,8 @@ export async function GET() {
           ? (trades.reduce((s, t) => s + (t.calendar_days ?? 1), 0) / trades.length).toFixed(1)
           : 0
 
+        const totalFeesPaid = trades.reduce((s, t) => s + (t.total_costs_usd ?? 0), 0)
+
         return {
           userId: uid,
           firstName: user.firstName ?? '',
@@ -104,6 +106,7 @@ export async function GET() {
           openPositions: positions,
           cash,
           totalNetEur,
+          totalGrossUsd,
           winRate,
           tradeCount: trades.length,
           totalTrades: trades.length,
@@ -118,12 +121,19 @@ export async function GET() {
           equityCurve: buildEquityCurve(trades),
           maxDrawdown,
           avgHoldDays,
+          totalFeesPaid,
         }
       })
     )
 
     // Sort by total net EUR descending
     members.sort((a, b) => b.totalNetEur - a.totalNetEur)
+
+    // Fee share per member
+    const fundTotalFees = members.reduce((s, m) => s + (m.totalFeesPaid ?? 0), 0)
+    members.forEach(m => {
+      m.feeShare = fundTotalFees > 0 ? (m.totalFeesPaid / fundTotalFees) * 100 : 0
+    })
 
     // Fund-level stats
     const allTradesFlat = members.flatMap(m => m.allTrades)
@@ -133,6 +143,7 @@ export async function GET() {
 
     const fundStats = {
       totalNetEur: members.reduce((s, m) => s + m.totalNetEur, 0),
+      totalGrossUsd: members.reduce((s, m) => s + m.totalGrossUsd, 0),
       totalTrades: members.reduce((s, m) => s + m.tradeCount, 0),
       winRate: fundWinRateVal,
       fundWinRate: fundWinRateVal,

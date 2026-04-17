@@ -10,6 +10,7 @@ const MEMBER_COLORS = [
   { stroke: 'rgba(34,197,94,0.8)', fill0: 'rgba(34,197,94,0.18)', fill1: 'rgba(34,197,94,0)', dot: 'rgba(34,197,94,0.9)', glow: 'rgba(34,197,94,0.4)' },
   { stroke: 'rgba(245,158,11,0.8)', fill0: 'rgba(245,158,11,0.15)', fill1: 'rgba(245,158,11,0)', dot: 'rgba(245,158,11,0.9)', glow: 'rgba(245,158,11,0.4)' },
 ]
+const fmtEuro = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 // ─── ScanLine ─────────────────────────────────────────────────────────────────
 const ScanLine = () => (
@@ -89,20 +90,21 @@ const ConstellationBg = () => {
 // ─── HeroSection ─────────────────────────────────────────────────────────────
 const HeroSection = ({ data }) => {
   const [displayVal, setDisplayVal] = useState(0)
-  const fundTotal = data?.fundStats?.totalNetEur ?? 0
+  const fundGross = data?.fundStats?.totalGrossUsd ?? 0
+  const fundNet = data?.fundStats?.totalNetEur ?? 0
 
   useEffect(() => {
-    if (!fundTotal) return
+    if (!fundGross) return
     const duration = 900
     const start = performance.now()
     const easeOutExpo = t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
     const frame = (now) => {
       const p = Math.min((now - start) / duration, 1)
-      setDisplayVal(Math.round(easeOutExpo(p) * fundTotal))
+      setDisplayVal(Math.round(easeOutExpo(p) * fundGross))
       if (p < 1) requestAnimationFrame(frame)
     }
     requestAnimationFrame(frame)
-  }, [fundTotal])
+  }, [fundGross])
 
   return (
     <div style={{
@@ -152,21 +154,32 @@ const HeroSection = ({ data }) => {
             Fund Performance · Live
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+              <span style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '24px', fontWeight: '300',
+                color: 'rgba(255,255,255,0.18)',
+                marginTop: '10px',
+              }}>$</span>
+              <span style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '72px', fontWeight: '600',
+                color: '#f0f0f8',
+                letterSpacing: '-2px', lineHeight: '1',
+                animation: 'numberFlicker 9s ease-in-out infinite',
+              }}>
+                {displayVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
             <span style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '24px', fontWeight: '300',
-              color: 'rgba(255,255,255,0.18)',
-              marginTop: '10px',
-            }}>€</span>
-            <span style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '72px', fontWeight: '800',
-              color: '#ffffff',
-              letterSpacing: '-4px', lineHeight: '1',
-              animation: 'numberFlicker 9s ease-in-out infinite',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '16px', fontWeight: '400',
+              color: 'rgba(255,255,255,0.35)',
+              marginLeft: '12px',
+              marginBottom: '8px',
             }}>
-              {displayVal.toLocaleString()}
+              €{fmtEuro(fundNet)} net
             </span>
           </div>
 
@@ -213,7 +226,7 @@ const HeroSection = ({ data }) => {
               boxShadow: '0 0 6px rgba(34,197,94,0.8)',
               animation: 'dotPulseLedger 1.5s ease-in-out infinite',
             }} />
-            Markets Open · NYSE
+            NVDA
           </div>
 
           {/* Connected stat pills */}
@@ -294,20 +307,24 @@ const EquityCurveSection = ({ members }) => {
 
     const W = canvas.width / DPR
     const H = canvas.height / DPR
-    const PAD_LEFT = 48, PAD_RIGHT = 16, PAD_TOP = 16, PAD_BOTTOM = 28
+    const PAD_LEFT = 48, PAD_RIGHT = 64, PAD_TOP = 16, PAD_BOTTOM = 28
 
-    const xScale = (i) => PAD_LEFT + (i / (sortedDates.length - 1)) * (W - PAD_LEFT - PAD_RIGHT)
+    const minTime = new Date(sortedDates[0]).getTime()
+    const maxTime = new Date(sortedDates[sortedDates.length - 1]).getTime()
+    const timeRange = maxTime - minTime || 1
+    const xScale = (i) => PAD_LEFT + ((new Date(sortedDates[i]).getTime() - minTime) / timeRange) * (W - PAD_LEFT - PAD_RIGHT)
     const yScale = (v) => H - PAD_BOTTOM - ((v / maxVal) * (H - PAD_TOP - PAD_BOTTOM))
 
     let startTime = null
 
     const draw = (ts) => {
       if (!startTime) startTime = ts
-      const prog = Math.min(easeOutExpo((ts - startTime) / 2600), 1)
+      const rawT = Math.min((ts - startTime) / 2600, 1)
+      const prog = easeOutExpo(rawT)
 
       ctx.clearRect(0, 0, W, H)
 
-      // Horizontal grid lines
+      // Horizontal grid lines (always full-width, no clip)
       for (let i = 1; i <= 4; i++) {
         const v = maxVal * i / 5
         const y = yScale(v)
@@ -316,7 +333,7 @@ const EquityCurveSection = ({ members }) => {
         ctx.strokeStyle = 'rgba(255,255,255,0.035)'
         ctx.lineWidth = 0.5
         ctx.setLineDash([3, 10]); ctx.stroke(); ctx.setLineDash([])
-        ctx.fillStyle = 'rgba(255,255,255,0.1)'
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'
         ctx.font = '9px Courier New'
         ctx.textAlign = 'right'
         ctx.fillText('€' + Math.round(v / 1000) + 'k', PAD_LEFT - 4, y + 3)
@@ -333,22 +350,31 @@ const EquityCurveSection = ({ members }) => {
       for (let i = 0; i < labelCount; i++) {
         const idx = Math.floor(i * (sortedDates.length - 1) / (labelCount - 1))
         const x = xScale(idx)
-        ctx.fillStyle = 'rgba(255,255,255,0.12)'
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'
         ctx.font = '9px Courier New'
         ctx.textAlign = 'center'
         ctx.fillText(sortedDates[idx]?.slice(0, 7) ?? '', x, H - 6)
       }
 
-      const n = Math.max(2, Math.floor(sortedDates.length * prog))
+      // Clip: outer boundary prevents overflow, inner reveals progressively
+      const clipRight = PAD_LEFT + prog * (W - PAD_LEFT - PAD_RIGHT)
 
-      // Draw members back to front
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(PAD_LEFT, 0, W - PAD_LEFT - PAD_RIGHT + 12, H)
+      ctx.clip()
+
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(PAD_LEFT, 0, Math.max(0, clipRight - PAD_LEFT), H)
+      ctx.clip()
+
+      // Draw members back to front (all points, clip handles reveal)
       ;[...memberSeries].reverse().forEach((series, ri) => {
         const ci = memberSeries.length - 1 - ri
         const col = MEMBER_COLORS[ci] ?? MEMBER_COLORS[0]
-        const slice = series.slice(0, n)
-        if (slice.length < 2) return
-
-        const pts = slice.map((v, i) => ({ x: xScale(i), y: yScale(v) }))
+        const pts = series.map((v, i) => ({ x: xScale(i), y: yScale(v) }))
+        if (pts.length < 2) return
 
         // Filled area
         const grad = ctx.createLinearGradient(0, PAD_TOP, 0, H - PAD_BOTTOM)
@@ -379,28 +405,62 @@ const EquityCurveSection = ({ members }) => {
         ctx.strokeStyle = col.stroke
         ctx.lineWidth = ci === 0 ? 2 : 1.5
         ctx.lineJoin = 'round'; ctx.stroke()
+      })
 
-        // Endpoint glow + dot
-        if (prog > 0.9) {
-          const lp = pts[pts.length - 1]
-          const grd = ctx.createRadialGradient(lp.x, lp.y, 0, lp.x, lp.y, 18)
+      ctx.restore() // inner clip
+
+      // Endpoint glow + dot — outside inner clip so full dot radius renders without being cut
+      if (prog > 0.02) {
+        const floatIdx = prog * (sortedDates.length - 1)
+        const i0 = Math.floor(floatIdx)
+        const i1 = Math.min(i0 + 1, sortedDates.length - 1)
+        const frac = floatIdx - i0
+
+        ;[...memberSeries].reverse().forEach((series, ri) => {
+          const ci = memberSeries.length - 1 - ri
+          const col = MEMBER_COLORS[ci] ?? MEMBER_COLORS[0]
+          const yAtEdge = series[i0] + (series[i1] - series[i0]) * frac
+          const xEdge = Math.min(clipRight, W - PAD_RIGHT - 4)
+          const yEdge = yScale(yAtEdge)
+
+          const grd = ctx.createRadialGradient(xEdge, yEdge, 0, xEdge, yEdge, 18)
           grd.addColorStop(0, col.glow); grd.addColorStop(1, 'rgba(0,0,0,0)')
-          ctx.beginPath(); ctx.arc(lp.x, lp.y, 18, 0, Math.PI * 2)
+          ctx.beginPath(); ctx.arc(xEdge, yEdge, 18, 0, Math.PI * 2)
           ctx.fillStyle = grd; ctx.fill()
-          ctx.beginPath(); ctx.arc(lp.x, lp.y, 4, 0, Math.PI * 2)
+
+          ctx.beginPath(); ctx.arc(xEdge, yEdge, 4, 0, Math.PI * 2)
           ctx.fillStyle = col.dot; ctx.fill()
+        })
+      }
+
+      ctx.restore() // outer clip
+
+      // Labels — outside both clips so text is never cut; x position capped to stay within chart area
+      if (prog > 0.9) {
+        const floatIdx = prog * (sortedDates.length - 1)
+        const i0 = Math.floor(floatIdx)
+        const i1 = Math.min(i0 + 1, sortedDates.length - 1)
+        const frac = floatIdx - i0
+
+        ;[...memberSeries].reverse().forEach((series, ri) => {
+          const ci = memberSeries.length - 1 - ri
+          const yAtEdge = series[i0] + (series[i1] - series[i0]) * frac
+          const xEdge = Math.min(clipRight, W - PAD_RIGHT)
+          const yEdge = yScale(yAtEdge)
           const m = members[ci]
           if (m) {
-            ctx.fillStyle = 'rgba(255,255,255,0.6)'
+            ctx.fillStyle = 'rgba(255,255,255,0.75)'
             ctx.font = '500 10px Inter'
             ctx.textAlign = 'right'
             const initials = `${m.firstName?.[0] ?? m.name?.[0] ?? ''}${m.lastName?.[0] ?? m.name?.[1] ?? ''}`.toUpperCase()
-            ctx.fillText(initials, lp.x - 10, lp.y - 9)
+            const labelWidth = ctx.measureText(initials).width
+            const labelX = Math.min(xEdge - 10, W - PAD_RIGHT - labelWidth)
+            ctx.fillText(initials, labelX, yEdge - 9)
           }
-        }
-      })
+        })
+      }
 
-      if (prog < 1) animRef.current = requestAnimationFrame(draw)
+      if (rawT < 1) animRef.current = requestAnimationFrame(draw)
     }
 
     animRef.current = requestAnimationFrame(draw)
@@ -458,7 +518,7 @@ const EquityCurveSection = ({ members }) => {
 const MembersSection = ({ members }) => {
   if (!members) return null
   const sorted = [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))
-  const maxPnl = sorted[0]?.totalNetEur ?? 1
+  const fundTotal = sorted.reduce((s, m) => s + (m.totalNetEur ?? 0), 0)
 
   const AVATAR_STYLES = [
     { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)', color: 'rgba(59,130,246,0.95)', glow: 'rgba(59,130,246,0.2)' },
@@ -490,11 +550,10 @@ const MembersSection = ({ members }) => {
           const pnl = member.totalNetEur ?? 0
           const winRate = member.winRate ?? 0
           const trades = member.totalTrades ?? 0
-          const maxDD = member.maxDrawdown ?? 0
           const bestTrade = member.bestTrade ?? 0
           const worstTrade = member.worstTrade ?? 0
           const avgHold = member.avgHoldDays ?? 0
-          const fundShare = maxPnl > 0 ? (pnl / maxPnl) * 100 : 0
+          const fundShare = fundTotal > 0 ? (pnl / fundTotal) * 100 : 0
           const isFirst = i === 0
 
           return (
@@ -599,12 +658,12 @@ const MembersSection = ({ members }) => {
                     fontSize: '22px', fontWeight: '700',
                     color: pnl >= 0 ? '#22c55e' : '#ef4444',
                     letterSpacing: '-0.5px',
-                  }}>{pnl >= 0 ? '+' : ''}€{Math.abs(pnl).toLocaleString()}</div>
+                  }}>{pnl >= 0 ? '+' : ''}€{fmtEuro(Math.abs(pnl))}</div>
                   <div style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: '9px', color: 'rgba(255,255,255,0.2)',
                     marginTop: '2px',
-                  }}>{(member.thisMonthPnl ?? 0) >= 0 ? '+' : ''}€{Math.abs(member.thisMonthPnl ?? 0).toLocaleString()} this mo.</div>
+                  }}>{(member.thisMonthPnl ?? 0) >= 0 ? '+' : ''}€{fmtEuro(Math.abs(member.thisMonthPnl ?? 0))} this mo.</div>
                 </div>
               </div>
 
@@ -613,7 +672,7 @@ const MembersSection = ({ members }) => {
                 {[
                   { label: 'Win Rate', value: winRate, color: 'rgba(59,130,246,0.8)', display: `${winRate}%`, delay: `${0.3 + i * 0.1}s` },
                   { label: 'Fund Share', value: fundShare, color: 'rgba(34,197,94,0.7)', display: `${fundShare.toFixed(1)}%`, delay: `${0.4 + i * 0.1}s` },
-                  { label: 'Max Drawdown', value: Math.abs(maxDD) / Math.max(pnl, 1) * 100, color: 'rgba(239,68,68,0.6)', display: `€${Math.abs(maxDD).toLocaleString()}`, delay: `${0.5 + i * 0.1}s` },
+                  { label: 'Fee Share', value: member.feeShare ?? 0, color: 'rgba(245,158,11,0.6)', display: `${(member.feeShare ?? 0).toFixed(1)}%`, delay: `${0.5 + i * 0.1}s` },
                 ].map(bar => (
                   <div key={bar.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
@@ -647,8 +706,8 @@ const MembersSection = ({ members }) => {
               {/* Stat pills */}
               <div style={{ display: 'flex', gap: '1px' }}>
                 {[
-                  { val: `+€${bestTrade.toLocaleString()}`, label: 'Best Trade', color: '#22c55e' },
-                  { val: `-€${Math.abs(worstTrade).toLocaleString()}`, label: 'Worst Trade', color: '#ef4444' },
+                  { val: `+€${fmtEuro(bestTrade)}`, label: 'Best Trade', color: '#22c55e' },
+                  { val: `-€${fmtEuro(Math.abs(worstTrade))}`, label: 'Worst Trade', color: '#ef4444' },
                   { val: `${avgHold}d`, label: 'Avg Hold', color: 'rgba(255,255,255,0.6)' },
                   { val: `${winRate}%`, label: 'Win Rate', color: 'rgba(59,130,246,0.85)' },
                   { val: trades, label: 'Trades', color: 'rgba(255,255,255,0.5)' },
@@ -692,9 +751,9 @@ const AwardsSection = ({ members }) => {
       valColor: '#22c55e',
       winner: [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))[0],
       runner: [...members].sort((a, b) => (b.totalNetEur ?? 0) - (a.totalNetEur ?? 0))[1],
-      getValue: m => `+€${(m?.totalNetEur ?? 0).toLocaleString()}`,
+      getValue: m => `+€${fmtEuro(m?.totalNetEur ?? 0)}`,
       fillWidth: () => 100,
-      runnerVal: m => `+€${(m?.totalNetEur ?? 0).toLocaleString()}`,
+      runnerVal: m => `+€${fmtEuro(m?.totalNetEur ?? 0)}`,
     },
     {
       title: 'Best Win Rate',
@@ -714,9 +773,9 @@ const AwardsSection = ({ members }) => {
       valColor: '#f0f0f8',
       winner: [...members].sort((a, b) => (b.bestTrade ?? 0) - (a.bestTrade ?? 0))[0],
       runner: [...members].sort((a, b) => (b.bestTrade ?? 0) - (a.bestTrade ?? 0))[1],
-      getValue: m => `+€${(m?.bestTrade ?? 0).toLocaleString()}`,
+      getValue: m => `+€${fmtEuro(m?.bestTrade ?? 0)}`,
       fillWidth: () => 100,
-      runnerVal: m => `+€${(m?.bestTrade ?? 0).toLocaleString()}`,
+      runnerVal: m => `+€${fmtEuro(m?.bestTrade ?? 0)}`,
     },
     {
       title: 'Best This Month',
@@ -725,9 +784,9 @@ const AwardsSection = ({ members }) => {
       valColor: '#f59e0b',
       winner: [...members].sort((a, b) => (b.thisMonthPnl ?? 0) - (a.thisMonthPnl ?? 0))[0],
       runner: [...members].sort((a, b) => (b.thisMonthPnl ?? 0) - (a.thisMonthPnl ?? 0))[1],
-      getValue: m => `+€${(m?.thisMonthPnl ?? 0).toLocaleString()}`,
+      getValue: m => `+€${fmtEuro(m?.thisMonthPnl ?? 0)}`,
       fillWidth: () => 100,
-      runnerVal: m => `+€${(m?.thisMonthPnl ?? 0).toLocaleString()}`,
+      runnerVal: m => `+€${fmtEuro(m?.thisMonthPnl ?? 0)}`,
     },
     {
       title: 'Most Disciplined',
@@ -736,14 +795,14 @@ const AwardsSection = ({ members }) => {
       valColor: '#ef4444',
       winner: [...members].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[0],
       runner: [...members].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[1],
-      getValue: m => `€${Math.abs(m?.maxDrawdown ?? 0).toLocaleString()}`,
+      getValue: m => `€${fmtEuro(Math.abs(m?.maxDrawdown ?? 0))}`,
       fillWidth: (ms) => {
         const vals = ms.map(m => Math.abs(m.maxDrawdown ?? 0))
         const min = Math.min(...vals), max = Math.max(...vals)
         const winner = [...ms].sort((a, b) => Math.abs(a.maxDrawdown ?? 0) - Math.abs(b.maxDrawdown ?? 0))[0]
         return max > min ? (1 - (Math.abs(winner?.maxDrawdown ?? 0) - min) / (max - min)) * 100 : 50
       },
-      runnerVal: m => `€${Math.abs(m?.maxDrawdown ?? 0).toLocaleString()}`,
+      runnerVal: m => `€${fmtEuro(Math.abs(m?.maxDrawdown ?? 0))}`,
       subtitle: 'Lowest drawdown',
     },
     {
