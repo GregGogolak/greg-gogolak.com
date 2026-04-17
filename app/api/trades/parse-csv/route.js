@@ -22,10 +22,15 @@ Delimiter is "${delimiter}". Headers may be Slovak or English:
 - akcie / stock = ticker
 
 European numbers: "1 720,00" = 1720.00, "218,88" = 218.88 (space=thousands, comma=decimal).
-Dates to YYYY-MM-DD. Skip only rows with missing/unparseable dates.
+Dates to YYYY-MM-DD.
+
+- Only import rows where the stock/ticker is NVIDIA or NVDA (case insensitive). Skip all other tickers silently.
+- Only skip rows where dates are completely missing or unparseable
+- Do NOT use any fee/cost columns from the CSV — we will recalculate fees ourselves
+- Do NOT skip rows based on fee or profit values
 
 Return:
-{"trades":[{"buy_date":"YYYY-MM-DD","sell_date":"YYYY-MM-DD","buy_price":number,"sell_price":number,"shares":number,"ticker":"NVDA"}],"skipped":["Row N: reason"]}
+{"trades":[{"buy_date":"YYYY-MM-DD","sell_date":"YYYY-MM-DD","buy_price":number,"sell_price":number,"shares":number,"ticker":"NVDA"}],"skipped":["Row N: reason (only for genuinely unparseable dates or non-NVDA ticker)"]}
 
 CSV:
 ${chunkCsv}`,
@@ -80,7 +85,10 @@ export async function POST(request) {
     )
 
     // Merge results
-    const allTrades = results.flatMap(r => r.trades ?? [])
+    const allTrades = results.flatMap(r => r.trades ?? []).filter(t => {
+      const ticker = (t.ticker ?? '').toUpperCase().trim()
+      return ticker === 'NVDA' || ticker === 'NVIDIA' || ticker === ''
+    })
     const allSkipped = results.flatMap(r => r.skipped ?? [])
 
     // Run calculateTrade on each
