@@ -22,7 +22,7 @@ export async function POST(request) {
     await redis.set(TRADES_KEY, JSON.stringify(updated))
 
     // Invalidate platform fees cache
-    await redis.del(`platform-fees-v2:${userId}`)
+    await redis.del(`platform-fees-v3:${userId}`)
 
     return Response.json({ success: true, imported: trades.length })
   } catch (err) {

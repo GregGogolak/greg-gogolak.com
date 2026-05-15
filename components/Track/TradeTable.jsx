@@ -233,7 +233,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
             const displayTotalCosts = platformFeeMap
               ? (t.transaction_fees_usd ?? 0) + sharedFees.totalPlatformFee + (t.interest_usd ?? 0)
               : (t.total_costs_usd ?? 0)
-            const feeIsShared = platformFeeMap && (sharedFees.buyUsers > 1 || sharedFees.sellUsers > 1)
+            const feeIsShared = platformFeeMap && (sharedFees.buyExecutions > 1 || sharedFees.sellExecutions > 1)
 
             return (
             <React.Fragment key={t.id}>
@@ -333,8 +333,8 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
                     <div>
                       <div>${adjustedPlatformFee.toFixed(0)}</div>
                       {feeIsShared && (
-                        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', marginTop: '1px' }}>
-                          was ${t.platform_fees_usd?.toFixed(0) ?? (t.buy_date !== t.sell_date ? '192' : '96')}
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#606070', marginTop: '1px' }}>
+                          total: $96
                         </div>
                       )}
                     </div>
