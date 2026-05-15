@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { fmtUSD, fmtEUR, pnlColor } from '@/lib/format'
-import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
+import { calculateSharedPlatformFee, recalculateNetWithSharedFees, FULL_UNSHARED_FEE } from '@/lib/tradeCalculations'
 
 const TH = ({ children, align = 'right' }) => (
   <th style={{
@@ -334,7 +334,7 @@ export default function TradeTable({ trades, platformFeeMap, onEdit, onDelete, s
                       <div>${adjustedPlatformFee.toFixed(0)}</div>
                       {feeIsShared && (
                         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#606070', marginTop: '1px' }}>
-                          total: $96
+                          total: ${FULL_UNSHARED_FEE}
                         </div>
                       )}
                     </div>
