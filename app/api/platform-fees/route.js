@@ -10,14 +10,16 @@ export async function GET() {
     const redis = getRedis()
 
     // Check cache first (5-minute TTL)
-    const cacheKey = `platform-fees:${userId}`
+    const cacheKey = `platform-fees-v2:${userId}`
     const cached = safeParse(await redis.get(cacheKey))
     if (cached) return Response.json(cached)
 
     const client = await clerkClient()
     const { data: users } = await client.users.getUserList({ limit: 20 })
 
-    // Build a map of date -> array of user entries who transacted on that date
+    // Build a map of date -> { buy: [], sell: [] }
+    // Buy and sell are tracked separately so fees split only among same-side users.
+    // A same-day round-trip pushes the user into BOTH buckets on that date.
     const dateMap = {}
 
     await Promise.all(users.map(async (user) => {
@@ -28,41 +30,35 @@ export async function GET() {
 
         const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
         const isCurrentUser = user.id === userId
+        const entry = { userId: user.id, name: fullName, isCurrentUser }
 
         tradeArray.forEach(trade => {
-          // Buy date
+          // Buy side
           if (trade.buy_date) {
-            if (!dateMap[trade.buy_date]) dateMap[trade.buy_date] = []
-            if (!dateMap[trade.buy_date].find(u => u.userId === user.id)) {
-              dateMap[trade.buy_date].push({
-                userId: user.id,
-                name: fullName,
-                isCurrentUser,
-              })
+            if (!dateMap[trade.buy_date]) dateMap[trade.buy_date] = { buy: [], sell: [] }
+            if (!dateMap[trade.buy_date].buy.find(u => u.userId === user.id)) {
+              dateMap[trade.buy_date].buy.push(entry)
             }
           }
-          // Sell date (only if different from buy date)
-          if (trade.sell_date && trade.sell_date !== trade.buy_date) {
-            if (!dateMap[trade.sell_date]) dateMap[trade.sell_date] = []
-            if (!dateMap[trade.sell_date].find(u => u.userId === user.id)) {
-              dateMap[trade.sell_date].push({
-                userId: user.id,
-                name: fullName,
-                isCurrentUser,
-              })
+          // Sell side (always, including same-day trades)
+          if (trade.sell_date) {
+            if (!dateMap[trade.sell_date]) dateMap[trade.sell_date] = { buy: [], sell: [] }
+            if (!dateMap[trade.sell_date].sell.find(u => u.userId === user.id)) {
+              dateMap[trade.sell_date].sell.push(entry)
             }
           }
         })
       } catch {}
     }))
 
-    // For each date, return totalUsers, names of OTHER users, and splitFactor
+    // For each date, emit per-side user counts and names of OTHER users
     const result = {}
-    Object.entries(dateMap).forEach(([date, users]) => {
+    Object.entries(dateMap).forEach(([date, { buy, sell }]) => {
       result[date] = {
-        totalUsers: users.length,
-        sharedWith: users.filter(u => !u.isCurrentUser).map(u => u.name),
-        splitFactor: users.length,
+        buyUsers:      buy.length,
+        sellUsers:     sell.length,
+        buySharedWith: buy.filter(u => !u.isCurrentUser).map(u => u.name),
+        sellSharedWith: sell.filter(u => !u.isCurrentUser).map(u => u.name),
       }
     })
 
