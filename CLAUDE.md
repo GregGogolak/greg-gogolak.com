@@ -68,8 +68,8 @@ Tax: 10%
 FX: USD to EUR fixed at 0.90 (no live rate needed)
 
 For closed trade history (Track page), the formula also includes:
-- Platform fee: $96 per execution day (buy day + sell day only, not days in between)
-- Same-day trade = 1 day = $96. Different days = always 2 days = $192.
+- Platform fee: $48 per execution day (buy day + sell day only, not days in between)
+- Same-day trade = 1 day = $48. Different days = always 2 days = $96.
 - See lib/tradeCalculations.js for the full implementation.
 
 ---
