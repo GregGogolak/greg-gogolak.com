@@ -113,7 +113,7 @@ export default function Dashboard() {
   const { data: macroData } = useMacroData()
   const { articles } = useNews()
   const { data: fundamentalsData } = useFundamentals()
-  const { livePrice, wsConnected } = useNVDALive()
+  const { livePrice, wsConnected, isLiveFresh } = useNVDALive()
   useAlerts({ externalPriceData: priceData, externalMacroData: macroData })
 
   // Positions + Iran (KV-backed)
@@ -171,7 +171,7 @@ export default function Dashboard() {
   }, [])
 
   // ── Derived values ─────────────────────────────────────────────────────
-  const displayPrice = livePrice ?? priceData?.price ?? null
+  const displayPrice = isLiveFresh ? livePrice : (priceData?.price ?? null)
   const price = priceData?.price ?? null
   const prevClose = priceData?.prevClose ?? null
   const pctChange = priceData?.pctChange ?? null

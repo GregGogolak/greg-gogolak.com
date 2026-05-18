@@ -10,7 +10,7 @@ const card = {
 }
 
 export default function PositionPanel({ positions = [], currentPrice, onAdd, onRemove, onRefresh, style: styleProp }) {
-  const { livePrice } = useNVDALive()
+  const { livePrice, isLiveFresh } = useNVDALive()
 
   // Add form state
   const [showForm, setShowForm] = useState(false)
@@ -32,7 +32,7 @@ export default function PositionPanel({ positions = [], currentPrice, onAdd, onR
     setShowForm(false)
   }
 
-  const priceToUse      = livePrice ?? currentPrice
+  const priceToUse      = isLiveFresh ? livePrice : currentPrice
   const visiblePositions = positions.filter(p => !closedIds.has(p.id))
 
   return (

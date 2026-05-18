@@ -6,6 +6,7 @@ const NVDALiveContext = createContext({
   livePrice:   null,
   wsConnected: false,
   lastTick:    null,
+  isLiveFresh: false,
 })
 
 export function useNVDALive() {
@@ -15,6 +16,7 @@ export function useNVDALive() {
 const BACKOFF_MAX           = 30_000
 const STALE_TIMEOUT         = 30_000 // market hours only
 const MAX_RECONNECT_ATTEMPTS = 5
+const STALE_TICK_MS         = 60_000
 
 export function NVDALiveContextProvider({ children }) {
   const [livePrice,   setLivePrice]   = useState(null)
@@ -28,20 +30,21 @@ export function NVDALiveContextProvider({ children }) {
   const hasLoggedWsError   = useRef(false)
   const reconnectAttempts  = useRef(0)
 
-  // REST fallback — populate livePrice immediately on mount so components
-  // never start with null. WebSocket ticks will override this once connected.
+  // REST fallback — polls /api/price every 60s when WebSocket is not connected.
+  // Fires immediately on mount and whenever wsConnected drops to false.
   useEffect(() => {
-    const fetchFallback = async () => {
+    if (wsConnected) return
+    async function fetchFallback() {
       try {
         const res  = await fetch('/api/price')
         const data = await res.json()
-        if (data?.price && !livePrice) {
-          setLivePrice(parseFloat(data.price))
-        }
+        if (data?.price) setLivePrice(parseFloat(data.price))
       } catch {}
     }
     fetchFallback()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const id = setInterval(fetchFallback, 60_000)
+    return () => clearInterval(id)
+  }, [wsConnected])
 
   function connect() {
     // Don't open a second connection if one is already live
@@ -100,6 +103,7 @@ export function NVDALiveContextProvider({ children }) {
   }
 
   useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_FINNHUB_API_KEY) console.warn('[NVDALive] NEXT_PUBLIC_FINNHUB_API_KEY missing — WS will fail')
     connect()
     return () => {
       clearTimeout(reconnectTimer.current)
@@ -115,8 +119,10 @@ export function NVDALiveContextProvider({ children }) {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isLiveFresh = lastTick !== null && (Date.now() - lastTick) < STALE_TICK_MS
+
   return (
-    <NVDALiveContext.Provider value={{ livePrice, wsConnected, lastTick }}>
+    <NVDALiveContext.Provider value={{ livePrice, wsConnected, lastTick, isLiveFresh }}>
       {children}
     </NVDALiveContext.Provider>
   )
