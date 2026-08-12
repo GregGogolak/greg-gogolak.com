@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useUser } from '@clerk/nextjs'
 import { useNVDALive } from '@/context/NVDALiveContext'
 import { calculateEstimatedPnL } from '@/lib/calculations'
 import { calculateSharedPlatformFee, recalculateNetWithSharedFees } from '@/lib/tradeCalculations'
@@ -10,6 +11,8 @@ import CSVImport    from '@/components/Track/CSVImport'
 
 export default function TrackPage() {
   const { livePrice } = useNVDALive()
+  const { user } = useUser()
+  const isAdmin = (user?.publicMetadata?.role ?? user?.privateMetadata?.role) === 'admin'
 
   const [trades,        setTrades]        = useState([])
   const [loading,       setLoading]       = useState(true)
@@ -662,7 +665,9 @@ export default function TrackPage() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  flexWrap: 'wrap',
                   gap: '16px',
+                  rowGap: '8px',
                   transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1)',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)' }}
@@ -748,6 +753,66 @@ export default function TrackPage() {
                     </>
                   )}
                 </div>
+                {isAdmin && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                    <span style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: '8px',
+                      color: 'rgba(255,255,255,0.2)',
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                    }}>Public</span>
+                    {(() => {
+                      const on = pos.publicVisible !== false
+                      return (
+                        <div
+                          onClick={async () => {
+                            const newValue = !on
+                            setOpenPositions(prev => prev.map(p =>
+                              p.id === pos.id ? { ...p, publicVisible: newValue } : p
+                            ))
+                            try {
+                              const res = await fetch('/api/positions', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'setVisible', payload: { id: pos.id, value: newValue } }),
+                              })
+                              if (!res.ok) throw new Error('setVisible failed')
+                            } catch {
+                              // Revert the optimistic update on failure
+                              setOpenPositions(prev => prev.map(p =>
+                                p.id === pos.id ? { ...p, publicVisible: on } : p
+                              ))
+                            }
+                          }}
+                          style={{
+                            width: '36px',
+                            height: '20px',
+                            borderRadius: '9999px',
+                            background: on ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.06)',
+                            border: `0.5px solid ${on ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            cursor: 'pointer',
+                            position: 'relative',
+                            transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            top: '3px',
+                            left: on ? '17px' : '3px',
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            background: on ? '#3b82f6' : 'rgba(255,255,255,0.25)',
+                            transition: 'all 0.25s cubic-bezier(0.16,1,0.3,1)',
+                            boxShadow: on ? '0 0 8px rgba(59,130,246,0.4)' : 'none',
+                          }} />
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     setClosingId(pos.id)

@@ -1,6 +1,6 @@
 import { getRedis } from '@/lib/redis'
 import { safeParse } from '@/lib/safeParse'
-import { getUserId } from '@/lib/auth'
+import { getUserId, getUserRole } from '@/lib/auth'
 import { calculateTrade } from '@/lib/tradeCalculations'
 
 // Iran status is shared across all users — not namespaced
@@ -65,6 +65,21 @@ export async function POST(req) {
         const filtered = current.filter(p => p.id !== payload.id)
         await redis.set(POSITIONS_KEY, JSON.stringify(filtered))
         return Response.json({ ok: true, positions: filtered })
+      }
+
+      case 'setVisible': {
+        // payload: { id: string, value: boolean } — admin-only: toggle whether
+        // this position shows in the public ledger. Only ever mutates the
+        // caller's own positions.
+        const role = await getUserRole()
+        if (role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+        const current = safeParse(await redis.get(POSITIONS_KEY), [])
+        const updated = current.map(p =>
+          p.id === payload.id ? { ...p, publicVisible: payload.value } : p
+        )
+        await redis.set(POSITIONS_KEY, JSON.stringify(updated))
+        return Response.json({ ok: true, positions: updated })
       }
 
       case 'setCash': {

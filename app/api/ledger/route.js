@@ -103,7 +103,9 @@ export async function GET() {
                 user.emailAddresses[0]?.emailAddress?.split('@')[0] ||
                 'Unknown',
           role,
-          openPositions: positions,
+          // Positions the owner has hidden from the public ledger (publicVisible === false)
+          // are excluded here; this feeds both the open-positions list and its count.
+          openPositions: positions.filter(p => p.publicVisible !== false),
           cash,
           totalNetEur,
           totalGrossUsd,
